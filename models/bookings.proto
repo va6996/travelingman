@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package travelingman;
+
+option go_package = "example.com/travelingman/pb";
+
+import "google/protobuf/timestamp.proto";
+
+message FlightOffer {
+    int64 id = 1;
+    int64 group_id = 2;
+    string amadeus_offer_id = 3;
+    string carrier_code = 4;
+    string flight_number = 5;
+    string departure_airport = 6;
+    string arrival_airport = 7;
+    google.protobuf.Timestamp departure_time = 8;
+    google.protobuf.Timestamp arrival_time = 9;
+    string price_total = 10;
+    string currency = 11;
+    string raw_data = 12;
+}
+
+message HotelOffer {
+    int64 id = 1;
+    int64 group_id = 2;
+    string hotel_name = 3;
+    google.protobuf.Timestamp check_in = 4;
+    google.protobuf.Timestamp check_out = 5;
+    string price_total = 6;
+    string currency = 7;
+    string offer_id = 8;
+}
+
+enum BookingType {
+    BOOKING_TYPE_UNSPECIFIED = 0;
+    BOOKING_TYPE_FLIGHT = 1;
+    BOOKING_TYPE_HOTEL = 2;
+    BOOKING_TYPE_CAR = 3;
+    BOOKING_TYPE_TRANSPORT = 4;
+}
+
+enum Provider {
+    PROVIDER_UNSPECIFIED = 0;
+    PROVIDER_AMADEUS = 1;
+    PROVIDER_BOOKING_COM = 2;
+    PROVIDER_MANUAL = 3;
+    PROVIDER_OTHER = 4;
+}
+
+message Booking {
+    int64 id = 1;
+    int64 user_id = 2;
+    BookingType type = 3;
+    Provider provider = 4;
+    string status = 5;
+    string external_booking_reference = 6;
+    google.protobuf.Timestamp created_at = 7;
+}
+
+
+message Payment {
+    int64 id = 1;
+    int64 booking_id = 2;
+    int64 user_id = 3;
+    string amount = 4;
+    string currency = 5;
+    string status = 6;
+    string transaction_id = 7;
+    google.protobuf.Timestamp created_at = 8;
+}

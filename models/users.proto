@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package travelingman;
+
+option go_package = "example.com/travelingman/pb";
+
+import "google/protobuf/timestamp.proto";
+import "itinerary.proto";
+
+message User {
+    int64 id = 1;
+    string email = 2;
+    string password_hash = 3;
+    string full_name = 4;
+    google.protobuf.Timestamp created_at = 5;
+    repeated Passport passports = 6;
+    repeated DriversLicense drivers_licenses = 7;
+}
+
+message Passport {
+    int64 id = 1;
+    int64 user_id = 2;
+    string number = 3;
+    string issuing_country = 4;
+    google.protobuf.Timestamp expiry_date = 5;
+}
+
+message DriversLicense {
+    int64 id = 1;
+    int64 user_id = 2;
+    string number = 3;
+    string issuing_country = 4;
+    google.protobuf.Timestamp expiry_date = 5;
+}
+
+message TravelGroup {
+    int64 group_id = 1;
+    string name = 2;
+    int64 organizer_id = 3;
+    string destination = 4;
+    google.protobuf.Timestamp travel_date = 5;
+    repeated User members = 6;
+    repeated Itinerary itinerary = 7;
+}

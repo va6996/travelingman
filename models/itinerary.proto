@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package travelingman;
+
+option go_package = "example.com/travelingman/pb";
+
+import "google/protobuf/timestamp.proto";
+
+enum ItineraryType {
+    ITINERARY_TYPE_UNSPECIFIED = 0;
+    ITINERARY_TYPE_TRANSPORT = 1;
+    ITINERARY_TYPE_HOTEL = 2;
+    ITINERARY_TYPE_EVENT = 3;
+    ITINERARY_TYPE_DAY_PLAN = 4;
+}
+
+enum TransportType {
+    TRANSPORT_TYPE_UNSPECIFIED = 0;
+    TRANSPORT_TYPE_FLIGHT = 1;
+    TRANSPORT_TYPE_TRAIN = 2;
+    TRANSPORT_TYPE_CAR = 3;
+    TRANSPORT_TYPE_WALKING = 4;
+}
+
+message Itinerary {
+    int64 id = 1;
+    int64 group_id = 2;
+    int32 day_number = 3;
+    google.protobuf.Timestamp start_time = 4;
+    google.protobuf.Timestamp end_time = 5;
+    ItineraryType type = 6;
+    string title = 7;
+    string description = 8;
+    repeated Transport transport = 11;
+    repeated Accommodation accommodation = 12;
+    repeated Itinerary itineraries = 13;
+}
+
+message Accommodation {
+    int64 id = 1;
+    int64 group_id = 2;
+    string name = 3;
+    string address = 4;
+    google.protobuf.Timestamp check_in = 5;
+    google.protobuf.Timestamp check_out = 6;
+    string price_total = 7;
+    string booking_reference = 8;
+    string status = 9;
+    repeated int64 user_ids = 10;
+}
+
+message Transport {
+    int64 id = 1;
+    int64 booking_id = 2;
+    string provider = 3;
+    string reference_number = 4;
+    string status = 5;
+    TransportType type = 6;
+
+    oneof details {
+        Flight flight = 10;
+        Train train = 11;
+        CarRental car_rental = 12;
+    }
+}
+
+message Flight {
+    string carrier_code = 1;
+    string flight_number = 2;
+    string departure_airport = 3;
+    string arrival_airport = 4;
+    google.protobuf.Timestamp departure_time = 5;
+    google.protobuf.Timestamp arrival_time = 6;
+    repeated int64 user_ids = 7;
+}
+
+message Train {
+    string departure_station = 1;
+    string arrival_station = 2;
+    google.protobuf.Timestamp departure_time = 3;
+    google.protobuf.Timestamp arrival_time = 4;
+    string train_number = 5;
+    repeated int64 user_ids = 6;
+}
+
+message CarRental {
+    string company = 1;
+    string pickup_location = 2;
+    string dropoff_location = 3;
+    google.protobuf.Timestamp pickup_time = 4;
+    google.protobuf.Timestamp dropoff_time = 5;
+    string car_type = 6;
+    string price_total = 7;
+    repeated int64 user_ids = 8;
+}

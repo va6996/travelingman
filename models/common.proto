@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+package travelingman;
+
+option go_package = "example.com/travelingman/pb";
+

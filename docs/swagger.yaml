@@ -1,0 +1,266 @@
+basePath: /api/v1
+definitions:
+  service.BookFlightRequest:
+    properties:
+      flight_offer_json:
+        description: JSON representation of the elected FlightOffer
+        items:
+          type: integer
+        type: array
+      travelers_json:
+        description: JSON list of TravelerInfo
+        items:
+          type: integer
+        type: array
+      user_id:
+        type: integer
+    type: object
+  service.BookFlightResponse:
+    properties:
+      raw_json:
+        description: JSON response from Amadeus (booking confirmation)
+        items:
+          type: integer
+        type: array
+    type: object
+  service.CreateItineraryItemRequest:
+    properties:
+      details_json:
+        items:
+          type: integer
+        type: array
+      end_time:
+        description: RFC3339
+        type: string
+      group_id:
+        type: integer
+      start_time:
+        description: RFC3339
+        type: string
+      title:
+        type: string
+      type:
+        type: string
+    type: object
+  service.ItineraryItem:
+    properties:
+      details_json:
+        description: Flexible meta-data
+        items:
+          type: integer
+        type: array
+      end_time:
+        $ref: '#/definitions/timestamppb.Timestamp'
+      group_id:
+        type: integer
+      id:
+        type: integer
+      start_time:
+        $ref: '#/definitions/timestamppb.Timestamp'
+      title:
+        type: string
+      type:
+        description: '"flight", "hotel", "activity", "note"'
+        type: string
+    type: object
+  service.SearchFlightRequest:
+    properties:
+      adults:
+        type: integer
+      departure_date:
+        type: string
+      destination:
+        type: string
+      origin:
+        type: string
+      return_date:
+        type: string
+    type: object
+  service.SearchFlightResponse:
+    properties:
+      raw_json:
+        description: |-
+          Returning raw JSON for now to allow frontend to parse full Amadeus schema
+          without rigid proto re-definition of every segment/fee/etc.
+        items:
+          type: integer
+        type: array
+    type: object
+  service.SearchHotelRequest:
+    properties:
+      adults:
+        type: integer
+      check_in_date:
+        type: string
+      check_out_date:
+        type: string
+      city_code:
+        type: string
+      hotel_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  service.SearchHotelResponse:
+    properties:
+      raw_json:
+        items:
+          type: integer
+        type: array
+    type: object
+  timestamppb.Timestamp:
+    properties:
+      nanos:
+        description: |-
+          Non-negative fractions of a second at nanosecond resolution. This field is
+          the nanosecond portion of the duration, not an alternative to seconds.
+          Negative second values with fractions must still have non-negative nanos
+          values that count forward in time. Must be between 0 and 999,999,999
+          inclusive.
+        type: integer
+      seconds:
+        description: |-
+          Represents seconds of UTC time since Unix epoch 1970-01-01T00:00:00Z. Must
+          be between -315576000000 and 315576000000 inclusive (which corresponds to
+          0001-01-01T00:00:00Z to 9999-12-31T23:59:59Z).
+        type: integer
+    type: object
+host: localhost:8081
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is the API server for the Travelingman group travel application.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Travelingman API
+  version: "1.0"
+paths:
+  /bookings/flight:
+    post:
+      consumes:
+      - application/json
+      description: Create a new flight booking
+      parameters:
+      - description: Booking Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.BookFlightRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.BookFlightResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Book Flight
+      tags:
+      - bookings
+  /itinerary/add:
+    post:
+      consumes:
+      - application/json
+      description: Add an item (flight, hotel, etc.) to a group itinerary
+      parameters:
+      - description: Item Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.CreateItineraryItemRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/service.ItineraryItem'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Add Itinerary Item
+      tags:
+      - itinerary
+  /search/flights:
+    post:
+      consumes:
+      - application/json
+      description: Search for flights using Amadeus API
+      parameters:
+      - description: Flight Search Parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.SearchFlightRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.SearchFlightResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Search Flights
+      tags:
+      - search
+  /search/hotels:
+    post:
+      consumes:
+      - application/json
+      description: Search for hotels by city or specific offers
+      parameters:
+      - description: Hotel Search Parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.SearchHotelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.SearchHotelResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Search Hotels
+      tags:
+      - search
+swagger: "2.0"

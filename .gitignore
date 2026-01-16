@@ -1,0 +1,21 @@
+# Temporary
+tmp/
+
+# OS
+.DS_Store
+
+# Secrets and Environment
+.env
+.env.*
+
+# Dependencies
+node_modules/
+
+# Database
+*.db
+*.sqlite
+
+# Binaries
+bin/
+test
+
