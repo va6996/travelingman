@@ -1,21 +1,20 @@
-package toolcalling
+package tools
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"time"
 
-	"example.com/travelingman/providers/amadeus"
-	"example.com/travelingman/providers/gemini"
-	"example.com/travelingman/tools"
-	"github.com/firebase/genkit/go/ai"
 	"github.com/firebase/genkit/go/genkit"
 )
+
+// LLMClient defines the interface for LLM interaction
+type LLMClient interface {
+	GenerateContent(ctx context.Context, prompt string) (string, error)
+}
 
 const SystemPromptTemplate = `You are a helpful travel assistant. You have access to the following tools:
 
@@ -29,26 +28,6 @@ Protocol:
 
 Current Date: %s
 User Query: %s`
-
-// Input types for tools
-type DateInput struct {
-	Code string `json:"code"`
-}
-
-type FlightInput struct {
-	Origin      string `json:"origin"`
-	Destination string `json:"destination"`
-	Date        string `json:"date"`
-	Adults      int    `json:"adults"`
-}
-
-type HotelInput struct {
-	CityCode string `json:"city_code"`
-}
-
-type AskUserInput struct {
-	Question string `json:"question"`
-}
 
 // ToolCallResult stores the result of a tool call
 type ToolCallResult struct {
@@ -74,6 +53,7 @@ type TripData struct {
 type Agent struct {
 	flow     FlowRunner
 	tripData *TripData
+	llm      LLMClient
 }
 
 // FlowRunner defines the interface for running a flow
@@ -133,90 +113,17 @@ func (a *Agent) ToJSON() ([]byte, error) {
 	return a.tripData.ToJSON()
 }
 
-// InitAgent initializes Genkit with tools and returns the Agent service
-func InitAgent(amadeusClient *amadeus.Client, geminiClient gemini.Provider) (*Agent, error) {
-	ctx := context.Background()
-
-	// Initialize Genkit instance
-	gk := genkit.Init(ctx)
-
-	// Initialize Tools
-	dateTool := &tools.DateTool{}
-	flightTool := &tools.FlightTool{Client: amadeusClient}
-	hotelTool := &tools.HotelTool{Client: amadeusClient}
+// NewAgent creates a new Agent service using provided Genkit and Registry
+func NewAgent(gk *genkit.Genkit, registry *Registry, llmPlugin LLMClient) (*Agent, error) {
 
 	// Create agent instance
 	agent := &Agent{
 		tripData: nil,
+		llm:      llmPlugin,
 	}
 
-	// Define Genkit Tools
 	// Capture tools to auto-generate system prompt descriptions
-	var registeredTools []ai.Tool
-
-	t1 := genkit.DefineTool[*DateInput, string](
-		gk,
-		"dateTool",
-		"Executes JavaScript code. Code must return a Date object.",
-		func(ctx *ai.ToolContext, input *DateInput) (string, error) {
-			res, err := dateTool.Execute(map[string]interface{}{"code": input.Code})
-			if err != nil {
-				return "", err
-			}
-			return fmt.Sprintf("%v", res), nil
-		},
-	)
-	registeredTools = append(registeredTools, t1)
-
-	t2 := genkit.DefineTool[FlightInput, string](
-		gk,
-		"flightTool",
-		flightTool.Description(),
-		func(ctx *ai.ToolContext, input FlightInput) (string, error) {
-			args := map[string]interface{}{
-				"origin":      input.Origin,
-				"destination": input.Destination,
-				"date":        input.Date,
-				"adults":      input.Adults,
-			}
-			res, err := flightTool.Execute(args)
-			if err != nil {
-				return "", err
-			}
-			return fmt.Sprintf("%+v", res), nil
-		},
-	)
-	registeredTools = append(registeredTools, t2)
-
-	t3 := genkit.DefineTool[HotelInput, string](
-		gk,
-		"hotelTool",
-		hotelTool.Description(),
-		func(ctx *ai.ToolContext, input HotelInput) (string, error) {
-			args := map[string]interface{}{
-				"city_code": input.CityCode,
-			}
-			res, err := hotelTool.Execute(args)
-			if err != nil {
-				return "", err
-			}
-			return fmt.Sprintf("%+v", res), nil
-		},
-	)
-	registeredTools = append(registeredTools, t3)
-
-	t4 := genkit.DefineTool[AskUserInput, string](
-		gk,
-		"askUserTool",
-		"Ask the user for more information. Use this when you need clarification or missing details.",
-		func(ctx *ai.ToolContext, input AskUserInput) (string, error) {
-			// Implementation handled in flow loop for interactivity,
-			// but we define it here for schema generation.
-			// The actual execution in the flow switch case intercepts this tool.
-			return "", nil
-		},
-	)
-	registeredTools = append(registeredTools, t4)
+	registeredTools := registry.GetTools()
 
 	flow := genkit.DefineFlow(
 		gk,
@@ -252,15 +159,22 @@ func InitAgent(amadeusClient *amadeus.Client, geminiClient gemini.Provider) (*Ag
 			maxSteps := 50
 
 			for i := 0; i < maxSteps; i++ {
-				log.Printf("[DEBUG] Step %d/%d: Prompting Gemini...", i+1, maxSteps)
+				// Check for context cancellation
+				select {
+				case <-ctx.Done():
+					return "", ctx.Err()
+				default:
+				}
+
+				log.Printf("[DEBUG] Step %d/%d: Prompting LLM...", i+1, maxSteps)
 
 				// 1. Generate content from Gemini
-				resp, err := geminiClient.GenerateContent(history)
+				resp, err := agent.llm.GenerateContent(ctx, history)
 				if err != nil {
-					log.Printf("[ERROR] Gemini generation failed: %v", err)
-					return "", fmt.Errorf("gemini generation failed: %v", err)
+					log.Printf("[ERROR] LLM generation failed: %v", err)
+					return "", fmt.Errorf("llm generation failed: %v", err)
 				}
-				log.Printf("[DEBUG] Gemini Response: %q", resp)
+				log.Printf("[DEBUG] LLM Response: %q", resp)
 
 				// 2. Parse response for tool call
 				// We scan for the first '{' and last '}' to handle markdown blocks or preamble
@@ -293,40 +207,9 @@ func InitAgent(amadeusClient *amadeus.Client, geminiClient gemini.Provider) (*Ag
 					var toolRes interface{}
 					var toolErr error
 
-					switch toolCall.Tool {
-					case "dateTool":
-						log.Printf("[DEBUG] Executing dateTool...")
-						toolRes, toolErr = dateTool.Execute(toolCall.Input)
-
-					case "flightTool":
-						log.Printf("[DEBUG] Executing flightTool...")
-						if val, ok := toolCall.Input["adults"].(float64); ok {
-							toolCall.Input["adults"] = int(val)
-						}
-						toolRes, toolErr = flightTool.Execute(toolCall.Input)
-
-					case "hotelTool":
-						log.Printf("[DEBUG] Executing hotelTool...")
-						toolRes, toolErr = hotelTool.Execute(toolCall.Input)
-
-					case "askUserTool":
-						log.Printf("[DEBUG] Executing askUserTool...")
-						// Prompt the user via Stdout and read from Stdin
-						question, _ := toolCall.Input["question"].(string)
-						fmt.Printf("\n[AI Request] %s\n> ", question)
-
-						// Read input
-						scanner := bufio.NewScanner(os.Stdin)
-						if scanner.Scan() {
-							toolRes = scanner.Text()
-						} else {
-							toolErr = fmt.Errorf("failed to read user input")
-						}
-
-					default:
-						log.Printf("[WARN] Unknown tool requested: %s", toolCall.Tool)
-						toolErr = fmt.Errorf("unknown tool: %s", toolCall.Tool)
-					}
+					// Generic Tool Execution
+					log.Printf("[DEBUG] Executing tool: %s", toolCall.Tool)
+					toolRes, toolErr = registry.ExecuteTool(ctx, toolCall.Tool, toolCall.Input)
 
 					// 3. Store Tool Result and Append to History
 					result := ToolCallResult{

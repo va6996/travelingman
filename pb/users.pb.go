@@ -394,7 +394,7 @@ const file_users_proto_rawDesc = "" +
 	"\vtravel_date\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"travelDate\x12,\n" +
 	"\amembers\x18\x06 \x03(\v2\x12.travelingman.UserR\amembers\x125\n" +
-	"\titinerary\x18\a \x03(\v2\x17.travelingman.ItineraryR\titineraryB\x1dZ\x1bexample.com/travelingman/pbb\x06proto3"
+	"\titinerary\x18\a \x03(\v2\x17.travelingman.ItineraryR\titineraryB#Z!github.com/va6996/travelingman/pbb\x06proto3"
 
 var (
 	file_users_proto_rawDescOnce sync.Once

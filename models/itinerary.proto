@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package travelingman;
 
-option go_package = "example.com/travelingman/pb";
+option go_package = "github.com/va6996/travelingman/pb";
 
 import "google/protobuf/timestamp.proto";
 
@@ -52,7 +52,7 @@ message Accommodation {
 message Transport {
     int64 id = 1;
     int64 booking_id = 2;
-    string provider = 3;
+    string plugin = 3;
     string reference_number = 4;
     string status = 5;
     TransportType type = 6;

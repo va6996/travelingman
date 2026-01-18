@@ -77,58 +77,58 @@ func (BookingType) EnumDescriptor() ([]byte, []int) {
 	return file_bookings_proto_rawDescGZIP(), []int{0}
 }
 
-type Provider int32
+type Plugin int32
 
 const (
-	Provider_PROVIDER_UNSPECIFIED Provider = 0
-	Provider_PROVIDER_AMADEUS     Provider = 1
-	Provider_PROVIDER_BOOKING_COM Provider = 2
-	Provider_PROVIDER_MANUAL      Provider = 3
-	Provider_PROVIDER_OTHER       Provider = 4
+	Plugin_PLUGIN_UNSPECIFIED Plugin = 0
+	Plugin_PLUGIN_AMADEUS     Plugin = 1
+	Plugin_PLUGIN_BOOKING_COM Plugin = 2
+	Plugin_PLUGIN_MANUAL      Plugin = 3
+	Plugin_PLUGIN_OTHER       Plugin = 4
 )
 
-// Enum value maps for Provider.
+// Enum value maps for Plugin.
 var (
-	Provider_name = map[int32]string{
-		0: "PROVIDER_UNSPECIFIED",
-		1: "PROVIDER_AMADEUS",
-		2: "PROVIDER_BOOKING_COM",
-		3: "PROVIDER_MANUAL",
-		4: "PROVIDER_OTHER",
+	Plugin_name = map[int32]string{
+		0: "PLUGIN_UNSPECIFIED",
+		1: "PLUGIN_AMADEUS",
+		2: "PLUGIN_BOOKING_COM",
+		3: "PLUGIN_MANUAL",
+		4: "PLUGIN_OTHER",
 	}
-	Provider_value = map[string]int32{
-		"PROVIDER_UNSPECIFIED": 0,
-		"PROVIDER_AMADEUS":     1,
-		"PROVIDER_BOOKING_COM": 2,
-		"PROVIDER_MANUAL":      3,
-		"PROVIDER_OTHER":       4,
+	Plugin_value = map[string]int32{
+		"PLUGIN_UNSPECIFIED": 0,
+		"PLUGIN_AMADEUS":     1,
+		"PLUGIN_BOOKING_COM": 2,
+		"PLUGIN_MANUAL":      3,
+		"PLUGIN_OTHER":       4,
 	}
 )
 
-func (x Provider) Enum() *Provider {
-	p := new(Provider)
+func (x Plugin) Enum() *Plugin {
+	p := new(Plugin)
 	*p = x
 	return p
 }
 
-func (x Provider) String() string {
+func (x Plugin) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (Provider) Descriptor() protoreflect.EnumDescriptor {
+func (Plugin) Descriptor() protoreflect.EnumDescriptor {
 	return file_bookings_proto_enumTypes[1].Descriptor()
 }
 
-func (Provider) Type() protoreflect.EnumType {
+func (Plugin) Type() protoreflect.EnumType {
 	return &file_bookings_proto_enumTypes[1]
 }
 
-func (x Provider) Number() protoreflect.EnumNumber {
+func (x Plugin) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use Provider.Descriptor instead.
-func (Provider) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use Plugin.Descriptor instead.
+func (Plugin) EnumDescriptor() ([]byte, []int) {
 	return file_bookings_proto_rawDescGZIP(), []int{1}
 }
 
@@ -369,7 +369,7 @@ type Booking struct {
 	Id                       int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	UserId                   int64                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Type                     BookingType            `protobuf:"varint,3,opt,name=type,proto3,enum=travelingman.BookingType" json:"type,omitempty"`
-	Provider                 Provider               `protobuf:"varint,4,opt,name=provider,proto3,enum=travelingman.Provider" json:"provider,omitempty"`
+	Plugin                   Plugin                 `protobuf:"varint,4,opt,name=plugin,proto3,enum=travelingman.Plugin" json:"plugin,omitempty"`
 	Status                   string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
 	ExternalBookingReference string                 `protobuf:"bytes,6,opt,name=external_booking_reference,json=externalBookingReference,proto3" json:"external_booking_reference,omitempty"`
 	CreatedAt                *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
@@ -428,11 +428,11 @@ func (x *Booking) GetType() BookingType {
 	return BookingType_BOOKING_TYPE_UNSPECIFIED
 }
 
-func (x *Booking) GetProvider() Provider {
+func (x *Booking) GetPlugin() Plugin {
 	if x != nil {
-		return x.Provider
+		return x.Plugin
 	}
-	return Provider_PROVIDER_UNSPECIFIED
+	return Plugin_PLUGIN_UNSPECIFIED
 }
 
 func (x *Booking) GetStatus() string {
@@ -587,12 +587,12 @@ const file_bookings_proto_rawDesc = "" +
 	"\vprice_total\x18\x06 \x01(\tR\n" +
 	"priceTotal\x12\x1a\n" +
 	"\bcurrency\x18\a \x01(\tR\bcurrency\x12\x19\n" +
-	"\boffer_id\x18\b \x01(\tR\aofferId\"\xa6\x02\n" +
+	"\boffer_id\x18\b \x01(\tR\aofferId\"\xa0\x02\n" +
 	"\aBooking\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12-\n" +
-	"\x04type\x18\x03 \x01(\x0e2\x19.travelingman.BookingTypeR\x04type\x122\n" +
-	"\bprovider\x18\x04 \x01(\x0e2\x16.travelingman.ProviderR\bprovider\x12\x16\n" +
+	"\x04type\x18\x03 \x01(\x0e2\x19.travelingman.BookingTypeR\x04type\x12,\n" +
+	"\x06plugin\x18\x04 \x01(\x0e2\x14.travelingman.PluginR\x06plugin\x12\x16\n" +
 	"\x06status\x18\x05 \x01(\tR\x06status\x12<\n" +
 	"\x1aexternal_booking_reference\x18\x06 \x01(\tR\x18externalBookingReference\x129\n" +
 	"\n" +
@@ -613,13 +613,13 @@ const file_bookings_proto_rawDesc = "" +
 	"\x13BOOKING_TYPE_FLIGHT\x10\x01\x12\x16\n" +
 	"\x12BOOKING_TYPE_HOTEL\x10\x02\x12\x14\n" +
 	"\x10BOOKING_TYPE_CAR\x10\x03\x12\x1a\n" +
-	"\x16BOOKING_TYPE_TRANSPORT\x10\x04*}\n" +
-	"\bProvider\x12\x18\n" +
-	"\x14PROVIDER_UNSPECIFIED\x10\x00\x12\x14\n" +
-	"\x10PROVIDER_AMADEUS\x10\x01\x12\x18\n" +
-	"\x14PROVIDER_BOOKING_COM\x10\x02\x12\x13\n" +
-	"\x0fPROVIDER_MANUAL\x10\x03\x12\x12\n" +
-	"\x0ePROVIDER_OTHER\x10\x04B\x1dZ\x1bexample.com/travelingman/pbb\x06proto3"
+	"\x16BOOKING_TYPE_TRANSPORT\x10\x04*q\n" +
+	"\x06Plugin\x12\x16\n" +
+	"\x12PLUGIN_UNSPECIFIED\x10\x00\x12\x12\n" +
+	"\x0ePLUGIN_AMADEUS\x10\x01\x12\x16\n" +
+	"\x12PLUGIN_BOOKING_COM\x10\x02\x12\x11\n" +
+	"\rPLUGIN_MANUAL\x10\x03\x12\x10\n" +
+	"\fPLUGIN_OTHER\x10\x04B#Z!github.com/va6996/travelingman/pbb\x06proto3"
 
 var (
 	file_bookings_proto_rawDescOnce sync.Once
@@ -637,7 +637,7 @@ var file_bookings_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_bookings_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_bookings_proto_goTypes = []any{
 	(BookingType)(0),              // 0: travelingman.BookingType
-	(Provider)(0),                 // 1: travelingman.Provider
+	(Plugin)(0),                   // 1: travelingman.Plugin
 	(*FlightOffer)(nil),           // 2: travelingman.FlightOffer
 	(*HotelOffer)(nil),            // 3: travelingman.HotelOffer
 	(*Booking)(nil),               // 4: travelingman.Booking
@@ -650,7 +650,7 @@ var file_bookings_proto_depIdxs = []int32{
 	6, // 2: travelingman.HotelOffer.check_in:type_name -> google.protobuf.Timestamp
 	6, // 3: travelingman.HotelOffer.check_out:type_name -> google.protobuf.Timestamp
 	0, // 4: travelingman.Booking.type:type_name -> travelingman.BookingType
-	1, // 5: travelingman.Booking.provider:type_name -> travelingman.Provider
+	1, // 5: travelingman.Booking.plugin:type_name -> travelingman.Plugin
 	6, // 6: travelingman.Booking.created_at:type_name -> google.protobuf.Timestamp
 	6, // 7: travelingman.Payment.created_at:type_name -> google.protobuf.Timestamp
 	8, // [8:8] is the sub-list for method output_type

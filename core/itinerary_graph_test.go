@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"example.com/travelingman/pb"
+	"github.com/va6996/travelingman/pb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

@@ -1,14 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
-	"os"
 
-	_ "example.com/travelingman/docs"
-	"example.com/travelingman/providers/amadeus"
-	"example.com/travelingman/providers/gemini"
-	"example.com/travelingman/tools/toolcalling"
+	"github.com/va6996/travelingman/bootstrap"
+	"github.com/va6996/travelingman/config"
+	_ "github.com/va6996/travelingman/docs"
 	_ "github.com/mattn/go-sqlite3"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -29,6 +28,12 @@ import (
 // @BasePath  /api/v1
 
 func main() {
+	// 0. Init Config
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
 	// 1. Init DB
 	db, err := InitDB("./travelingman.db")
 	if err != nil {
@@ -39,33 +44,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// 2. Init Amadeus
-	clientID := os.Getenv("AMADEUS_CLIENT_ID")
-	clientSecret := os.Getenv("AMADEUS_CLIENT_SECRET")
-	if clientID == "" || clientSecret == "" {
-		log.Fatal("Error: AMADEUS_CLIENT_ID and AMADEUS_CLIENT_SECRET must be set")
-	}
-	amadeusClient, err := amadeus.NewClient(clientID, clientSecret, false) // false = test env
+	// 2. Init App Components (AI, Genkit, Tools, Agent)
+	app, err := bootstrap.Setup(context.Background(), cfg)
 	if err != nil {
-		log.Fatalf("Error: Failed to initialize Amadeus client: %v", err)
+		log.Fatalf("Setup failed: %v", err)
 	}
 
-	// 3. Init Gemini AI
-	geminiAPIKey := os.Getenv("GEMINI_API_KEY")
-	if geminiAPIKey == "" {
-		log.Fatal("Error: GEMINI_API_KEY must be set")
-	}
-	geminiClient, err := gemini.NewClient(geminiAPIKey)
-	if err != nil {
-		log.Fatalf("Error: Failed to initialize Gemini client: %v", err)
-	}
-
-	// 4. Init Genkit
-	travelAI, err := toolcalling.InitAgent(amadeusClient, geminiClient)
-	if err != nil {
-		log.Fatalf("Error: Failed to initialize Genkit: %v", err)
-	}
-	_ = travelAI // Suppress unused var (until used in handler)
+	_ = app.Agent // Suppress unused var (until used in handler)
 
 	// 4. Routes
 	// Swagger

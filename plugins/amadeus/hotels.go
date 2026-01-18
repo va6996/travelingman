@@ -1,6 +1,7 @@
 package amadeus
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -167,11 +168,11 @@ type HotelListResponse struct {
 }
 
 // SearchHotelsByCity searches for hotels in a specific city
-func (c *Client) SearchHotelsByCity(cityCode string) (*HotelListResponse, error) {
+func (c *Client) SearchHotelsByCity(ctx context.Context, cityCode string) (*HotelListResponse, error) {
 	// Step 1: Get list of hotels in city
 	endpoint := fmt.Sprintf("/v1/reference-data/locations/hotels/by-city?cityCode=%s", cityCode)
 
-	resp, err := c.doRequest("GET", endpoint, nil)
+	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +192,7 @@ func (c *Client) SearchHotelsByCity(cityCode string) (*HotelListResponse, error)
 }
 
 // SearchHotelOffers searches for offers for a specific hotel
-func (c *Client) SearchHotelOffers(hotelIds []string, adults int, checkIn, checkOut string) (*HotelSearchResponse, error) {
+func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adults int, checkIn, checkOut string) (*HotelSearchResponse, error) {
 	// construct hotelIds string
 	ids := ""
 	for i, id := range hotelIds {
@@ -204,7 +205,7 @@ func (c *Client) SearchHotelOffers(hotelIds []string, adults int, checkIn, check
 	endpoint := fmt.Sprintf("/v3/shopping/hotel-offers?hotelIds=%s&adults=%d&checkInDate=%s&checkOutDate=%s",
 		ids, adults, checkIn, checkOut)
 
-	resp, err := c.doRequest("GET", endpoint, nil)
+	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +224,7 @@ func (c *Client) SearchHotelOffers(hotelIds []string, adults int, checkIn, check
 }
 
 // BookHotel creates a hotel booking
-func (c *Client) BookHotel(offerId string, guests []HotelGuest, payment HotelPayment) (*HotelOrderResponse, error) {
+func (c *Client) BookHotel(ctx context.Context, offerId string, guests []HotelGuest, payment HotelPayment) (*HotelOrderResponse, error) {
 	reqBody := HotelOrderRequest{}
 	reqBody.Data.Type = "hotel-order"
 
@@ -242,7 +243,7 @@ func (c *Client) BookHotel(offerId string, guests []HotelGuest, payment HotelPay
 	reqBody.Data.Guests = guests
 	reqBody.Data.Payments = []HotelPayment{payment}
 
-	resp, err := c.doRequest("POST", "/v2/booking/hotel-orders", reqBody)
+	resp, err := c.doRequest(ctx, "POST", "/v2/booking/hotel-orders", reqBody)
 	if err != nil {
 		return nil, err
 	}

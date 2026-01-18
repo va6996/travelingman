@@ -1,6 +1,7 @@
 package amadeus
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -187,7 +188,7 @@ type AssociatedRecord struct {
 // --- Methods ---
 
 // SearchFlights searches for flight offers
-func (c *Client) SearchFlights(origin, destination, departureDate, returnDate, arrivalBy string, adults int) (*FlightSearchResponse, error) {
+func (c *Client) SearchFlights(ctx context.Context, origin, destination, departureDate, returnDate, arrivalBy string, adults int) (*FlightSearchResponse, error) {
 	// Construct query parameters
 	endpoint := fmt.Sprintf("/v2/shopping/flight-offers?originLocationCode=%s&destinationLocationCode=%s&adults=%d",
 		origin, destination, adults)
@@ -210,9 +211,9 @@ func (c *Client) SearchFlights(origin, destination, departureDate, returnDate, a
 
 	// Optimization: If arrivalBy is set, maybe we can pass it as a filter?
 	// API doesn't seem to support arrivalBy filter directly in V2 GET.
-	// We will handle filtering in the upper layer or just ignore for now in the raw provider call.
+	// We will handle filtering in the upper layer or just ignore for now in the raw plugin call.
 
-	resp, err := c.doRequest("GET", endpoint, nil)
+	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -231,12 +232,12 @@ func (c *Client) SearchFlights(origin, destination, departureDate, returnDate, a
 }
 
 // ConfirmPrice confirms the price of a selected flight offer
-func (c *Client) ConfirmPrice(offer FlightOffer) (*FlightSearchResponse, error) {
+func (c *Client) ConfirmPrice(ctx context.Context, offer FlightOffer) (*FlightSearchResponse, error) {
 	reqBody := FlightPriceCheckRequest{}
 	reqBody.Data.Type = "flight-offers-pricing"
 	reqBody.Data.FlightOffers = []FlightOffer{offer}
 
-	resp, err := c.doRequest("POST", "/v1/shopping/flight-offers/pricing", reqBody)
+	resp, err := c.doRequest(ctx, "POST", "/v1/shopping/flight-offers/pricing", reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -255,13 +256,13 @@ func (c *Client) ConfirmPrice(offer FlightOffer) (*FlightSearchResponse, error) 
 }
 
 // BookFlight creates a flight order
-func (c *Client) BookFlight(offer FlightOffer, travelers []TravelerInfo) (*FlightOrderResponse, error) {
+func (c *Client) BookFlight(ctx context.Context, offer FlightOffer, travelers []TravelerInfo) (*FlightOrderResponse, error) {
 	reqBody := FlightOrderRequest{}
 	reqBody.Data.Type = "flight-order"
 	reqBody.Data.FlightOffers = []FlightOffer{offer}
 	reqBody.Data.Travelers = travelers
 
-	resp, err := c.doRequest("POST", "/v1/booking/flight-orders", reqBody)
+	resp, err := c.doRequest(ctx, "POST", "/v1/booking/flight-orders", reqBody)
 	if err != nil {
 		return nil, err
 	}

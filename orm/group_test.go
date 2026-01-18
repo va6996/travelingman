@@ -3,7 +3,7 @@ package orm
 import (
 	"testing"
 
-	"example.com/travelingman/pb"
+	"github.com/va6996/travelingman/pb"
 	"github.com/stretchr/testify/assert"
 )
 

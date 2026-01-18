@@ -7,7 +7,7 @@
 package service
 
 import (
-	pb "example.com/travelingman/pb"
+	pb "github.com/va6996/travelingman/pb"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -200,7 +200,7 @@ const file_service_auth_proto_rawDesc = "" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\"L\n" +
 	"\fAuthResponse\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12&\n" +
-	"\x04user\x18\x02 \x01(\v2\x12.travelingman.UserR\x04userB%Z#example.com/travelingman/pb/serviceb\x06proto3"
+	"\x04user\x18\x02 \x01(\v2\x12.travelingman.UserR\x04userB%Z#github.com/va6996/travelingman/pb/serviceb\x06proto3"
 
 var (
 	file_service_auth_proto_rawDescOnce sync.Once

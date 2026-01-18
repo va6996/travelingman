@@ -357,7 +357,7 @@ const file_service_itinerary_proto_rawDesc = "" +
 	"\x19GetItineraryItemsResponse\x129\n" +
 	"\x05items\x18\x01 \x03(\v2#.travelingman.service.ItineraryItemR\x05items\"5\n" +
 	"\x1aDeleteItineraryItemRequest\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\x03R\x06itemIdB%Z#example.com/travelingman/pb/serviceb\x06proto3"
+	"\aitem_id\x18\x01 \x01(\x03R\x06itemIdB%Z#github.com/va6996/travelingman/pb/serviceb\x06proto3"
 
 var (
 	file_service_itinerary_proto_rawDescOnce sync.Once

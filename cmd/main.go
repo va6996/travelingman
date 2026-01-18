@@ -5,56 +5,48 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
-	"example.com/travelingman/providers/amadeus"
-	"example.com/travelingman/providers/gemini"
-	"example.com/travelingman/tools/toolcalling"
-	"github.com/joho/godotenv"
+	"github.com/va6996/travelingman/bootstrap"
+	"github.com/va6996/travelingman/config"
 )
 
 func main() {
-	// Load .env if present
-	_ = godotenv.Load()
+	// Setup signal handling for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Handle Ctrl+C (SIGINT)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT)
+	go func() {
+		<-sigChan
+		log.Println("\nProgram terminated externally. Exiting...")
+		cancel()
+	}()
 
 	log.Println("Testing Agent Data Storage...")
 
-	// 1. Setup Amadeus Client
-	amadeusClientID := os.Getenv("AMADEUS_CLIENT_ID")
-	amadeusClientSecret := os.Getenv("AMADEUS_CLIENT_SECRET")
-	if amadeusClientID == "" || amadeusClientSecret == "" {
-		log.Fatal("Error: AMADEUS_CLIENT_ID and AMADEUS_CLIENT_SECRET must be set")
-	}
-
-	amadeusClient, err := amadeus.NewClient(amadeusClientID, amadeusClientSecret, false)
+	// 0. Load Config
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Failed to create Amadeus client: %v", err)
+		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// 2. Setup Gemini Client
-	geminiAPIKey := os.Getenv("GEMINI_API_KEY")
-	if geminiAPIKey == "" {
-		log.Fatal("Error: GEMINI_API_KEY must be set")
-	}
-
-	geminiClient, err := gemini.NewClient(geminiAPIKey)
+	// 1-3. Init App Components using Bootstrap
+	app, err := bootstrap.Setup(context.Background(), cfg)
 	if err != nil {
-		log.Fatalf("Failed to create Gemini client: %v", err)
+		log.Fatalf("Setup failed: %v", err)
 	}
-	defer geminiClient.Close()
 
-	// 3. Init Agent
-	log.Println("Initializing Agent...")
-	agent, err := toolcalling.InitAgent(amadeusClient, geminiClient)
-	if err != nil {
-		log.Fatalf("Failed to initialize Agent: %v", err)
-	}
+	agent := app.Agent
 
 	// 4. Run a query that will trigger multiple tool calls
 	query := "find me hotels in paris for next weekend for 2 adults"
 	log.Printf("Running PlanTrip with query: %q", query)
 
-	ctx := context.Background()
 	result, err := agent.PlanTrip(ctx, query)
 	if err != nil {
 		log.Fatalf("PlanTrip failed: %v", err)

@@ -200,7 +200,7 @@ const file_service_trips_proto_rawDesc = "" +
 	"\x0eGetTripRequest\x12\x17\n" +
 	"\atrip_id\x18\x01 \x01(\x03R\x06tripId\"-\n" +
 	"\x12GetTripFlowRequest\x12\x17\n" +
-	"\atrip_id\x18\x01 \x01(\x03R\x06tripIdB%Z#example.com/travelingman/pb/serviceb\x06proto3"
+	"\atrip_id\x18\x01 \x01(\x03R\x06tripIdB%Z#github.com/va6996/travelingman/pb/serviceb\x06proto3"
 
 var (
 	file_service_trips_proto_rawDescOnce sync.Once

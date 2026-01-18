@@ -16,7 +16,7 @@ This document contains instructions for developing, building, testing, and runni
 - `apis/v1`: API Handlers grouped by feature (auth, groups, search, bookings, itinerary).
 - `models`: Protobuf definitions.
 - `pb`: Generated Go code from Protobufs.
-- `providers`: External service integrations (e.g., Amadeus).
+- `plugins`: External service integrations (e.g., Amadeus).
 - `migrations.go`: Database schema definitions.
 
 ## Key Commands

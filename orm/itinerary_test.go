@@ -3,7 +3,7 @@ package orm
 import (
 	"testing"
 
-	"example.com/travelingman/pb"
+	"github.com/va6996/travelingman/pb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -69,8 +69,8 @@ func TestItineraryHierarchy(t *testing.T) {
 				Type:  2,
 				Transport: []*pb.Transport{
 					{
-						Provider: "AirFrance",
-						Status:   "Confirmed",
+						Plugin: "AirFrance",
+						Status: "Confirmed",
 						Details: &pb.Transport_Flight{
 							Flight: &pb.Flight{
 								CarrierCode:  "AF",
@@ -108,7 +108,7 @@ func TestItineraryHierarchy(t *testing.T) {
 	assert.Len(t, fetchedParent.Itineraries, 1)
 	assert.Equal(t, "Day 1 in Paris", fetchedParent.Itineraries[0].Title)
 	assert.Len(t, fetchedParent.Itineraries[0].Transport, 1)
-	assert.Equal(t, "AirFrance", fetchedParent.Itineraries[0].Transport[0].Provider)
+	assert.Equal(t, "AirFrance", fetchedParent.Itineraries[0].Transport[0].Plugin)
 	assert.NotNil(t, fetchedParent.Itineraries[0].Transport[0].GetFlight())
 	assert.Equal(t, "AF", fetchedParent.Itineraries[0].Transport[0].GetFlight().CarrierCode)
 }

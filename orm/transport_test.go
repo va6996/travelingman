@@ -3,7 +3,7 @@ package orm
 import (
 	"testing"
 
-	"example.com/travelingman/pb"
+	"github.com/va6996/travelingman/pb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,9 +12,9 @@ func TestTransport_Train(t *testing.T) {
 
 	// Create Transport with Train details
 	trans := &pb.Transport{
-		Provider: "Eurostar",
-		Status:   "Confirmed",
-		Type:     pb.TransportType_TRANSPORT_TYPE_TRAIN,
+		Plugin: "Eurostar",
+		Status: "Confirmed",
+		Type:   pb.TransportType_TRANSPORT_TYPE_TRAIN,
 		Details: &pb.Transport_Train{
 			Train: &pb.Train{
 				DepartureStation: "London St Pancras",
@@ -31,7 +31,7 @@ func TestTransport_Train(t *testing.T) {
 	// Read back
 	fetched, err := GetTransport(db, uint(trans.Id))
 	assert.NoError(t, err)
-	assert.Equal(t, "Eurostar", fetched.Provider)
+	assert.Equal(t, "Eurostar", fetched.Plugin)
 	assert.Equal(t, pb.TransportType_TRANSPORT_TYPE_TRAIN, fetched.Type)
 
 	// Check Train Details
@@ -45,9 +45,9 @@ func TestTransport_CarRental(t *testing.T) {
 
 	// Create Transport with CarRental details
 	trans := &pb.Transport{
-		Provider: "Hertz",
-		Status:   "Reserved",
-		Type:     pb.TransportType_TRANSPORT_TYPE_CAR,
+		Plugin: "Hertz",
+		Status: "Reserved",
+		Type:   pb.TransportType_TRANSPORT_TYPE_CAR,
 		Details: &pb.Transport_CarRental{
 			CarRental: &pb.CarRental{
 				Company:        "Hertz",

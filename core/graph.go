@@ -1,7 +1,7 @@
 package core
 
 import (
-	"example.com/travelingman/pb"
+	"github.com/va6996/travelingman/pb"
 )
 
 // NewGraph creates a new empty graph

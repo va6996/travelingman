@@ -61,52 +61,52 @@ export function bookingTypeToJSON(object: BookingType): string {
   }
 }
 
-export enum Provider {
-  PROVIDER_UNSPECIFIED = 0,
-  PROVIDER_AMADEUS = 1,
-  PROVIDER_BOOKING_COM = 2,
-  PROVIDER_MANUAL = 3,
-  PROVIDER_OTHER = 4,
+export enum Plugin {
+  PLUGIN_UNSPECIFIED = 0,
+  PLUGIN_AMADEUS = 1,
+  PLUGIN_BOOKING_COM = 2,
+  PLUGIN_MANUAL = 3,
+  PLUGIN_OTHER = 4,
   UNRECOGNIZED = -1,
 }
 
-export function providerFromJSON(object: any): Provider {
+export function pluginFromJSON(object: any): Plugin {
   switch (object) {
     case 0:
-    case "PROVIDER_UNSPECIFIED":
-      return Provider.PROVIDER_UNSPECIFIED;
+    case "PLUGIN_UNSPECIFIED":
+      return Plugin.PLUGIN_UNSPECIFIED;
     case 1:
-    case "PROVIDER_AMADEUS":
-      return Provider.PROVIDER_AMADEUS;
+    case "PLUGIN_AMADEUS":
+      return Plugin.PLUGIN_AMADEUS;
     case 2:
-    case "PROVIDER_BOOKING_COM":
-      return Provider.PROVIDER_BOOKING_COM;
+    case "PLUGIN_BOOKING_COM":
+      return Plugin.PLUGIN_BOOKING_COM;
     case 3:
-    case "PROVIDER_MANUAL":
-      return Provider.PROVIDER_MANUAL;
+    case "PLUGIN_MANUAL":
+      return Plugin.PLUGIN_MANUAL;
     case 4:
-    case "PROVIDER_OTHER":
-      return Provider.PROVIDER_OTHER;
+    case "PLUGIN_OTHER":
+      return Plugin.PLUGIN_OTHER;
     case -1:
     case "UNRECOGNIZED":
     default:
-      return Provider.UNRECOGNIZED;
+      return Plugin.UNRECOGNIZED;
   }
 }
 
-export function providerToJSON(object: Provider): string {
+export function pluginToJSON(object: Plugin): string {
   switch (object) {
-    case Provider.PROVIDER_UNSPECIFIED:
-      return "PROVIDER_UNSPECIFIED";
-    case Provider.PROVIDER_AMADEUS:
-      return "PROVIDER_AMADEUS";
-    case Provider.PROVIDER_BOOKING_COM:
-      return "PROVIDER_BOOKING_COM";
-    case Provider.PROVIDER_MANUAL:
-      return "PROVIDER_MANUAL";
-    case Provider.PROVIDER_OTHER:
-      return "PROVIDER_OTHER";
-    case Provider.UNRECOGNIZED:
+    case Plugin.PLUGIN_UNSPECIFIED:
+      return "PLUGIN_UNSPECIFIED";
+    case Plugin.PLUGIN_AMADEUS:
+      return "PLUGIN_AMADEUS";
+    case Plugin.PLUGIN_BOOKING_COM:
+      return "PLUGIN_BOOKING_COM";
+    case Plugin.PLUGIN_MANUAL:
+      return "PLUGIN_MANUAL";
+    case Plugin.PLUGIN_OTHER:
+      return "PLUGIN_OTHER";
+    case Plugin.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
   }
@@ -142,7 +142,7 @@ export interface Booking {
   id: number;
   userId: number;
   type: BookingType;
-  provider: Provider;
+  plugin: Plugin;
   status: string;
   externalBookingReference: string;
   createdAt: Date | undefined;
@@ -590,7 +590,7 @@ export const HotelOffer: MessageFns<HotelOffer> = {
 };
 
 function createBaseBooking(): Booking {
-  return { id: 0, userId: 0, type: 0, provider: 0, status: "", externalBookingReference: "", createdAt: undefined };
+  return { id: 0, userId: 0, type: 0, plugin: 0, status: "", externalBookingReference: "", createdAt: undefined };
 }
 
 export const Booking: MessageFns<Booking> = {
@@ -604,8 +604,8 @@ export const Booking: MessageFns<Booking> = {
     if (message.type !== 0) {
       writer.uint32(24).int32(message.type);
     }
-    if (message.provider !== 0) {
-      writer.uint32(32).int32(message.provider);
+    if (message.plugin !== 0) {
+      writer.uint32(32).int32(message.plugin);
     }
     if (message.status !== "") {
       writer.uint32(42).string(message.status);
@@ -655,7 +655,7 @@ export const Booking: MessageFns<Booking> = {
             break;
           }
 
-          message.provider = reader.int32() as any;
+          message.plugin = reader.int32() as any;
           continue;
         }
         case 5: {
@@ -696,7 +696,7 @@ export const Booking: MessageFns<Booking> = {
       id: isSet(object.id) ? globalThis.Number(object.id) : 0,
       userId: isSet(object.userId) ? globalThis.Number(object.userId) : 0,
       type: isSet(object.type) ? bookingTypeFromJSON(object.type) : 0,
-      provider: isSet(object.provider) ? providerFromJSON(object.provider) : 0,
+      plugin: isSet(object.plugin) ? pluginFromJSON(object.plugin) : 0,
       status: isSet(object.status) ? globalThis.String(object.status) : "",
       externalBookingReference: isSet(object.externalBookingReference)
         ? globalThis.String(object.externalBookingReference)
@@ -716,8 +716,8 @@ export const Booking: MessageFns<Booking> = {
     if (message.type !== 0) {
       obj.type = bookingTypeToJSON(message.type);
     }
-    if (message.provider !== 0) {
-      obj.provider = providerToJSON(message.provider);
+    if (message.plugin !== 0) {
+      obj.plugin = pluginToJSON(message.plugin);
     }
     if (message.status !== "") {
       obj.status = message.status;
@@ -739,7 +739,7 @@ export const Booking: MessageFns<Booking> = {
     message.id = object.id ?? 0;
     message.userId = object.userId ?? 0;
     message.type = object.type ?? 0;
-    message.provider = object.provider ?? 0;
+    message.plugin = object.plugin ?? 0;
     message.status = object.status ?? "";
     message.externalBookingReference = object.externalBookingReference ?? "";
     message.createdAt = object.createdAt ?? undefined;

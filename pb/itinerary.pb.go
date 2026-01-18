@@ -376,7 +376,7 @@ type Transport struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Id              int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	BookingId       int64                  `protobuf:"varint,2,opt,name=booking_id,json=bookingId,proto3" json:"booking_id,omitempty"`
-	Provider        string                 `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"`
+	Plugin          string                 `protobuf:"bytes,3,opt,name=plugin,proto3" json:"plugin,omitempty"`
 	ReferenceNumber string                 `protobuf:"bytes,4,opt,name=reference_number,json=referenceNumber,proto3" json:"reference_number,omitempty"`
 	Status          string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
 	Type            TransportType          `protobuf:"varint,6,opt,name=type,proto3,enum=travelingman.TransportType" json:"type,omitempty"`
@@ -434,9 +434,9 @@ func (x *Transport) GetBookingId() int64 {
 	return 0
 }
 
-func (x *Transport) GetProvider() string {
+func (x *Transport) GetPlugin() string {
 	if x != nil {
-		return x.Provider
+		return x.Plugin
 	}
 	return ""
 }
@@ -825,12 +825,12 @@ const file_itinerary_proto_rawDesc = "" +
 	"\x11booking_reference\x18\b \x01(\tR\x10bookingReference\x12\x16\n" +
 	"\x06status\x18\t \x01(\tR\x06status\x12\x19\n" +
 	"\buser_ids\x18\n" +
-	" \x03(\x03R\auserIds\"\xec\x02\n" +
+	" \x03(\x03R\auserIds\"\xe8\x02\n" +
 	"\tTransport\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1d\n" +
 	"\n" +
-	"booking_id\x18\x02 \x01(\x03R\tbookingId\x12\x1a\n" +
-	"\bprovider\x18\x03 \x01(\tR\bprovider\x12)\n" +
+	"booking_id\x18\x02 \x01(\x03R\tbookingId\x12\x16\n" +
+	"\x06plugin\x18\x03 \x01(\tR\x06plugin\x12)\n" +
 	"\x10reference_number\x18\x04 \x01(\tR\x0freferenceNumber\x12\x16\n" +
 	"\x06status\x18\x05 \x01(\tR\x06status\x12/\n" +
 	"\x04type\x18\x06 \x01(\x0e2\x1b.travelingman.TransportTypeR\x04type\x12.\n" +
@@ -877,7 +877,7 @@ const file_itinerary_proto_rawDesc = "" +
 	"\x15TRANSPORT_TYPE_FLIGHT\x10\x01\x12\x18\n" +
 	"\x14TRANSPORT_TYPE_TRAIN\x10\x02\x12\x16\n" +
 	"\x12TRANSPORT_TYPE_CAR\x10\x03\x12\x1a\n" +
-	"\x16TRANSPORT_TYPE_WALKING\x10\x04B\x1dZ\x1bexample.com/travelingman/pbb\x06proto3"
+	"\x16TRANSPORT_TYPE_WALKING\x10\x04B#Z!github.com/va6996/travelingman/pbb\x06proto3"
 
 var (
 	file_itinerary_proto_rawDescOnce sync.Once

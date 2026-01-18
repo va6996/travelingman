@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package travelingman;
 
-option go_package = "example.com/travelingman/pb";
+option go_package = "github.com/va6996/travelingman/pb";
 
 import "google/protobuf/timestamp.proto";
 
@@ -40,19 +40,19 @@ enum BookingType {
     BOOKING_TYPE_TRANSPORT = 4;
 }
 
-enum Provider {
-    PROVIDER_UNSPECIFIED = 0;
-    PROVIDER_AMADEUS = 1;
-    PROVIDER_BOOKING_COM = 2;
-    PROVIDER_MANUAL = 3;
-    PROVIDER_OTHER = 4;
+enum Plugin {
+    PLUGIN_UNSPECIFIED = 0;
+    PLUGIN_AMADEUS = 1;
+    PLUGIN_BOOKING_COM = 2;
+    PLUGIN_MANUAL = 3;
+    PLUGIN_OTHER = 4;
 }
 
 message Booking {
     int64 id = 1;
     int64 user_id = 2;
     BookingType type = 3;
-    Provider provider = 4;
+    Plugin plugin = 4;
     string status = 5;
     string external_booking_reference = 6;
     google.protobuf.Timestamp created_at = 7;

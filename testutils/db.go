@@ -42,7 +42,7 @@ func SetupTestDB() (*sql.DB, error) {
 			"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 			"user_id" INTEGER,
 			"type" TEXT,
-			"provider" TEXT,
+			"plugin" TEXT,
 			"status" TEXT,
 			"external_booking_reference" TEXT,
 			"created_at" DATETIME,

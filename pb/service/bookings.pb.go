@@ -383,7 +383,7 @@ const file_service_bookings_proto_rawDesc = "" +
 	"\fpayment_json\x18\x03 \x01(\fR\vpaymentJson\x12\x17\n" +
 	"\auser_id\x18\x04 \x01(\x03R\x06userId\"1\n" +
 	"\x14BookTransferResponse\x12\x19\n" +
-	"\braw_json\x18\x01 \x01(\fR\arawJsonB%Z#example.com/travelingman/pb/serviceb\x06proto3"
+	"\braw_json\x18\x01 \x01(\fR\arawJsonB%Z#github.com/va6996/travelingman/pb/serviceb\x06proto3"
 
 var (
 	file_service_bookings_proto_rawDescOnce sync.Once

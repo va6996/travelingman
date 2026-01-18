@@ -19,3 +19,8 @@ node_modules/
 bin/
 test
 
+# IDE
+.idea
+.vscode
+
+

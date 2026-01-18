@@ -1,0 +1,15 @@
+# Agent Configuration
+ai:
+  # Plugin can be "gemini" or "ollama"
+  plugin: "ollama"
+  
+  gemini:
+    # api_key: "YOUR_KEY_HERE" # Can be set via GEMINI_API_KEY env var
+
+  ollama:
+    model: "llama3.2:3b" # Can be set via OLLAMA_MODEL
+    base_url: "http://localhost:11434"
+
+amadeus:
+  # client_id: "YOUR_ID" # Can be set via AMADEUS_CLIENT_ID
+  # client_secret: "YOUR_SECRET" # Can be set via AMADEUS_CLIENT_SECRET

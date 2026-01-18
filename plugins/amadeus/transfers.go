@@ -1,6 +1,7 @@
 package amadeus
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -109,11 +110,11 @@ type TransferOrderResponse struct {
 // --- Methods ---
 
 // SearchTransfers searches for transfers
-func (c *Client) SearchTransfers(startLocationCode, endLocationCode, startDateTime string, passengers int) (*TransferSearchResponse, error) {
+func (c *Client) SearchTransfers(ctx context.Context, startLocationCode, endLocationCode, startDateTime string, passengers int) (*TransferSearchResponse, error) {
 	endpoint := fmt.Sprintf("/v1/shopping/transfer-offers?startLocationCode=%s&endLocationCode=%s&startDateTime=%s&passengers=%d",
 		startLocationCode, endLocationCode, startDateTime, passengers)
 
-	resp, err := c.doRequest("GET", endpoint, nil)
+	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +133,7 @@ func (c *Client) SearchTransfers(startLocationCode, endLocationCode, startDateTi
 }
 
 // BookTransfer creates a transfer order
-func (c *Client) BookTransfer(offerId string, travelers []TransferTraveler, payment *TransferPayment) (*TransferOrderResponse, error) {
+func (c *Client) BookTransfer(ctx context.Context, offerId string, travelers []TransferTraveler, payment *TransferPayment) (*TransferOrderResponse, error) {
 	reqBody := TransferOrderRequest{}
 	reqBody.Data.Type = "transfer-booking" // Check API spec, usually "transfer-order" or similar, stick to standard guess if undefined
 	// Correction: API spec says "transfer-order" for structure but endpoint is /ordering/transfer-orders
@@ -141,7 +142,7 @@ func (c *Client) BookTransfer(offerId string, travelers []TransferTraveler, paym
 	reqBody.Data.Travelers = travelers
 	reqBody.Data.Payment = payment
 
-	resp, err := c.doRequest("POST", "/v1/ordering/transfer-orders", reqBody)
+	resp, err := c.doRequest(ctx, "POST", "/v1/ordering/transfer-orders", reqBody)
 	if err != nil {
 		return nil, err
 	}

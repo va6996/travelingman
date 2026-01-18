@@ -142,7 +142,7 @@ export interface Accommodation {
 export interface Transport {
   id: number;
   bookingId: number;
-  provider: string;
+  plugin: string;
   referenceNumber: string;
   status: string;
   type: TransportType;
@@ -650,7 +650,7 @@ function createBaseTransport(): Transport {
   return {
     id: 0,
     bookingId: 0,
-    provider: "",
+    plugin: "",
     referenceNumber: "",
     status: "",
     type: 0,
@@ -668,8 +668,8 @@ export const Transport: MessageFns<Transport> = {
     if (message.bookingId !== 0) {
       writer.uint32(16).int64(message.bookingId);
     }
-    if (message.provider !== "") {
-      writer.uint32(26).string(message.provider);
+    if (message.plugin !== "") {
+      writer.uint32(26).string(message.plugin);
     }
     if (message.referenceNumber !== "") {
       writer.uint32(34).string(message.referenceNumber);
@@ -720,7 +720,7 @@ export const Transport: MessageFns<Transport> = {
             break;
           }
 
-          message.provider = reader.string();
+          message.plugin = reader.string();
           continue;
         }
         case 4: {
@@ -784,7 +784,7 @@ export const Transport: MessageFns<Transport> = {
     return {
       id: isSet(object.id) ? globalThis.Number(object.id) : 0,
       bookingId: isSet(object.bookingId) ? globalThis.Number(object.bookingId) : 0,
-      provider: isSet(object.provider) ? globalThis.String(object.provider) : "",
+      plugin: isSet(object.plugin) ? globalThis.String(object.plugin) : "",
       referenceNumber: isSet(object.referenceNumber) ? globalThis.String(object.referenceNumber) : "",
       status: isSet(object.status) ? globalThis.String(object.status) : "",
       type: isSet(object.type) ? transportTypeFromJSON(object.type) : 0,
@@ -802,8 +802,8 @@ export const Transport: MessageFns<Transport> = {
     if (message.bookingId !== 0) {
       obj.bookingId = Math.round(message.bookingId);
     }
-    if (message.provider !== "") {
-      obj.provider = message.provider;
+    if (message.plugin !== "") {
+      obj.plugin = message.plugin;
     }
     if (message.referenceNumber !== "") {
       obj.referenceNumber = message.referenceNumber;
@@ -833,7 +833,7 @@ export const Transport: MessageFns<Transport> = {
     const message = createBaseTransport();
     message.id = object.id ?? 0;
     message.bookingId = object.bookingId ?? 0;
-    message.provider = object.provider ?? "";
+    message.plugin = object.plugin ?? "";
     message.referenceNumber = object.referenceNumber ?? "";
     message.status = object.status ?? "";
     message.type = object.type ?? 0;

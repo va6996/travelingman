@@ -163,7 +163,7 @@ const file_service_groups_proto_rawDesc = "" +
 	"\x0eAddUserRequest\x12\x19\n" +
 	"\bgroup_id\x18\x01 \x01(\x03R\agroupId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12\x12\n" +
-	"\x04role\x18\x03 \x01(\tR\x04roleB%Z#example.com/travelingman/pb/serviceb\x06proto3"
+	"\x04role\x18\x03 \x01(\tR\x04roleB%Z#github.com/va6996/travelingman/pb/serviceb\x06proto3"
 
 var (
 	file_service_groups_proto_rawDescOnce sync.Once

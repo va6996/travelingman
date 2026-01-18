@@ -1,8 +1,8 @@
 # Integration Tests
 
-This directory contains integration tests for all external provider integrations.
+This directory contains integration tests for all external plugin integrations.
 
-## Providers Tested
+## Plugins Tested
 
 1. **Amadeus API** - Flight and hotel booking services
 2. **Google Maps API** - Places, geocoding, and location services
@@ -30,20 +30,20 @@ export GEMINI_API_KEY="your_api_key"
 ### Run All Integration Tests
 
 ```bash
-go test -v -tags=integration ./providers/integration/...
+go test -v -tags=integration ./plugins/integration/...
 ```
 
-### Run Specific Provider Tests
+### Run Specific Plugin Tests
 
 ```bash
 # Amadeus only
-go test -v -tags=integration -run TestAmadeusIntegration ./providers/integration/
+go test -v -tags=integration -run TestAmadeusIntegration ./plugins/integration/
 
 # Google Maps only
-go test -v -tags=integration -run TestGoogleMapsIntegration ./providers/integration/
+go test -v -tags=integration -run TestGoogleMapsIntegration ./plugins/integration/
 
 # Gemini only
-go test -v -tags=integration -run TestGeminiIntegration ./providers/integration/
+go test -v -tags=integration -run TestGeminiIntegration ./plugins/integration/
 ```
 
 ### Using Make
@@ -53,7 +53,7 @@ Add to your Makefile:
 ```makefile
 test-integration:
 	@echo "Running integration tests..."
-	go test -v -tags=integration ./providers/integration/...
+	go test -v -tags=integration ./plugins/integration/...
 ```
 
 Then run:
@@ -94,6 +94,6 @@ Example GitHub Actions:
     AMADEUS_CLIENT_SECRET: ${{ secrets.AMADEUS_CLIENT_SECRET }}
     GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
     GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-  run: go test -v -tags=integration ./providers/integration/...
+  run: go test -v -tags=integration ./plugins/integration/...
 ```
 

@@ -51,7 +51,7 @@ test:
 # Run integration tests
 test-integration:
 	@echo "Running integration tests..."
-	@go test -v -tags=integration ./providers/integration/...
+	@go test -v -tags=integration ./plugins/integration/...
 
 # Clean up generated files and binary
 clean:

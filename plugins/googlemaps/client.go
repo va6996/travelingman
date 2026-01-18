@@ -16,9 +16,6 @@ type Client struct {
 // NewClient creates a new Google Maps API client
 // Returns an error if the client cannot be initialized
 func NewClient(apiKey string) (*Client, error) {
-	if apiKey == "" {
-		return nil, fmt.Errorf("API key is required")
-	}
 
 	c, err := maps.NewClient(maps.WithAPIKey(apiKey))
 	if err != nil {

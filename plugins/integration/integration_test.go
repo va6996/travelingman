@@ -4,16 +4,17 @@
 package integration
 
 import (
+	"context"
 	"os"
 	"testing"
 
-	"example.com/travelingman/providers/amadeus"
-	"example.com/travelingman/providers/gemini"
-	"example.com/travelingman/providers/googlemaps"
+	"github.com/va6996/travelingman/plugins/amadeus"
+	"github.com/va6996/travelingman/plugins/gemini"
+	"github.com/va6996/travelingman/plugins/googlemaps"
 )
 
-// TestAllProviders runs integration tests for all providers
-func TestAllProviders(t *testing.T) {
+// TestAllPlugins runs integration tests for all plugins
+func TestAllPlugins(t *testing.T) {
 	t.Run("Amadeus", func(t *testing.T) {
 		TestAmadeusIntegration(t)
 	})
@@ -36,7 +37,8 @@ func TestAmadeusIntegration(t *testing.T) {
 	}
 	isProduction := os.Getenv("AMADEUS_PRODUCTION") == "true"
 
-	client, err := amadeus.NewClient(clientID, clientSecret, isProduction)
+	// Pass nil for genkit and registry as we are testing the client in isolation
+	client, err := amadeus.NewClient(clientID, clientSecret, isProduction, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to initialize Amadeus client: %v", err)
 	}
@@ -188,7 +190,7 @@ func TestGeminiIntegration(t *testing.T) {
 	// Test Content Generation
 	t.Run("GenerateContent", func(t *testing.T) {
 		prompt := "Say 'Hello, World!' in exactly 3 words."
-		response, err := client.GenerateContent(prompt)
+		response, err := client.GenerateContent(context.Background(), prompt)
 		if err != nil {
 			t.Fatalf("Content generation failed: %v", err)
 		}
@@ -202,7 +204,7 @@ func TestGeminiIntegration(t *testing.T) {
 	// Test Complex Prompt
 	t.Run("ComplexPrompt", func(t *testing.T) {
 		prompt := "What are the top 3 travel destinations in Europe? List them in a numbered format."
-		response, err := client.GenerateContent(prompt)
+		response, err := client.GenerateContent(context.Background(), prompt)
 		if err != nil {
 			t.Fatalf("Complex content generation failed: %v", err)
 		}

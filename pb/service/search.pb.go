@@ -414,7 +414,7 @@ const file_service_search_proto_rawDesc = "" +
 	"passengers\x18\x04 \x01(\x05R\n" +
 	"passengers\"3\n" +
 	"\x16SearchTransferResponse\x12\x19\n" +
-	"\braw_json\x18\x01 \x01(\fR\arawJsonB%Z#example.com/travelingman/pb/serviceb\x06proto3"
+	"\braw_json\x18\x01 \x01(\fR\arawJsonB%Z#github.com/va6996/travelingman/pb/serviceb\x06proto3"
 
 var (
 	file_service_search_proto_rawDescOnce sync.Once

@@ -3,7 +3,7 @@ package orm
 import (
 	"time"
 
-	"example.com/travelingman/pb"
+	"github.com/va6996/travelingman/pb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/gorm"
 )
@@ -12,7 +12,7 @@ type Transport struct {
 	ID              uint `gorm:"primaryKey"`
 	ItineraryID     uint // FK
 	BookingID       int64
-	Provider        string
+	Plugin          string
 	ReferenceNumber string
 	Status          string
 	Type            int32 // Enum
@@ -63,7 +63,7 @@ func (t *Transport) ToPB() *pb.Transport {
 	pbTrans := &pb.Transport{
 		Id:              int64(t.ID),
 		BookingId:       t.BookingID,
-		Provider:        t.Provider,
+		Plugin:          t.Plugin,
 		ReferenceNumber: t.ReferenceNumber,
 		Status:          t.Status,
 		Type:            pb.TransportType(t.Type),
@@ -85,7 +85,7 @@ func TransportFromPB(p *pb.Transport) *Transport {
 	t := &Transport{
 		ID:              uint(p.Id),
 		BookingID:       p.BookingId,
-		Provider:        p.Provider,
+		Plugin:          p.Plugin,
 		ReferenceNumber: p.ReferenceNumber,
 		Status:          p.Status,
 		Type:            int32(p.Type),

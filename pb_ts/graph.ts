@@ -18,24 +18,20 @@ export const protobufPackage = "travelingman";
 export interface Node {
   /** Unique identifier for the node */
   id: string;
-  /** Location from TripDay.location, Place.name/address, or Accommodation.name/address */
+  /** Name or address of the location */
   location: string;
-  /** When user arrives at this location (from incoming edge or TripDay.date/Place.visit_time) */
+  /** Arrival time at this node */
   fromTimestamp:
     | Date
     | undefined;
-  /** When user departs from this location (from outgoing edge or Accommodation.check_out) */
+  /** Departure time from this node */
   toTimestamp:
     | Date
     | undefined;
-  /** Hotel/accommodation info (from Accommodation) - contains full struct, no need for ID */
-  stay:
-    | Accommodation
-    | undefined;
-  /** True if this is an inter-city node */
+  /** Whether this node represents an inter-city travel point */
   isInterCity: boolean;
-  /** For intra-city details (contains Places) */
-  subGraph: Graph | undefined;
+  /** Hotel/accommodation info (from Accommodation) */
+  stay: Accommodation | undefined;
 }
 
 /**
@@ -47,7 +43,7 @@ export interface Edge {
   fromId: string;
   /** ID of the destination node */
   toId: string;
-  /** Duration in seconds (calculated from departure_time and arrival_time) */
+  /** Duration of travel in seconds */
   durationSeconds: number;
   /** Full Transport struct from Transport */
   transport: Transport | undefined;
@@ -59,6 +55,8 @@ export interface Graph {
   nodes: Node[];
   /** List of edges in the graph */
   edges: Edge[];
+  /** For intra-city details (contains Places) */
+  subGraph: Graph | undefined;
 }
 
 function createBaseNode(): Node {
@@ -67,9 +65,8 @@ function createBaseNode(): Node {
     location: "",
     fromTimestamp: undefined,
     toTimestamp: undefined,
-    stay: undefined,
     isInterCity: false,
-    subGraph: undefined,
+    stay: undefined,
   };
 }
 
@@ -87,14 +84,11 @@ export const Node: MessageFns<Node> = {
     if (message.toTimestamp !== undefined) {
       Timestamp.encode(toTimestamp(message.toTimestamp), writer.uint32(34).fork()).join();
     }
-    if (message.stay !== undefined) {
-      Accommodation.encode(message.stay, writer.uint32(42).fork()).join();
-    }
     if (message.isInterCity !== false) {
-      writer.uint32(48).bool(message.isInterCity);
+      writer.uint32(40).bool(message.isInterCity);
     }
-    if (message.subGraph !== undefined) {
-      Graph.encode(message.subGraph, writer.uint32(58).fork()).join();
+    if (message.stay !== undefined) {
+      Accommodation.encode(message.stay, writer.uint32(50).fork()).join();
     }
     return writer;
   },
@@ -139,27 +133,19 @@ export const Node: MessageFns<Node> = {
           continue;
         }
         case 5: {
-          if (tag !== 42) {
-            break;
-          }
-
-          message.stay = Accommodation.decode(reader, reader.uint32());
-          continue;
-        }
-        case 6: {
-          if (tag !== 48) {
+          if (tag !== 40) {
             break;
           }
 
           message.isInterCity = reader.bool();
           continue;
         }
-        case 7: {
-          if (tag !== 58) {
+        case 6: {
+          if (tag !== 50) {
             break;
           }
 
-          message.subGraph = Graph.decode(reader, reader.uint32());
+          message.stay = Accommodation.decode(reader, reader.uint32());
           continue;
         }
       }
@@ -177,9 +163,8 @@ export const Node: MessageFns<Node> = {
       location: isSet(object.location) ? globalThis.String(object.location) : "",
       fromTimestamp: isSet(object.fromTimestamp) ? fromJsonTimestamp(object.fromTimestamp) : undefined,
       toTimestamp: isSet(object.toTimestamp) ? fromJsonTimestamp(object.toTimestamp) : undefined,
-      stay: isSet(object.stay) ? Accommodation.fromJSON(object.stay) : undefined,
       isInterCity: isSet(object.isInterCity) ? globalThis.Boolean(object.isInterCity) : false,
-      subGraph: isSet(object.subGraph) ? Graph.fromJSON(object.subGraph) : undefined,
+      stay: isSet(object.stay) ? Accommodation.fromJSON(object.stay) : undefined,
     };
   },
 
@@ -197,14 +182,11 @@ export const Node: MessageFns<Node> = {
     if (message.toTimestamp !== undefined) {
       obj.toTimestamp = message.toTimestamp.toISOString();
     }
-    if (message.stay !== undefined) {
-      obj.stay = Accommodation.toJSON(message.stay);
-    }
     if (message.isInterCity !== false) {
       obj.isInterCity = message.isInterCity;
     }
-    if (message.subGraph !== undefined) {
-      obj.subGraph = Graph.toJSON(message.subGraph);
+    if (message.stay !== undefined) {
+      obj.stay = Accommodation.toJSON(message.stay);
     }
     return obj;
   },
@@ -218,12 +200,9 @@ export const Node: MessageFns<Node> = {
     message.location = object.location ?? "";
     message.fromTimestamp = object.fromTimestamp ?? undefined;
     message.toTimestamp = object.toTimestamp ?? undefined;
+    message.isInterCity = object.isInterCity ?? false;
     message.stay = (object.stay !== undefined && object.stay !== null)
       ? Accommodation.fromPartial(object.stay)
-      : undefined;
-    message.isInterCity = object.isInterCity ?? false;
-    message.subGraph = (object.subGraph !== undefined && object.subGraph !== null)
-      ? Graph.fromPartial(object.subGraph)
       : undefined;
     return message;
   },
@@ -340,7 +319,7 @@ export const Edge: MessageFns<Edge> = {
 };
 
 function createBaseGraph(): Graph {
-  return { nodes: [], edges: [] };
+  return { nodes: [], edges: [], subGraph: undefined };
 }
 
 export const Graph: MessageFns<Graph> = {
@@ -350,6 +329,9 @@ export const Graph: MessageFns<Graph> = {
     }
     for (const v of message.edges) {
       Edge.encode(v!, writer.uint32(18).fork()).join();
+    }
+    if (message.subGraph !== undefined) {
+      Graph.encode(message.subGraph, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -377,6 +359,14 @@ export const Graph: MessageFns<Graph> = {
           message.edges.push(Edge.decode(reader, reader.uint32()));
           continue;
         }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.subGraph = Graph.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -390,6 +380,7 @@ export const Graph: MessageFns<Graph> = {
     return {
       nodes: globalThis.Array.isArray(object?.nodes) ? object.nodes.map((e: any) => Node.fromJSON(e)) : [],
       edges: globalThis.Array.isArray(object?.edges) ? object.edges.map((e: any) => Edge.fromJSON(e)) : [],
+      subGraph: isSet(object.subGraph) ? Graph.fromJSON(object.subGraph) : undefined,
     };
   },
 
@@ -401,6 +392,9 @@ export const Graph: MessageFns<Graph> = {
     if (message.edges?.length) {
       obj.edges = message.edges.map((e) => Edge.toJSON(e));
     }
+    if (message.subGraph !== undefined) {
+      obj.subGraph = Graph.toJSON(message.subGraph);
+    }
     return obj;
   },
 
@@ -411,6 +405,9 @@ export const Graph: MessageFns<Graph> = {
     const message = createBaseGraph();
     message.nodes = object.nodes?.map((e) => Node.fromPartial(e)) || [];
     message.edges = object.edges?.map((e) => Edge.fromPartial(e)) || [];
+    message.subGraph = (object.subGraph !== undefined && object.subGraph !== null)
+      ? Graph.fromPartial(object.subGraph)
+      : undefined;
     return message;
   },
 };

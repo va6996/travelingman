@@ -2,11 +2,15 @@ package amadeus
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/va6996/travelingman/tools"
+	"github.com/firebase/genkit/go/genkit"
 )
 
 const (
@@ -21,6 +25,8 @@ type Client struct {
 	BaseURL      string
 	HTTPClient   *http.Client
 	Token        *AuthToken
+	FlightTool   *FlightTool
+	HotelTool    *HotelTool
 }
 
 // AuthToken represents the OAuth2 token response
@@ -33,25 +39,25 @@ type AuthToken struct {
 
 // NewClient creates a new Amadeus client
 // Returns an error if the client cannot be initialized
-func NewClient(clientID, clientSecret string, isProduction bool) (*Client, error) {
-	if clientID == "" {
-		return nil, fmt.Errorf("client ID is required")
-	}
-	if clientSecret == "" {
-		return nil, fmt.Errorf("client secret is required")
-	}
+func NewClient(clientID, clientSecret string, isProduction bool, gk *genkit.Genkit, registry *tools.Registry) (*Client, error) {
 
 	baseURL := BaseURLTest
 	if isProduction {
 		baseURL = BaseURLProduction
 	}
 
-	return &Client{
+	c := &Client{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		BaseURL:      baseURL,
 		HTTPClient:   &http.Client{Timeout: 30 * time.Second},
-	}, nil
+	}
+
+	// Initialize tools
+	c.FlightTool = NewFlightTool(c, gk, registry)
+	c.HotelTool = NewHotelTool(c, gk, registry)
+
+	return c, nil
 }
 
 // Authenticate obtains a new access token
@@ -91,7 +97,7 @@ func (c *Client) Authenticate() error {
 }
 
 // doRequest performs an authenticated HTTP request
-func (c *Client) doRequest(method, endpoint string, body interface{}) (*http.Response, error) {
+func (c *Client) doRequest(ctx context.Context, method, endpoint string, body interface{}) (*http.Response, error) {
 	if c.Token == nil || time.Now().After(c.Token.Expiry) {
 		if err := c.Authenticate(); err != nil {
 			return nil, fmt.Errorf("failed to refresh token: %w", err)
@@ -108,7 +114,7 @@ func (c *Client) doRequest(method, endpoint string, body interface{}) (*http.Res
 	}
 
 	url := c.BaseURL + endpoint
-	req, err := http.NewRequest(method, url, bytes.NewBuffer(reqBody))
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, err
 	}

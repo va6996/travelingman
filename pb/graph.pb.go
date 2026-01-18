@@ -27,12 +27,11 @@ const (
 type Node struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                            // Unique identifier for the node
-	Location      string                 `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`                                // Location from TripDay.location, Place.name/address, or Accommodation.name/address
-	FromTimestamp *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=from_timestamp,json=fromTimestamp,proto3" json:"from_timestamp,omitempty"` // When user arrives at this location (from incoming edge or TripDay.date/Place.visit_time)
-	ToTimestamp   *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=to_timestamp,json=toTimestamp,proto3" json:"to_timestamp,omitempty"`       // When user departs from this location (from outgoing edge or Accommodation.check_out)
-	Stay          *Accommodation         `protobuf:"bytes,5,opt,name=stay,proto3" json:"stay,omitempty"`                                        // Hotel/accommodation info (from Accommodation) - contains full struct, no need for ID
-	IsInterCity   bool                   `protobuf:"varint,6,opt,name=is_inter_city,json=isInterCity,proto3" json:"is_inter_city,omitempty"`    // True if this is an inter-city node
-	SubGraph      *Graph                 `protobuf:"bytes,7,opt,name=sub_graph,json=subGraph,proto3" json:"sub_graph,omitempty"`                // For intra-city details (contains Places)
+	Location      string                 `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`                                // Name or address of the location
+	FromTimestamp *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=from_timestamp,json=fromTimestamp,proto3" json:"from_timestamp,omitempty"` // Arrival time at this node
+	ToTimestamp   *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=to_timestamp,json=toTimestamp,proto3" json:"to_timestamp,omitempty"`       // Departure time from this node
+	IsInterCity   bool                   `protobuf:"varint,5,opt,name=is_inter_city,json=isInterCity,proto3" json:"is_inter_city,omitempty"`    // Whether this node represents an inter-city travel point
+	Stay          *Accommodation         `protobuf:"bytes,6,opt,name=stay,proto3" json:"stay,omitempty"`                                        // Hotel/accommodation info (from Accommodation)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -95,13 +94,6 @@ func (x *Node) GetToTimestamp() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *Node) GetStay() *Accommodation {
-	if x != nil {
-		return x.Stay
-	}
-	return nil
-}
-
 func (x *Node) GetIsInterCity() bool {
 	if x != nil {
 		return x.IsInterCity
@@ -109,9 +101,9 @@ func (x *Node) GetIsInterCity() bool {
 	return false
 }
 
-func (x *Node) GetSubGraph() *Graph {
+func (x *Node) GetStay() *Accommodation {
 	if x != nil {
-		return x.SubGraph
+		return x.Stay
 	}
 	return nil
 }
@@ -122,7 +114,7 @@ type Edge struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	FromId          string                 `protobuf:"bytes,1,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`                             // ID of the source node
 	ToId            string                 `protobuf:"bytes,2,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`                                   // ID of the destination node
-	DurationSeconds int64                  `protobuf:"varint,3,opt,name=duration_seconds,json=durationSeconds,proto3" json:"duration_seconds,omitempty"` // Duration in seconds (calculated from departure_time and arrival_time)
+	DurationSeconds int64                  `protobuf:"varint,3,opt,name=duration_seconds,json=durationSeconds,proto3" json:"duration_seconds,omitempty"` // Duration of travel in seconds
 	Transport       *Transport             `protobuf:"bytes,4,opt,name=transport,proto3" json:"transport,omitempty"`                                     // Full Transport struct from Transport
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
@@ -189,8 +181,9 @@ func (x *Edge) GetTransport() *Transport {
 // Graph represents the complete graph structure of a user's itinerary
 type Graph struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Nodes         []*Node                `protobuf:"bytes,1,rep,name=nodes,proto3" json:"nodes,omitempty"` // List of nodes in the graph
-	Edges         []*Edge                `protobuf:"bytes,2,rep,name=edges,proto3" json:"edges,omitempty"` // List of edges in the graph
+	Nodes         []*Node                `protobuf:"bytes,1,rep,name=nodes,proto3" json:"nodes,omitempty"`                       // List of nodes in the graph
+	Edges         []*Edge                `protobuf:"bytes,2,rep,name=edges,proto3" json:"edges,omitempty"`                       // List of edges in the graph
+	SubGraph      *Graph                 `protobuf:"bytes,3,opt,name=sub_graph,json=subGraph,proto3" json:"sub_graph,omitempty"` // For intra-city details (contains Places)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -239,27 +232,34 @@ func (x *Graph) GetEdges() []*Edge {
 	return nil
 }
 
+func (x *Graph) GetSubGraph() *Graph {
+	if x != nil {
+		return x.SubGraph
+	}
+	return nil
+}
+
 var File_graph_proto protoreflect.FileDescriptor
 
 const file_graph_proto_rawDesc = "" +
 	"\n" +
-	"\vgraph.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fitinerary.proto\"\xbb\x02\n" +
+	"\vgraph.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fitinerary.proto\"\x89\x02\n" +
 	"\x04Node\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\blocation\x18\x02 \x01(\tR\blocation\x12A\n" +
 	"\x0efrom_timestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\rfromTimestamp\x12=\n" +
-	"\fto_timestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vtoTimestamp\x12/\n" +
-	"\x04stay\x18\x05 \x01(\v2\x1b.travelingman.AccommodationR\x04stay\x12\"\n" +
-	"\ris_inter_city\x18\x06 \x01(\bR\visInterCity\x120\n" +
-	"\tsub_graph\x18\a \x01(\v2\x13.travelingman.GraphR\bsubGraph\"\x96\x01\n" +
+	"\fto_timestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vtoTimestamp\x12\"\n" +
+	"\ris_inter_city\x18\x05 \x01(\bR\visInterCity\x12/\n" +
+	"\x04stay\x18\x06 \x01(\v2\x1b.travelingman.AccommodationR\x04stay\"\x96\x01\n" +
 	"\x04Edge\x12\x17\n" +
 	"\afrom_id\x18\x01 \x01(\tR\x06fromId\x12\x13\n" +
 	"\x05to_id\x18\x02 \x01(\tR\x04toId\x12)\n" +
 	"\x10duration_seconds\x18\x03 \x01(\x03R\x0fdurationSeconds\x125\n" +
-	"\ttransport\x18\x04 \x01(\v2\x17.travelingman.TransportR\ttransport\"[\n" +
+	"\ttransport\x18\x04 \x01(\v2\x17.travelingman.TransportR\ttransport\"\x8d\x01\n" +
 	"\x05Graph\x12(\n" +
 	"\x05nodes\x18\x01 \x03(\v2\x12.travelingman.NodeR\x05nodes\x12(\n" +
-	"\x05edges\x18\x02 \x03(\v2\x12.travelingman.EdgeR\x05edgesB\x1dZ\x1bexample.com/travelingman/pbb\x06proto3"
+	"\x05edges\x18\x02 \x03(\v2\x12.travelingman.EdgeR\x05edges\x120\n" +
+	"\tsub_graph\x18\x03 \x01(\v2\x13.travelingman.GraphR\bsubGraphB#Z!github.com/va6996/travelingman/pbb\x06proto3"
 
 var (
 	file_graph_proto_rawDescOnce sync.Once
@@ -286,10 +286,10 @@ var file_graph_proto_depIdxs = []int32{
 	3, // 0: travelingman.Node.from_timestamp:type_name -> google.protobuf.Timestamp
 	3, // 1: travelingman.Node.to_timestamp:type_name -> google.protobuf.Timestamp
 	4, // 2: travelingman.Node.stay:type_name -> travelingman.Accommodation
-	2, // 3: travelingman.Node.sub_graph:type_name -> travelingman.Graph
-	5, // 4: travelingman.Edge.transport:type_name -> travelingman.Transport
-	0, // 5: travelingman.Graph.nodes:type_name -> travelingman.Node
-	1, // 6: travelingman.Graph.edges:type_name -> travelingman.Edge
+	5, // 3: travelingman.Edge.transport:type_name -> travelingman.Transport
+	0, // 4: travelingman.Graph.nodes:type_name -> travelingman.Node
+	1, // 5: travelingman.Graph.edges:type_name -> travelingman.Edge
+	2, // 6: travelingman.Graph.sub_graph:type_name -> travelingman.Graph
 	7, // [7:7] is the sub-list for method output_type
 	7, // [7:7] is the sub-list for method input_type
 	7, // [7:7] is the sub-list for extension type_name

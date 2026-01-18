@@ -11,7 +11,7 @@ func TestNewClient(t *testing.T) {
 		client, err := NewClient("")
 		assert.Error(t, err)
 		assert.Nil(t, client)
-		assert.Contains(t, err.Error(), "API key is required")
+		assert.Contains(t, err.Error(), "API Key or Maps for Work credentials missing")
 	})
 
 	t.Run("ValidAPIKey", func(t *testing.T) {

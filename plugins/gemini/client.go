@@ -4,14 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/va6996/travelingman/plugins"
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
 )
-
-// Provider defines the interface for generative AI models
-type Provider interface {
-	GenerateContent(prompt string) (string, error)
-}
 
 // Client handles Gemini API requests using the official SDK
 type Client struct {
@@ -20,8 +16,8 @@ type Client struct {
 	ctx    context.Context
 }
 
-// Ensure Client satisfies Provider
-var _ Provider = (*Client)(nil)
+// Ensure Client satisfies LLMClient
+var _ plugins.LLMClient = (*Client)(nil)
 
 // NewClient creates a new Gemini API client
 // Returns an error if the client cannot be initialized
@@ -44,7 +40,7 @@ func NewClient(apiKey string) (*Client, error) {
 }
 
 // GenerateContent sends a prompt to Gemini and returns the response
-func (c *Client) GenerateContent(prompt string) (string, error) {
+func (c *Client) GenerateContent(ctx context.Context, prompt string) (string, error) {
 	if c.client == nil {
 		return "", fmt.Errorf("client not initialized")
 	}
@@ -55,7 +51,7 @@ func (c *Client) GenerateContent(prompt string) (string, error) {
 	model := c.client.GenerativeModel(modelName)
 
 	// Generate content
-	resp, err := model.GenerateContent(c.ctx, genai.Text(prompt))
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
 		return "", fmt.Errorf("failed to generate content: %w", err)
 	}

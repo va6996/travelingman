@@ -24,7 +24,7 @@ var File_common_proto protoreflect.FileDescriptor
 
 const file_common_proto_rawDesc = "" +
 	"\n" +
-	"\fcommon.proto\x12\ftravelingmanB\x1dZ\x1bexample.com/travelingman/pbb\x06proto3"
+	"\fcommon.proto\x12\ftravelingmanB#Z!github.com/va6996/travelingman/pbb\x06proto3"
 
 var file_common_proto_goTypes = []any{}
 var file_common_proto_depIdxs = []int32{

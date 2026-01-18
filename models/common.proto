@@ -2,5 +2,5 @@ syntax = "proto3";
 
 package travelingman;
 
-option go_package = "example.com/travelingman/pb";
+option go_package = "github.com/va6996/travelingman/pb";
 
