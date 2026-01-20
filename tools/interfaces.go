@@ -13,3 +13,8 @@ type Tool interface {
 	// Execute runs the tool with the given arguments
 	Execute(ctx context.Context, args map[string]interface{}) (interface{}, error)
 }
+
+// LLMClient defines the interface for LLM interaction
+type LLMClient interface {
+	GenerateContent(ctx context.Context, prompt string) (string, error)
+}

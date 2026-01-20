@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v5.29.2
-// source: bookings.proto
+// source: protos/bookings.proto
 
 package pb
 
@@ -61,11 +61,11 @@ func (x BookingType) String() string {
 }
 
 func (BookingType) Descriptor() protoreflect.EnumDescriptor {
-	return file_bookings_proto_enumTypes[0].Descriptor()
+	return file_protos_bookings_proto_enumTypes[0].Descriptor()
 }
 
 func (BookingType) Type() protoreflect.EnumType {
-	return &file_bookings_proto_enumTypes[0]
+	return &file_protos_bookings_proto_enumTypes[0]
 }
 
 func (x BookingType) Number() protoreflect.EnumNumber {
@@ -74,7 +74,7 @@ func (x BookingType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use BookingType.Descriptor instead.
 func (BookingType) EnumDescriptor() ([]byte, []int) {
-	return file_bookings_proto_rawDescGZIP(), []int{0}
+	return file_protos_bookings_proto_rawDescGZIP(), []int{0}
 }
 
 type Plugin int32
@@ -116,11 +116,11 @@ func (x Plugin) String() string {
 }
 
 func (Plugin) Descriptor() protoreflect.EnumDescriptor {
-	return file_bookings_proto_enumTypes[1].Descriptor()
+	return file_protos_bookings_proto_enumTypes[1].Descriptor()
 }
 
 func (Plugin) Type() protoreflect.EnumType {
-	return &file_bookings_proto_enumTypes[1]
+	return &file_protos_bookings_proto_enumTypes[1]
 }
 
 func (x Plugin) Number() protoreflect.EnumNumber {
@@ -129,7 +129,7 @@ func (x Plugin) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Plugin.Descriptor instead.
 func (Plugin) EnumDescriptor() ([]byte, []int) {
-	return file_bookings_proto_rawDescGZIP(), []int{1}
+	return file_protos_bookings_proto_rawDescGZIP(), []int{1}
 }
 
 type FlightOffer struct {
@@ -152,7 +152,7 @@ type FlightOffer struct {
 
 func (x *FlightOffer) Reset() {
 	*x = FlightOffer{}
-	mi := &file_bookings_proto_msgTypes[0]
+	mi := &file_protos_bookings_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -164,7 +164,7 @@ func (x *FlightOffer) String() string {
 func (*FlightOffer) ProtoMessage() {}
 
 func (x *FlightOffer) ProtoReflect() protoreflect.Message {
-	mi := &file_bookings_proto_msgTypes[0]
+	mi := &file_protos_bookings_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -177,7 +177,7 @@ func (x *FlightOffer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FlightOffer.ProtoReflect.Descriptor instead.
 func (*FlightOffer) Descriptor() ([]byte, []int) {
-	return file_bookings_proto_rawDescGZIP(), []int{0}
+	return file_protos_bookings_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *FlightOffer) GetId() int64 {
@@ -280,7 +280,7 @@ type HotelOffer struct {
 
 func (x *HotelOffer) Reset() {
 	*x = HotelOffer{}
-	mi := &file_bookings_proto_msgTypes[1]
+	mi := &file_protos_bookings_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -292,7 +292,7 @@ func (x *HotelOffer) String() string {
 func (*HotelOffer) ProtoMessage() {}
 
 func (x *HotelOffer) ProtoReflect() protoreflect.Message {
-	mi := &file_bookings_proto_msgTypes[1]
+	mi := &file_protos_bookings_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -305,7 +305,7 @@ func (x *HotelOffer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HotelOffer.ProtoReflect.Descriptor instead.
 func (*HotelOffer) Descriptor() ([]byte, []int) {
-	return file_bookings_proto_rawDescGZIP(), []int{1}
+	return file_protos_bookings_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *HotelOffer) GetId() int64 {
@@ -379,7 +379,7 @@ type Booking struct {
 
 func (x *Booking) Reset() {
 	*x = Booking{}
-	mi := &file_bookings_proto_msgTypes[2]
+	mi := &file_protos_bookings_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -391,7 +391,7 @@ func (x *Booking) String() string {
 func (*Booking) ProtoMessage() {}
 
 func (x *Booking) ProtoReflect() protoreflect.Message {
-	mi := &file_bookings_proto_msgTypes[2]
+	mi := &file_protos_bookings_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -404,7 +404,7 @@ func (x *Booking) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Booking.ProtoReflect.Descriptor instead.
 func (*Booking) Descriptor() ([]byte, []int) {
-	return file_bookings_proto_rawDescGZIP(), []int{2}
+	return file_protos_bookings_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Booking) GetId() int64 {
@@ -472,7 +472,7 @@ type Payment struct {
 
 func (x *Payment) Reset() {
 	*x = Payment{}
-	mi := &file_bookings_proto_msgTypes[3]
+	mi := &file_protos_bookings_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -484,7 +484,7 @@ func (x *Payment) String() string {
 func (*Payment) ProtoMessage() {}
 
 func (x *Payment) ProtoReflect() protoreflect.Message {
-	mi := &file_bookings_proto_msgTypes[3]
+	mi := &file_protos_bookings_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -497,7 +497,7 @@ func (x *Payment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Payment.ProtoReflect.Descriptor instead.
 func (*Payment) Descriptor() ([]byte, []int) {
-	return file_bookings_proto_rawDescGZIP(), []int{3}
+	return file_protos_bookings_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Payment) GetId() int64 {
@@ -556,11 +556,11 @@ func (x *Payment) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-var File_bookings_proto protoreflect.FileDescriptor
+var File_protos_bookings_proto protoreflect.FileDescriptor
 
-const file_bookings_proto_rawDesc = "" +
+const file_protos_bookings_proto_rawDesc = "" +
 	"\n" +
-	"\x0ebookings.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\"\xda\x03\n" +
+	"\x15protos/bookings.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\"\xda\x03\n" +
 	"\vFlightOffer\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\x03R\agroupId\x12(\n" +
@@ -622,20 +622,20 @@ const file_bookings_proto_rawDesc = "" +
 	"\fPLUGIN_OTHER\x10\x04B#Z!github.com/va6996/travelingman/pbb\x06proto3"
 
 var (
-	file_bookings_proto_rawDescOnce sync.Once
-	file_bookings_proto_rawDescData []byte
+	file_protos_bookings_proto_rawDescOnce sync.Once
+	file_protos_bookings_proto_rawDescData []byte
 )
 
-func file_bookings_proto_rawDescGZIP() []byte {
-	file_bookings_proto_rawDescOnce.Do(func() {
-		file_bookings_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_bookings_proto_rawDesc), len(file_bookings_proto_rawDesc)))
+func file_protos_bookings_proto_rawDescGZIP() []byte {
+	file_protos_bookings_proto_rawDescOnce.Do(func() {
+		file_protos_bookings_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_protos_bookings_proto_rawDesc), len(file_protos_bookings_proto_rawDesc)))
 	})
-	return file_bookings_proto_rawDescData
+	return file_protos_bookings_proto_rawDescData
 }
 
-var file_bookings_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_bookings_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_bookings_proto_goTypes = []any{
+var file_protos_bookings_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_protos_bookings_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_protos_bookings_proto_goTypes = []any{
 	(BookingType)(0),              // 0: travelingman.BookingType
 	(Plugin)(0),                   // 1: travelingman.Plugin
 	(*FlightOffer)(nil),           // 2: travelingman.FlightOffer
@@ -644,7 +644,7 @@ var file_bookings_proto_goTypes = []any{
 	(*Payment)(nil),               // 5: travelingman.Payment
 	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
 }
-var file_bookings_proto_depIdxs = []int32{
+var file_protos_bookings_proto_depIdxs = []int32{
 	6, // 0: travelingman.FlightOffer.departure_time:type_name -> google.protobuf.Timestamp
 	6, // 1: travelingman.FlightOffer.arrival_time:type_name -> google.protobuf.Timestamp
 	6, // 2: travelingman.HotelOffer.check_in:type_name -> google.protobuf.Timestamp
@@ -660,27 +660,27 @@ var file_bookings_proto_depIdxs = []int32{
 	0, // [0:8] is the sub-list for field type_name
 }
 
-func init() { file_bookings_proto_init() }
-func file_bookings_proto_init() {
-	if File_bookings_proto != nil {
+func init() { file_protos_bookings_proto_init() }
+func file_protos_bookings_proto_init() {
+	if File_protos_bookings_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_bookings_proto_rawDesc), len(file_bookings_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protos_bookings_proto_rawDesc), len(file_protos_bookings_proto_rawDesc)),
 			NumEnums:      2,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_bookings_proto_goTypes,
-		DependencyIndexes: file_bookings_proto_depIdxs,
-		EnumInfos:         file_bookings_proto_enumTypes,
-		MessageInfos:      file_bookings_proto_msgTypes,
+		GoTypes:           file_protos_bookings_proto_goTypes,
+		DependencyIndexes: file_protos_bookings_proto_depIdxs,
+		EnumInfos:         file_protos_bookings_proto_enumTypes,
+		MessageInfos:      file_protos_bookings_proto_msgTypes,
 	}.Build()
-	File_bookings_proto = out.File
-	file_bookings_proto_goTypes = nil
-	file_bookings_proto_depIdxs = nil
+	File_protos_bookings_proto = out.File
+	file_protos_bookings_proto_goTypes = nil
+	file_protos_bookings_proto_depIdxs = nil
 }

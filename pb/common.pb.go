@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v5.29.2
-// source: common.proto
+// source: protos/common.proto
 
 package pb
 
@@ -20,14 +20,14 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-var File_common_proto protoreflect.FileDescriptor
+var File_protos_common_proto protoreflect.FileDescriptor
 
-const file_common_proto_rawDesc = "" +
+const file_protos_common_proto_rawDesc = "" +
 	"\n" +
-	"\fcommon.proto\x12\ftravelingmanB#Z!github.com/va6996/travelingman/pbb\x06proto3"
+	"\x13protos/common.proto\x12\ftravelingmanB#Z!github.com/va6996/travelingman/pbb\x06proto3"
 
-var file_common_proto_goTypes = []any{}
-var file_common_proto_depIdxs = []int32{
+var file_protos_common_proto_goTypes = []any{}
+var file_protos_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
 	0, // [0:0] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -35,25 +35,25 @@ var file_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_common_proto_init() }
-func file_common_proto_init() {
-	if File_common_proto != nil {
+func init() { file_protos_common_proto_init() }
+func file_protos_common_proto_init() {
+	if File_protos_common_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_proto_rawDesc), len(file_common_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protos_common_proto_rawDesc), len(file_protos_common_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   0,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_common_proto_goTypes,
-		DependencyIndexes: file_common_proto_depIdxs,
+		GoTypes:           file_protos_common_proto_goTypes,
+		DependencyIndexes: file_protos_common_proto_depIdxs,
 	}.Build()
-	File_common_proto = out.File
-	file_common_proto_goTypes = nil
-	file_common_proto_depIdxs = nil
+	File_protos_common_proto = out.File
+	file_protos_common_proto_goTypes = nil
+	file_protos_common_proto_depIdxs = nil
 }

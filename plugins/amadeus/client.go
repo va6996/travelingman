@@ -5,12 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
 
-	"github.com/va6996/travelingman/tools"
 	"github.com/firebase/genkit/go/genkit"
+	"github.com/va6996/travelingman/pb"
+	"github.com/va6996/travelingman/tools"
 )
 
 const (
@@ -27,6 +29,29 @@ type Client struct {
 	Token        *AuthToken
 	FlightTool   *FlightTool
 	HotelTool    *HotelTool
+	LocationTool *LocationTool
+}
+
+// LocationSearchResponse wraps the API response for locations
+type LocationSearchResponse struct {
+	Data []LocationData `json:"data"`
+}
+
+// LocationData represents a single location result from Amadeus
+type LocationData struct {
+	SubType string  `json:"subType"`
+	Name    string  `json:"name"`
+	JobCode string  `json:"iataCode"`
+	Address Address `json:"address"`
+	GeoCode GeoCode `json:"geoCode"`
+}
+
+// Address contains location details
+type Address struct {
+	CityName    string `json:"cityName"`
+	CityCode    string `json:"cityCode"`
+	CountryName string `json:"countryName"`
+	CountryCode string `json:"countryCode"`
 }
 
 // AuthToken represents the OAuth2 token response
@@ -56,6 +81,7 @@ func NewClient(clientID, clientSecret string, isProduction bool, gk *genkit.Genk
 	// Initialize tools
 	c.FlightTool = NewFlightTool(c, gk, registry)
 	c.HotelTool = NewHotelTool(c, gk, registry)
+	c.LocationTool = NewLocationTool(c, gk, registry)
 
 	return c, nil
 }
@@ -122,5 +148,129 @@ func (c *Client) doRequest(ctx context.Context, method, endpoint string, body in
 	req.Header.Set("Authorization", "Bearer "+c.Token.AccessToken)
 	req.Header.Set("Content-Type", "application/json")
 
-	return c.HTTPClient.Do(req)
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		log.Printf("Amadeus API request failed: %v", err)
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+// SearchLocations searches for airports and cities by keyword and returns protobuf Location objects
+func (c *Client) SearchLocations(ctx context.Context, keyword string) ([]*pb.Location, error) {
+	data := url.Values{}
+	data.Set("keyword", keyword)
+	data.Set("subType", "CITY,AIRPORT")
+	data.Set("page[limit]", "5")
+
+	endpoint := fmt.Sprintf("/v1/reference-data/locations?%s", data.Encode())
+	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
+	if err != nil {
+		log.Printf("SearchLocations: request failed: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("SearchLocations: API returned status %s", resp.Status)
+		return nil, fmt.Errorf("location search failed: %s", resp.Status)
+	}
+
+	var result LocationSearchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		log.Printf("SearchLocations: failed to decode response: %v", err)
+		return nil, err
+	}
+
+	var locations []*pb.Location
+	var lat, lng float64
+	foundCoordinates := false
+
+	for _, l := range result.Data {
+		loc := &pb.Location{
+			Name:      l.Name,
+			City:      l.Address.CityName,
+			Country:   l.Address.CountryName,
+			IataCodes: []string{l.JobCode},
+			CityCode:  l.Address.CityCode,
+			Geocode:   fmt.Sprintf("%f,%f", l.GeoCode.Latitude, l.GeoCode.Longitude),
+		}
+		locations = append(locations, loc)
+
+		// Capture coordinates from the first result that has them
+		if !foundCoordinates && (l.GeoCode.Latitude != 0 || l.GeoCode.Longitude != 0) {
+			lat = l.GeoCode.Latitude
+			lng = l.GeoCode.Longitude
+			foundCoordinates = true
+		}
+	}
+
+	// If we have coordinates, search for nearby airports
+	if foundCoordinates {
+		nearbyAirports, err := c.SearchNearbyAirports(ctx, lat, lng)
+		if err == nil {
+			// Add unique airports
+			existingCodes := make(map[string]bool)
+			for _, l := range locations {
+				if len(l.IataCodes) > 0 {
+					existingCodes[l.IataCodes[0]] = true
+				}
+			}
+
+			for _, airport := range nearbyAirports {
+				if len(airport.IataCodes) > 0 && !existingCodes[airport.IataCodes[0]] {
+					locations = append(locations, airport)
+					existingCodes[airport.IataCodes[0]] = true
+				}
+			}
+		} else {
+			log.Printf("SearchLocations: failed to search nearby airports: %v", err)
+		}
+	}
+
+	return locations, nil
+}
+
+// SearchNearbyAirports searches for airports near a specific latitude and longitude
+func (c *Client) SearchNearbyAirports(ctx context.Context, lat, lng float64) ([]*pb.Location, error) {
+	data := url.Values{}
+	data.Set("latitude", fmt.Sprintf("%f", lat))
+	data.Set("longitude", fmt.Sprintf("%f", lng))
+	data.Set("radius", "100") // 100km radius
+	data.Set("page[limit]", "5")
+
+	endpoint := fmt.Sprintf("/v1/reference-data/locations/airports?%s", data.Encode())
+	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
+	if err != nil {
+		log.Printf("SearchNearbyAirports: request failed: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("SearchNearbyAirports: API returned status %s", resp.Status)
+		return nil, fmt.Errorf("nearby airport search failed: %s", resp.Status)
+	}
+
+	var result LocationSearchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		log.Printf("SearchNearbyAirports: failed to decode response: %v", err)
+		return nil, err
+	}
+
+	var locations []*pb.Location
+	for _, l := range result.Data {
+		loc := &pb.Location{
+			Name:      l.Name,
+			City:      l.Address.CityName,
+			Country:   l.Address.CountryName,
+			IataCodes: []string{l.JobCode},
+			CityCode:  l.Address.CityCode,
+			Geocode:   fmt.Sprintf("%f,%f", l.GeoCode.Latitude, l.GeoCode.Longitude),
+		}
+		locations = append(locations, loc)
+	}
+
+	return locations, nil
 }

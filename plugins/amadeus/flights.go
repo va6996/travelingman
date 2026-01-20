@@ -4,7 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/va6996/travelingman/pb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // --- Structs for Flight Search (Simplified) ---
@@ -188,18 +194,84 @@ type AssociatedRecord struct {
 // --- Methods ---
 
 // SearchFlights searches for flight offers
-func (c *Client) SearchFlights(ctx context.Context, origin, destination, departureDate, returnDate, arrivalBy string, adults int) (*FlightSearchResponse, error) {
+func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) (*FlightSearchResponse, error) {
+	// Extract flight from transport
+	flight := transport.GetFlight()
+	if flight == nil {
+		return nil, fmt.Errorf("transport does not contain flight details")
+	}
+
+	// Extract parameters from transport locations
+	origin := ""
+	if transport.OriginLocation != nil {
+		if transport.OriginLocation.CityCode != "" {
+			origin = transport.OriginLocation.CityCode
+			// If we are using CityCode but we have a specific airport code, save it to preferences
+			if len(transport.OriginLocation.IataCodes) > 0 && transport.OriginLocation.IataCodes[0] != origin {
+				if transport.FlightPreferences == nil {
+					transport.FlightPreferences = &pb.FlightPreferences{}
+				}
+				// Check if already present
+				found := false
+				for _, code := range transport.FlightPreferences.PreferredOriginAirports {
+					if code == transport.OriginLocation.IataCodes[0] {
+						found = true
+						break
+					}
+				}
+				if !found {
+					transport.FlightPreferences.PreferredOriginAirports = append(transport.FlightPreferences.PreferredOriginAirports, transport.OriginLocation.IataCodes[0])
+				}
+			}
+		} else if len(transport.OriginLocation.IataCodes) > 0 {
+			origin = transport.OriginLocation.IataCodes[0]
+		}
+	}
+
+	destination := ""
+	if transport.DestinationLocation != nil {
+		if transport.DestinationLocation.CityCode != "" {
+			destination = transport.DestinationLocation.CityCode
+			// If we are using CityCode but we have a specific airport code, save it to preferences
+			if len(transport.DestinationLocation.IataCodes) > 0 && transport.DestinationLocation.IataCodes[0] != destination {
+				if transport.FlightPreferences == nil {
+					transport.FlightPreferences = &pb.FlightPreferences{}
+				}
+				// Check if already present
+				found := false
+				for _, code := range transport.FlightPreferences.PreferredDestinationAirports {
+					if code == transport.DestinationLocation.IataCodes[0] {
+						found = true
+						break
+					}
+				}
+				if !found {
+					transport.FlightPreferences.PreferredDestinationAirports = append(transport.FlightPreferences.PreferredDestinationAirports, transport.DestinationLocation.IataCodes[0])
+				}
+			}
+		} else if len(transport.DestinationLocation.IataCodes) > 0 {
+			destination = transport.DestinationLocation.IataCodes[0]
+		}
+	}
+
+	departureDate := ""
+	if flight.DepartureTime != nil {
+		departureDate = flight.DepartureTime.AsTime().Format("2006-01-02")
+	}
+
+	// Extract adults from transport
+	adults := int(transport.TravelerCount)
+	if adults <= 0 {
+		adults = 1
+	}
+
+	// Calculate returnDate if needed (not in current Proto for one-way segments, but logic kept for compatibility)
+	// If it's a round trip, logic might be handled differently, but for now we follow previous logic.
+	returnDate := ""
+
 	// Construct query parameters
 	endpoint := fmt.Sprintf("/v2/shopping/flight-offers?originLocationCode=%s&destinationLocationCode=%s&adults=%d",
 		origin, destination, adults)
-
-	// Logic for Arrival Time Search:
-	// If arrivalBy is provided, we might need to adjust logic.
-	// However, Amadeus Flight Offers Search *requires* a departureDate.
-	// If the user provides arrivalBy, we might infer a departure window?
-	// For this MVP, we will assume the caller handles the date inference or we just pass whatever date is given.
-	// BUT, if the user strictly wants "Arrival Time" search, they might not know the departure date.
-	// We will rely on the caller to provide a departureDate.
 
 	if departureDate != "" {
 		endpoint += fmt.Sprintf("&departureDate=%s", departureDate)
@@ -209,22 +281,43 @@ func (c *Client) SearchFlights(ctx context.Context, origin, destination, departu
 		endpoint += fmt.Sprintf("&returnDate=%s", returnDate)
 	}
 
+	// Handle Preferences
+	if transport.FlightPreferences != nil {
+		classStr := ""
+		switch transport.FlightPreferences.TravelClass {
+		case pb.Class_CLASS_ECONOMY:
+			classStr = "ECONOMY"
+		case pb.Class_CLASS_PREMIUM_ECONOMY:
+			classStr = "PREMIUM_ECONOMY"
+		case pb.Class_CLASS_BUSINESS:
+			classStr = "BUSINESS"
+		case pb.Class_CLASS_FIRST:
+			classStr = "FIRST"
+		}
+		if classStr != "" {
+			endpoint += fmt.Sprintf("&travelClass=%s", classStr)
+		}
+	}
+
 	// Optimization: If arrivalBy is set, maybe we can pass it as a filter?
 	// API doesn't seem to support arrivalBy filter directly in V2 GET.
 	// We will handle filtering in the upper layer or just ignore for now in the raw plugin call.
 
 	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
 	if err != nil {
+		log.Printf("SearchFlights: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		log.Printf("SearchFlights: API returned status %s", resp.Status)
 		return nil, fmt.Errorf("search failed: %s", resp.Status)
 	}
 
 	var searchResp FlightSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
+		log.Printf("SearchFlights: failed to decode response: %v", err)
 		return nil, err
 	}
 
@@ -239,16 +332,19 @@ func (c *Client) ConfirmPrice(ctx context.Context, offer FlightOffer) (*FlightSe
 
 	resp, err := c.doRequest(ctx, "POST", "/v1/shopping/flight-offers/pricing", reqBody)
 	if err != nil {
+		log.Printf("ConfirmPrice: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		log.Printf("ConfirmPrice: API returned status %s", resp.Status)
 		return nil, fmt.Errorf("price confirmation failed: %s", resp.Status)
 	}
 
 	var priceResp FlightSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&priceResp); err != nil {
+		log.Printf("ConfirmPrice: failed to decode response: %v", err)
 		return nil, err
 	}
 
@@ -264,18 +360,66 @@ func (c *Client) BookFlight(ctx context.Context, offer FlightOffer, travelers []
 
 	resp, err := c.doRequest(ctx, "POST", "/v1/booking/flight-orders", reqBody)
 	if err != nil {
+		log.Printf("BookFlight: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		log.Printf("BookFlight: API returned status %s", resp.Status)
 		return nil, fmt.Errorf("booking failed: %s", resp.Status)
 	}
 
 	var orderResp FlightOrderResponse
 	if err := json.NewDecoder(resp.Body).Decode(&orderResp); err != nil {
+		log.Printf("BookFlight: failed to decode response: %v", err)
 		return nil, err
 	}
 
 	return &orderResp, nil
+}
+
+// ToTransport converts a FlightOffer to a pb.Transport
+func (o FlightOffer) ToTransport() *pb.Transport {
+	t := &pb.Transport{
+		Type: pb.TransportType_TRANSPORT_TYPE_FLIGHT,
+		OriginLocation: &pb.Location{
+			IataCodes: []string{},
+		},
+		DestinationLocation: &pb.Location{
+			IataCodes: []string{},
+		},
+	}
+
+	// Price
+	if price, err := strconv.ParseFloat(o.Price.Total, 32); err == nil {
+		t.PriceTotal = float32(price)
+	}
+
+	// Details from first segment of first itinerary (simplification)
+	if len(o.Itineraries) > 0 && len(o.Itineraries[0].Segments) > 0 {
+		firstSeg := o.Itineraries[0].Segments[0]
+		lastSeg := o.Itineraries[0].Segments[len(o.Itineraries[0].Segments)-1]
+
+		t.OriginLocation.IataCodes = append(t.OriginLocation.IataCodes, firstSeg.Departure.IataCode)
+		t.DestinationLocation.IataCodes = append(t.DestinationLocation.IataCodes, lastSeg.Arrival.IataCode)
+
+		// Carrier and Flight Number
+		flightDetails := &pb.Flight{
+			CarrierCode:  firstSeg.CarrierCode,
+			FlightNumber: firstSeg.Number,
+		}
+
+		// Times
+		if depTime, err := time.Parse("2006-01-02T15:04:05", firstSeg.Departure.At); err == nil {
+			flightDetails.DepartureTime = timestamppb.New(depTime)
+		}
+		if arrTime, err := time.Parse("2006-01-02T15:04:05", lastSeg.Arrival.At); err == nil {
+			flightDetails.ArrivalTime = timestamppb.New(arrTime)
+		}
+
+		t.Details = &pb.Transport_Flight{Flight: flightDetails}
+	}
+
+	return t
 }

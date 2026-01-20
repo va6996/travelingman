@@ -2,11 +2,11 @@
 // versions:
 //   protoc-gen-ts_proto  v2.10.0
 //   protoc               v5.29.2
-// source: bookings.proto
+// source: protos/bookings.proto
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import { Timestamp } from "./google/protobuf/timestamp";
+import { Timestamp } from "../google/protobuf/timestamp";
 
 export const protobufPackage = "travelingman";
 

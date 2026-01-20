@@ -41,6 +41,16 @@ func (r *Registry) GetTools() []ai.Tool {
 	return r.tools
 }
 
+// Lookup finds a tool definition by name
+func (r *Registry) Lookup(name string) (ai.Tool, bool) {
+	for _, t := range r.tools {
+		if t.Definition().Name == name {
+			return t, true
+		}
+	}
+	return nil, false
+}
+
 // ExecuteTool runs a registered tool by name
 func (r *Registry) ExecuteTool(ctx context.Context, name string, args map[string]interface{}) (interface{}, error) {
 	executor, ok := r.executors[name]

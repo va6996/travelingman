@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v5.29.2
-// source: graph.proto
+// source: protos/graph.proto
 
 package pb
 
@@ -32,13 +32,14 @@ type Node struct {
 	ToTimestamp   *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=to_timestamp,json=toTimestamp,proto3" json:"to_timestamp,omitempty"`       // Departure time from this node
 	IsInterCity   bool                   `protobuf:"varint,5,opt,name=is_inter_city,json=isInterCity,proto3" json:"is_inter_city,omitempty"`    // Whether this node represents an inter-city travel point
 	Stay          *Accommodation         `protobuf:"bytes,6,opt,name=stay,proto3" json:"stay,omitempty"`                                        // Hotel/accommodation info (from Accommodation)
+	StayOptions   []*Accommodation       `protobuf:"bytes,7,rep,name=stayOptions,proto3" json:"stayOptions,omitempty"`                          // List of possible accommodations
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Node) Reset() {
 	*x = Node{}
-	mi := &file_graph_proto_msgTypes[0]
+	mi := &file_protos_graph_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -50,7 +51,7 @@ func (x *Node) String() string {
 func (*Node) ProtoMessage() {}
 
 func (x *Node) ProtoReflect() protoreflect.Message {
-	mi := &file_graph_proto_msgTypes[0]
+	mi := &file_protos_graph_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -63,7 +64,7 @@ func (x *Node) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Node.ProtoReflect.Descriptor instead.
 func (*Node) Descriptor() ([]byte, []int) {
-	return file_graph_proto_rawDescGZIP(), []int{0}
+	return file_protos_graph_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Node) GetId() string {
@@ -108,21 +109,29 @@ func (x *Node) GetStay() *Accommodation {
 	return nil
 }
 
+func (x *Node) GetStayOptions() []*Accommodation {
+	if x != nil {
+		return x.StayOptions
+	}
+	return nil
+}
+
 // Edge represents transportation between two locations
 // It maps to protobuf structures: Transport
 type Edge struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	FromId          string                 `protobuf:"bytes,1,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`                             // ID of the source node
-	ToId            string                 `protobuf:"bytes,2,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`                                   // ID of the destination node
-	DurationSeconds int64                  `protobuf:"varint,3,opt,name=duration_seconds,json=durationSeconds,proto3" json:"duration_seconds,omitempty"` // Duration of travel in seconds
-	Transport       *Transport             `protobuf:"bytes,4,opt,name=transport,proto3" json:"transport,omitempty"`                                     // Full Transport struct from Transport
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	FromId           string                 `protobuf:"bytes,1,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`                             // ID of the source node
+	ToId             string                 `protobuf:"bytes,2,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`                                   // ID of the destination node
+	DurationSeconds  int64                  `protobuf:"varint,3,opt,name=duration_seconds,json=durationSeconds,proto3" json:"duration_seconds,omitempty"` // Duration of travel in seconds
+	Transport        *Transport             `protobuf:"bytes,4,opt,name=transport,proto3" json:"transport,omitempty"`                                     // Full Transport struct from Transport
+	TransportOptions []*Transport           `protobuf:"bytes,5,rep,name=transportOptions,proto3" json:"transportOptions,omitempty"`                       // List of possible transports
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Edge) Reset() {
 	*x = Edge{}
-	mi := &file_graph_proto_msgTypes[1]
+	mi := &file_protos_graph_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -134,7 +143,7 @@ func (x *Edge) String() string {
 func (*Edge) ProtoMessage() {}
 
 func (x *Edge) ProtoReflect() protoreflect.Message {
-	mi := &file_graph_proto_msgTypes[1]
+	mi := &file_protos_graph_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -147,7 +156,7 @@ func (x *Edge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Edge.ProtoReflect.Descriptor instead.
 func (*Edge) Descriptor() ([]byte, []int) {
-	return file_graph_proto_rawDescGZIP(), []int{1}
+	return file_protos_graph_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Edge) GetFromId() string {
@@ -178,6 +187,13 @@ func (x *Edge) GetTransport() *Transport {
 	return nil
 }
 
+func (x *Edge) GetTransportOptions() []*Transport {
+	if x != nil {
+		return x.TransportOptions
+	}
+	return nil
+}
+
 // Graph represents the complete graph structure of a user's itinerary
 type Graph struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -190,7 +206,7 @@ type Graph struct {
 
 func (x *Graph) Reset() {
 	*x = Graph{}
-	mi := &file_graph_proto_msgTypes[2]
+	mi := &file_protos_graph_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -202,7 +218,7 @@ func (x *Graph) String() string {
 func (*Graph) ProtoMessage() {}
 
 func (x *Graph) ProtoReflect() protoreflect.Message {
-	mi := &file_graph_proto_msgTypes[2]
+	mi := &file_protos_graph_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -215,7 +231,7 @@ func (x *Graph) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Graph.ProtoReflect.Descriptor instead.
 func (*Graph) Descriptor() ([]byte, []int) {
-	return file_graph_proto_rawDescGZIP(), []int{2}
+	return file_protos_graph_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Graph) GetNodes() []*Node {
@@ -239,85 +255,213 @@ func (x *Graph) GetSubGraph() *Graph {
 	return nil
 }
 
-var File_graph_proto protoreflect.FileDescriptor
+type Itinerary struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	GroupId       int64                  `protobuf:"varint,2,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	DayNumber     int32                  `protobuf:"varint,3,opt,name=day_number,json=dayNumber,proto3" json:"day_number,omitempty"`
+	StartTime     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	EndTime       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	Title         string                 `protobuf:"bytes,6,opt,name=title,proto3" json:"title,omitempty"`
+	Description   string                 `protobuf:"bytes,7,opt,name=description,proto3" json:"description,omitempty"`
+	Graph         *Graph                 `protobuf:"bytes,8,opt,name=graph,proto3" json:"graph,omitempty"`
+	Travelers     int32                  `protobuf:"varint,9,opt,name=travelers,proto3" json:"travelers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
 
-const file_graph_proto_rawDesc = "" +
+func (x *Itinerary) Reset() {
+	*x = Itinerary{}
+	mi := &file_protos_graph_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Itinerary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Itinerary) ProtoMessage() {}
+
+func (x *Itinerary) ProtoReflect() protoreflect.Message {
+	mi := &file_protos_graph_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Itinerary.ProtoReflect.Descriptor instead.
+func (*Itinerary) Descriptor() ([]byte, []int) {
+	return file_protos_graph_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Itinerary) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *Itinerary) GetGroupId() int64 {
+	if x != nil {
+		return x.GroupId
+	}
+	return 0
+}
+
+func (x *Itinerary) GetDayNumber() int32 {
+	if x != nil {
+		return x.DayNumber
+	}
+	return 0
+}
+
+func (x *Itinerary) GetStartTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartTime
+	}
+	return nil
+}
+
+func (x *Itinerary) GetEndTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EndTime
+	}
+	return nil
+}
+
+func (x *Itinerary) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Itinerary) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Itinerary) GetGraph() *Graph {
+	if x != nil {
+		return x.Graph
+	}
+	return nil
+}
+
+func (x *Itinerary) GetTravelers() int32 {
+	if x != nil {
+		return x.Travelers
+	}
+	return 0
+}
+
+var File_protos_graph_proto protoreflect.FileDescriptor
+
+const file_protos_graph_proto_rawDesc = "" +
 	"\n" +
-	"\vgraph.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fitinerary.proto\"\x89\x02\n" +
+	"\x12protos/graph.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16protos/itinerary.proto\"\xc8\x02\n" +
 	"\x04Node\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\blocation\x18\x02 \x01(\tR\blocation\x12A\n" +
 	"\x0efrom_timestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\rfromTimestamp\x12=\n" +
 	"\fto_timestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vtoTimestamp\x12\"\n" +
 	"\ris_inter_city\x18\x05 \x01(\bR\visInterCity\x12/\n" +
-	"\x04stay\x18\x06 \x01(\v2\x1b.travelingman.AccommodationR\x04stay\"\x96\x01\n" +
+	"\x04stay\x18\x06 \x01(\v2\x1b.travelingman.AccommodationR\x04stay\x12=\n" +
+	"\vstayOptions\x18\a \x03(\v2\x1b.travelingman.AccommodationR\vstayOptions\"\xdb\x01\n" +
 	"\x04Edge\x12\x17\n" +
 	"\afrom_id\x18\x01 \x01(\tR\x06fromId\x12\x13\n" +
 	"\x05to_id\x18\x02 \x01(\tR\x04toId\x12)\n" +
 	"\x10duration_seconds\x18\x03 \x01(\x03R\x0fdurationSeconds\x125\n" +
-	"\ttransport\x18\x04 \x01(\v2\x17.travelingman.TransportR\ttransport\"\x8d\x01\n" +
+	"\ttransport\x18\x04 \x01(\v2\x17.travelingman.TransportR\ttransport\x12C\n" +
+	"\x10transportOptions\x18\x05 \x03(\v2\x17.travelingman.TransportR\x10transportOptions\"\x8d\x01\n" +
 	"\x05Graph\x12(\n" +
 	"\x05nodes\x18\x01 \x03(\v2\x12.travelingman.NodeR\x05nodes\x12(\n" +
 	"\x05edges\x18\x02 \x03(\v2\x12.travelingman.EdgeR\x05edges\x120\n" +
-	"\tsub_graph\x18\x03 \x01(\v2\x13.travelingman.GraphR\bsubGraphB#Z!github.com/va6996/travelingman/pbb\x06proto3"
+	"\tsub_graph\x18\x03 \x01(\v2\x13.travelingman.GraphR\bsubGraph\"\xc8\x02\n" +
+	"\tItinerary\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x19\n" +
+	"\bgroup_id\x18\x02 \x01(\x03R\agroupId\x12\x1d\n" +
+	"\n" +
+	"day_number\x18\x03 \x01(\x05R\tdayNumber\x129\n" +
+	"\n" +
+	"start_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
+	"\bend_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12\x14\n" +
+	"\x05title\x18\x06 \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\a \x01(\tR\vdescription\x12)\n" +
+	"\x05graph\x18\b \x01(\v2\x13.travelingman.GraphR\x05graph\x12\x1c\n" +
+	"\ttravelers\x18\t \x01(\x05R\ttravelersB#Z!github.com/va6996/travelingman/pbb\x06proto3"
 
 var (
-	file_graph_proto_rawDescOnce sync.Once
-	file_graph_proto_rawDescData []byte
+	file_protos_graph_proto_rawDescOnce sync.Once
+	file_protos_graph_proto_rawDescData []byte
 )
 
-func file_graph_proto_rawDescGZIP() []byte {
-	file_graph_proto_rawDescOnce.Do(func() {
-		file_graph_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_graph_proto_rawDesc), len(file_graph_proto_rawDesc)))
+func file_protos_graph_proto_rawDescGZIP() []byte {
+	file_protos_graph_proto_rawDescOnce.Do(func() {
+		file_protos_graph_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_protos_graph_proto_rawDesc), len(file_protos_graph_proto_rawDesc)))
 	})
-	return file_graph_proto_rawDescData
+	return file_protos_graph_proto_rawDescData
 }
 
-var file_graph_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_graph_proto_goTypes = []any{
+var file_protos_graph_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_protos_graph_proto_goTypes = []any{
 	(*Node)(nil),                  // 0: travelingman.Node
 	(*Edge)(nil),                  // 1: travelingman.Edge
 	(*Graph)(nil),                 // 2: travelingman.Graph
-	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
-	(*Accommodation)(nil),         // 4: travelingman.Accommodation
-	(*Transport)(nil),             // 5: travelingman.Transport
+	(*Itinerary)(nil),             // 3: travelingman.Itinerary
+	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
+	(*Accommodation)(nil),         // 5: travelingman.Accommodation
+	(*Transport)(nil),             // 6: travelingman.Transport
 }
-var file_graph_proto_depIdxs = []int32{
-	3, // 0: travelingman.Node.from_timestamp:type_name -> google.protobuf.Timestamp
-	3, // 1: travelingman.Node.to_timestamp:type_name -> google.protobuf.Timestamp
-	4, // 2: travelingman.Node.stay:type_name -> travelingman.Accommodation
-	5, // 3: travelingman.Edge.transport:type_name -> travelingman.Transport
-	0, // 4: travelingman.Graph.nodes:type_name -> travelingman.Node
-	1, // 5: travelingman.Graph.edges:type_name -> travelingman.Edge
-	2, // 6: travelingman.Graph.sub_graph:type_name -> travelingman.Graph
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+var file_protos_graph_proto_depIdxs = []int32{
+	4,  // 0: travelingman.Node.from_timestamp:type_name -> google.protobuf.Timestamp
+	4,  // 1: travelingman.Node.to_timestamp:type_name -> google.protobuf.Timestamp
+	5,  // 2: travelingman.Node.stay:type_name -> travelingman.Accommodation
+	5,  // 3: travelingman.Node.stayOptions:type_name -> travelingman.Accommodation
+	6,  // 4: travelingman.Edge.transport:type_name -> travelingman.Transport
+	6,  // 5: travelingman.Edge.transportOptions:type_name -> travelingman.Transport
+	0,  // 6: travelingman.Graph.nodes:type_name -> travelingman.Node
+	1,  // 7: travelingman.Graph.edges:type_name -> travelingman.Edge
+	2,  // 8: travelingman.Graph.sub_graph:type_name -> travelingman.Graph
+	4,  // 9: travelingman.Itinerary.start_time:type_name -> google.protobuf.Timestamp
+	4,  // 10: travelingman.Itinerary.end_time:type_name -> google.protobuf.Timestamp
+	2,  // 11: travelingman.Itinerary.graph:type_name -> travelingman.Graph
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
-func init() { file_graph_proto_init() }
-func file_graph_proto_init() {
-	if File_graph_proto != nil {
+func init() { file_protos_graph_proto_init() }
+func file_protos_graph_proto_init() {
+	if File_protos_graph_proto != nil {
 		return
 	}
-	file_itinerary_proto_init()
+	file_protos_itinerary_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_graph_proto_rawDesc), len(file_graph_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protos_graph_proto_rawDesc), len(file_protos_graph_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_graph_proto_goTypes,
-		DependencyIndexes: file_graph_proto_depIdxs,
-		MessageInfos:      file_graph_proto_msgTypes,
+		GoTypes:           file_protos_graph_proto_goTypes,
+		DependencyIndexes: file_protos_graph_proto_depIdxs,
+		MessageInfos:      file_protos_graph_proto_msgTypes,
 	}.Build()
-	File_graph_proto = out.File
-	file_graph_proto_goTypes = nil
-	file_graph_proto_depIdxs = nil
+	File_protos_graph_proto = out.File
+	file_protos_graph_proto_goTypes = nil
+	file_protos_graph_proto_depIdxs = nil
 }

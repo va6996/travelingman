@@ -5,7 +5,7 @@ package travelingman;
 option go_package = "github.com/va6996/travelingman/pb";
 
 import "google/protobuf/timestamp.proto";
-import "itinerary.proto";
+import "protos/itinerary.proto";
 
 // Node represents a location/place in the itinerary graph
 // It maps to protobuf structures: TripDay, Place, Accommodation
@@ -16,6 +16,7 @@ message Node {
     google.protobuf.Timestamp to_timestamp = 4;       // Departure time from this node
     bool is_inter_city = 5;                           // Whether this node represents an inter-city travel point
     Accommodation stay = 6;                           // Hotel/accommodation info (from Accommodation)
+    repeated Accommodation stayOptions = 7;           // List of possible accommodations
 }
 
 // Edge represents transportation between two locations
@@ -25,6 +26,7 @@ message Edge {
     string to_id = 2;                                 // ID of the destination node
     int64 duration_seconds = 3;                       // Duration of travel in seconds
     Transport transport = 4;                          // Full Transport struct from Transport
+    repeated Transport transportOptions = 5;          // List of possible transports
 }
 
 // Graph represents the complete graph structure of a user's itinerary
@@ -34,3 +36,14 @@ message Graph {
     Graph sub_graph = 3;                              // For intra-city details (contains Places)
 }
 
+message Itinerary {
+    int64 id = 1;
+    int64 group_id = 2;
+    int32 day_number = 3;
+    google.protobuf.Timestamp start_time = 4;
+    google.protobuf.Timestamp end_time = 5;
+    string title = 6;
+    string description = 7;
+    Graph graph = 8;
+    int32 travelers = 9;
+}

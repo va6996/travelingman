@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v5.29.2
-// source: itinerary.proto
+// source: protos/itinerary.proto
 
 package pb
 
@@ -21,61 +21,6 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
-
-type ItineraryType int32
-
-const (
-	ItineraryType_ITINERARY_TYPE_UNSPECIFIED ItineraryType = 0
-	ItineraryType_ITINERARY_TYPE_TRANSPORT   ItineraryType = 1
-	ItineraryType_ITINERARY_TYPE_HOTEL       ItineraryType = 2
-	ItineraryType_ITINERARY_TYPE_EVENT       ItineraryType = 3
-	ItineraryType_ITINERARY_TYPE_DAY_PLAN    ItineraryType = 4
-)
-
-// Enum value maps for ItineraryType.
-var (
-	ItineraryType_name = map[int32]string{
-		0: "ITINERARY_TYPE_UNSPECIFIED",
-		1: "ITINERARY_TYPE_TRANSPORT",
-		2: "ITINERARY_TYPE_HOTEL",
-		3: "ITINERARY_TYPE_EVENT",
-		4: "ITINERARY_TYPE_DAY_PLAN",
-	}
-	ItineraryType_value = map[string]int32{
-		"ITINERARY_TYPE_UNSPECIFIED": 0,
-		"ITINERARY_TYPE_TRANSPORT":   1,
-		"ITINERARY_TYPE_HOTEL":       2,
-		"ITINERARY_TYPE_EVENT":       3,
-		"ITINERARY_TYPE_DAY_PLAN":    4,
-	}
-)
-
-func (x ItineraryType) Enum() *ItineraryType {
-	p := new(ItineraryType)
-	*p = x
-	return p
-}
-
-func (x ItineraryType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (ItineraryType) Descriptor() protoreflect.EnumDescriptor {
-	return file_itinerary_proto_enumTypes[0].Descriptor()
-}
-
-func (ItineraryType) Type() protoreflect.EnumType {
-	return &file_itinerary_proto_enumTypes[0]
-}
-
-func (x ItineraryType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use ItineraryType.Descriptor instead.
-func (ItineraryType) EnumDescriptor() ([]byte, []int) {
-	return file_itinerary_proto_rawDescGZIP(), []int{0}
-}
 
 type TransportType int32
 
@@ -116,11 +61,11 @@ func (x TransportType) String() string {
 }
 
 func (TransportType) Descriptor() protoreflect.EnumDescriptor {
-	return file_itinerary_proto_enumTypes[1].Descriptor()
+	return file_protos_itinerary_proto_enumTypes[0].Descriptor()
 }
 
 func (TransportType) Type() protoreflect.EnumType {
-	return &file_itinerary_proto_enumTypes[1]
+	return &file_protos_itinerary_proto_enumTypes[0]
 }
 
 func (x TransportType) Number() protoreflect.EnumNumber {
@@ -129,41 +74,138 @@ func (x TransportType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use TransportType.Descriptor instead.
 func (TransportType) EnumDescriptor() ([]byte, []int) {
-	return file_itinerary_proto_rawDescGZIP(), []int{1}
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{0}
 }
 
-type Itinerary struct {
+type Class int32
+
+const (
+	Class_CLASS_UNSPECIFIED     Class = 0
+	Class_CLASS_ECONOMY         Class = 1
+	Class_CLASS_PREMIUM_ECONOMY Class = 2
+	Class_CLASS_BUSINESS        Class = 3
+	Class_CLASS_FIRST           Class = 4
+)
+
+// Enum value maps for Class.
+var (
+	Class_name = map[int32]string{
+		0: "CLASS_UNSPECIFIED",
+		1: "CLASS_ECONOMY",
+		2: "CLASS_PREMIUM_ECONOMY",
+		3: "CLASS_BUSINESS",
+		4: "CLASS_FIRST",
+	}
+	Class_value = map[string]int32{
+		"CLASS_UNSPECIFIED":     0,
+		"CLASS_ECONOMY":         1,
+		"CLASS_PREMIUM_ECONOMY": 2,
+		"CLASS_BUSINESS":        3,
+		"CLASS_FIRST":           4,
+	}
+)
+
+func (x Class) Enum() *Class {
+	p := new(Class)
+	*p = x
+	return p
+}
+
+func (x Class) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Class) Descriptor() protoreflect.EnumDescriptor {
+	return file_protos_itinerary_proto_enumTypes[1].Descriptor()
+}
+
+func (Class) Type() protoreflect.EnumType {
+	return &file_protos_itinerary_proto_enumTypes[1]
+}
+
+func (x Class) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Class.Descriptor instead.
+func (Class) EnumDescriptor() ([]byte, []int) {
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{1}
+}
+
+type Transmission int32
+
+const (
+	Transmission_TRANSMISSION_UNSPECIFIED Transmission = 0
+	Transmission_TRANSMISSION_MANUAL      Transmission = 1
+	Transmission_TRANSMISSION_AUTOMATIC   Transmission = 2
+)
+
+// Enum value maps for Transmission.
+var (
+	Transmission_name = map[int32]string{
+		0: "TRANSMISSION_UNSPECIFIED",
+		1: "TRANSMISSION_MANUAL",
+		2: "TRANSMISSION_AUTOMATIC",
+	}
+	Transmission_value = map[string]int32{
+		"TRANSMISSION_UNSPECIFIED": 0,
+		"TRANSMISSION_MANUAL":      1,
+		"TRANSMISSION_AUTOMATIC":   2,
+	}
+)
+
+func (x Transmission) Enum() *Transmission {
+	p := new(Transmission)
+	*p = x
+	return p
+}
+
+func (x Transmission) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Transmission) Descriptor() protoreflect.EnumDescriptor {
+	return file_protos_itinerary_proto_enumTypes[2].Descriptor()
+}
+
+func (Transmission) Type() protoreflect.EnumType {
+	return &file_protos_itinerary_proto_enumTypes[2]
+}
+
+func (x Transmission) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Transmission.Descriptor instead.
+func (Transmission) EnumDescriptor() ([]byte, []int) {
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{2}
+}
+
+type AccommodationPreferences struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	GroupId       int64                  `protobuf:"varint,2,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
-	DayNumber     int32                  `protobuf:"varint,3,opt,name=day_number,json=dayNumber,proto3" json:"day_number,omitempty"`
-	StartTime     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
-	EndTime       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
-	Type          ItineraryType          `protobuf:"varint,6,opt,name=type,proto3,enum=travelingman.ItineraryType" json:"type,omitempty"`
-	Title         string                 `protobuf:"bytes,7,opt,name=title,proto3" json:"title,omitempty"`
-	Description   string                 `protobuf:"bytes,8,opt,name=description,proto3" json:"description,omitempty"`
-	Transport     []*Transport           `protobuf:"bytes,11,rep,name=transport,proto3" json:"transport,omitempty"`
-	Accommodation []*Accommodation       `protobuf:"bytes,12,rep,name=accommodation,proto3" json:"accommodation,omitempty"`
-	Itineraries   []*Itinerary           `protobuf:"bytes,13,rep,name=itineraries,proto3" json:"itineraries,omitempty"`
+	RoomType      string                 `protobuf:"bytes,1,opt,name=room_type,json=roomType,proto3" json:"room_type,omitempty"`
+	Area          string                 `protobuf:"bytes,2,opt,name=area,proto3" json:"area,omitempty"`
+	Rating        int32                  `protobuf:"varint,3,opt,name=rating,proto3" json:"rating,omitempty"`
+	Amenities     []string               `protobuf:"bytes,4,rep,name=amenities,proto3" json:"amenities,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Itinerary) Reset() {
-	*x = Itinerary{}
-	mi := &file_itinerary_proto_msgTypes[0]
+func (x *AccommodationPreferences) Reset() {
+	*x = AccommodationPreferences{}
+	mi := &file_protos_itinerary_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Itinerary) String() string {
+func (x *AccommodationPreferences) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Itinerary) ProtoMessage() {}
+func (*AccommodationPreferences) ProtoMessage() {}
 
-func (x *Itinerary) ProtoReflect() protoreflect.Message {
-	mi := &file_itinerary_proto_msgTypes[0]
+func (x *AccommodationPreferences) ProtoReflect() protoreflect.Message {
+	mi := &file_protos_itinerary_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -174,107 +216,333 @@ func (x *Itinerary) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Itinerary.ProtoReflect.Descriptor instead.
-func (*Itinerary) Descriptor() ([]byte, []int) {
-	return file_itinerary_proto_rawDescGZIP(), []int{0}
+// Deprecated: Use AccommodationPreferences.ProtoReflect.Descriptor instead.
+func (*AccommodationPreferences) Descriptor() ([]byte, []int) {
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Itinerary) GetId() int64 {
+func (x *AccommodationPreferences) GetRoomType() string {
 	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
-func (x *Itinerary) GetGroupId() int64 {
-	if x != nil {
-		return x.GroupId
-	}
-	return 0
-}
-
-func (x *Itinerary) GetDayNumber() int32 {
-	if x != nil {
-		return x.DayNumber
-	}
-	return 0
-}
-
-func (x *Itinerary) GetStartTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.StartTime
-	}
-	return nil
-}
-
-func (x *Itinerary) GetEndTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.EndTime
-	}
-	return nil
-}
-
-func (x *Itinerary) GetType() ItineraryType {
-	if x != nil {
-		return x.Type
-	}
-	return ItineraryType_ITINERARY_TYPE_UNSPECIFIED
-}
-
-func (x *Itinerary) GetTitle() string {
-	if x != nil {
-		return x.Title
+		return x.RoomType
 	}
 	return ""
 }
 
-func (x *Itinerary) GetDescription() string {
+func (x *AccommodationPreferences) GetArea() string {
 	if x != nil {
-		return x.Description
+		return x.Area
 	}
 	return ""
 }
 
-func (x *Itinerary) GetTransport() []*Transport {
+func (x *AccommodationPreferences) GetRating() int32 {
 	if x != nil {
-		return x.Transport
+		return x.Rating
+	}
+	return 0
+}
+
+func (x *AccommodationPreferences) GetAmenities() []string {
+	if x != nil {
+		return x.Amenities
 	}
 	return nil
 }
 
-func (x *Itinerary) GetAccommodation() []*Accommodation {
+type FlightPreferences struct {
+	state                        protoimpl.MessageState `protogen:"open.v1"`
+	TravelClass                  Class                  `protobuf:"varint,1,opt,name=travel_class,json=travelClass,proto3,enum=travelingman.Class" json:"travel_class,omitempty"`
+	MaxStops                     int32                  `protobuf:"varint,2,opt,name=max_stops,json=maxStops,proto3" json:"max_stops,omitempty"`
+	PreferredOriginAirports      []string               `protobuf:"bytes,3,rep,name=preferred_origin_airports,json=preferredOriginAirports,proto3" json:"preferred_origin_airports,omitempty"`
+	PreferredDestinationAirports []string               `protobuf:"bytes,4,rep,name=preferred_destination_airports,json=preferredDestinationAirports,proto3" json:"preferred_destination_airports,omitempty"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
+}
+
+func (x *FlightPreferences) Reset() {
+	*x = FlightPreferences{}
+	mi := &file_protos_itinerary_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FlightPreferences) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FlightPreferences) ProtoMessage() {}
+
+func (x *FlightPreferences) ProtoReflect() protoreflect.Message {
+	mi := &file_protos_itinerary_proto_msgTypes[1]
 	if x != nil {
-		return x.Accommodation
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FlightPreferences.ProtoReflect.Descriptor instead.
+func (*FlightPreferences) Descriptor() ([]byte, []int) {
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *FlightPreferences) GetTravelClass() Class {
+	if x != nil {
+		return x.TravelClass
+	}
+	return Class_CLASS_UNSPECIFIED
+}
+
+func (x *FlightPreferences) GetMaxStops() int32 {
+	if x != nil {
+		return x.MaxStops
+	}
+	return 0
+}
+
+func (x *FlightPreferences) GetPreferredOriginAirports() []string {
+	if x != nil {
+		return x.PreferredOriginAirports
 	}
 	return nil
 }
 
-func (x *Itinerary) GetItineraries() []*Itinerary {
+func (x *FlightPreferences) GetPreferredDestinationAirports() []string {
 	if x != nil {
-		return x.Itineraries
+		return x.PreferredDestinationAirports
 	}
 	return nil
+}
+
+type TrainPreferences struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TravelClass   Class                  `protobuf:"varint,1,opt,name=travel_class,json=travelClass,proto3,enum=travelingman.Class" json:"travel_class,omitempty"`
+	SeatType      string                 `protobuf:"bytes,2,opt,name=seat_type,json=seatType,proto3" json:"seat_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TrainPreferences) Reset() {
+	*x = TrainPreferences{}
+	mi := &file_protos_itinerary_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrainPreferences) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrainPreferences) ProtoMessage() {}
+
+func (x *TrainPreferences) ProtoReflect() protoreflect.Message {
+	mi := &file_protos_itinerary_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrainPreferences.ProtoReflect.Descriptor instead.
+func (*TrainPreferences) Descriptor() ([]byte, []int) {
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *TrainPreferences) GetTravelClass() Class {
+	if x != nil {
+		return x.TravelClass
+	}
+	return Class_CLASS_UNSPECIFIED
+}
+
+func (x *TrainPreferences) GetSeatType() string {
+	if x != nil {
+		return x.SeatType
+	}
+	return ""
+}
+
+type CarRentalPreferences struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Transmission  Transmission           `protobuf:"varint,1,opt,name=transmission,proto3,enum=travelingman.Transmission" json:"transmission,omitempty"`
+	CarClass      string                 `protobuf:"bytes,2,opt,name=car_class,json=carClass,proto3" json:"car_class,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CarRentalPreferences) Reset() {
+	*x = CarRentalPreferences{}
+	mi := &file_protos_itinerary_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CarRentalPreferences) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CarRentalPreferences) ProtoMessage() {}
+
+func (x *CarRentalPreferences) ProtoReflect() protoreflect.Message {
+	mi := &file_protos_itinerary_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CarRentalPreferences.ProtoReflect.Descriptor instead.
+func (*CarRentalPreferences) Descriptor() ([]byte, []int) {
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CarRentalPreferences) GetTransmission() Transmission {
+	if x != nil {
+		return x.Transmission
+	}
+	return Transmission_TRANSMISSION_UNSPECIFIED
+}
+
+func (x *CarRentalPreferences) GetCarClass() string {
+	if x != nil {
+		return x.CarClass
+	}
+	return ""
+}
+
+type Location struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Area          string                 `protobuf:"bytes,1,opt,name=area,proto3" json:"area,omitempty"`
+	City          string                 `protobuf:"bytes,2,opt,name=city,proto3" json:"city,omitempty"`
+	Country       string                 `protobuf:"bytes,3,opt,name=country,proto3" json:"country,omitempty"`
+	IataCodes     []string               `protobuf:"bytes,4,rep,name=iata_codes,json=iataCodes,proto3" json:"iata_codes,omitempty"`
+	CityCode      string                 `protobuf:"bytes,5,opt,name=city_code,json=cityCode,proto3" json:"city_code,omitempty"`
+	Geocode       string                 `protobuf:"bytes,6,opt,name=geocode,proto3" json:"geocode,omitempty"`
+	Zip           string                 `protobuf:"bytes,7,opt,name=zip,proto3" json:"zip,omitempty"`
+	Name          string                 `protobuf:"bytes,8,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Location) Reset() {
+	*x = Location{}
+	mi := &file_protos_itinerary_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Location) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Location) ProtoMessage() {}
+
+func (x *Location) ProtoReflect() protoreflect.Message {
+	mi := &file_protos_itinerary_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Location.ProtoReflect.Descriptor instead.
+func (*Location) Descriptor() ([]byte, []int) {
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Location) GetArea() string {
+	if x != nil {
+		return x.Area
+	}
+	return ""
+}
+
+func (x *Location) GetCity() string {
+	if x != nil {
+		return x.City
+	}
+	return ""
+}
+
+func (x *Location) GetCountry() string {
+	if x != nil {
+		return x.Country
+	}
+	return ""
+}
+
+func (x *Location) GetIataCodes() []string {
+	if x != nil {
+		return x.IataCodes
+	}
+	return nil
+}
+
+func (x *Location) GetCityCode() string {
+	if x != nil {
+		return x.CityCode
+	}
+	return ""
+}
+
+func (x *Location) GetGeocode() string {
+	if x != nil {
+		return x.Geocode
+	}
+	return ""
+}
+
+func (x *Location) GetZip() string {
+	if x != nil {
+		return x.Zip
+	}
+	return ""
+}
+
+func (x *Location) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
 }
 
 type Accommodation struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Id               int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	GroupId          int64                  `protobuf:"varint,2,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
-	Name             string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Address          string                 `protobuf:"bytes,4,opt,name=address,proto3" json:"address,omitempty"`
-	CheckIn          *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=check_in,json=checkIn,proto3" json:"check_in,omitempty"`
-	CheckOut         *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=check_out,json=checkOut,proto3" json:"check_out,omitempty"`
-	PriceTotal       string                 `protobuf:"bytes,7,opt,name=price_total,json=priceTotal,proto3" json:"price_total,omitempty"`
-	BookingReference string                 `protobuf:"bytes,8,opt,name=booking_reference,json=bookingReference,proto3" json:"booking_reference,omitempty"`
-	Status           string                 `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"`
-	UserIds          []int64                `protobuf:"varint,10,rep,packed,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
+	state            protoimpl.MessageState    `protogen:"open.v1"`
+	Id               int64                     `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	GroupId          int64                     `protobuf:"varint,2,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	Name             string                    `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Address          string                    `protobuf:"bytes,4,opt,name=address,proto3" json:"address,omitempty"`
+	CheckIn          *timestamppb.Timestamp    `protobuf:"bytes,5,opt,name=check_in,json=checkIn,proto3" json:"check_in,omitempty"`
+	CheckOut         *timestamppb.Timestamp    `protobuf:"bytes,6,opt,name=check_out,json=checkOut,proto3" json:"check_out,omitempty"`
+	PriceTotal       string                    `protobuf:"bytes,7,opt,name=price_total,json=priceTotal,proto3" json:"price_total,omitempty"`
+	BookingReference string                    `protobuf:"bytes,8,opt,name=booking_reference,json=bookingReference,proto3" json:"booking_reference,omitempty"`
+	Status           string                    `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"`
+	UserIds          []int64                   `protobuf:"varint,10,rep,packed,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
+	Preferences      *AccommodationPreferences `protobuf:"bytes,11,opt,name=preferences,proto3" json:"preferences,omitempty"`
+	TravelerCount    int32                     `protobuf:"varint,12,opt,name=traveler_count,json=travelerCount,proto3" json:"traveler_count,omitempty"`
+	Location         *Location                 `protobuf:"bytes,13,opt,name=location,proto3" json:"location,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Accommodation) Reset() {
 	*x = Accommodation{}
-	mi := &file_itinerary_proto_msgTypes[1]
+	mi := &file_protos_itinerary_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -286,7 +554,7 @@ func (x *Accommodation) String() string {
 func (*Accommodation) ProtoMessage() {}
 
 func (x *Accommodation) ProtoReflect() protoreflect.Message {
-	mi := &file_itinerary_proto_msgTypes[1]
+	mi := &file_protos_itinerary_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -299,7 +567,7 @@ func (x *Accommodation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Accommodation.ProtoReflect.Descriptor instead.
 func (*Accommodation) Descriptor() ([]byte, []int) {
-	return file_itinerary_proto_rawDescGZIP(), []int{1}
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Accommodation) GetId() int64 {
@@ -372,14 +640,43 @@ func (x *Accommodation) GetUserIds() []int64 {
 	return nil
 }
 
+func (x *Accommodation) GetPreferences() *AccommodationPreferences {
+	if x != nil {
+		return x.Preferences
+	}
+	return nil
+}
+
+func (x *Accommodation) GetTravelerCount() int32 {
+	if x != nil {
+		return x.TravelerCount
+	}
+	return 0
+}
+
+func (x *Accommodation) GetLocation() *Location {
+	if x != nil {
+		return x.Location
+	}
+	return nil
+}
+
 type Transport struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	BookingId       int64                  `protobuf:"varint,2,opt,name=booking_id,json=bookingId,proto3" json:"booking_id,omitempty"`
-	Plugin          string                 `protobuf:"bytes,3,opt,name=plugin,proto3" json:"plugin,omitempty"`
-	ReferenceNumber string                 `protobuf:"bytes,4,opt,name=reference_number,json=referenceNumber,proto3" json:"reference_number,omitempty"`
-	Status          string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
-	Type            TransportType          `protobuf:"varint,6,opt,name=type,proto3,enum=travelingman.TransportType" json:"type,omitempty"`
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Id                   int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	BookingId            int64                  `protobuf:"varint,2,opt,name=booking_id,json=bookingId,proto3" json:"booking_id,omitempty"`
+	Plugin               string                 `protobuf:"bytes,3,opt,name=plugin,proto3" json:"plugin,omitempty"`
+	ReferenceNumber      string                 `protobuf:"bytes,4,opt,name=reference_number,json=referenceNumber,proto3" json:"reference_number,omitempty"`
+	Status               string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	Type                 TransportType          `protobuf:"varint,6,opt,name=type,proto3,enum=travelingman.TransportType" json:"type,omitempty"`
+	TravelerCount        int32                  `protobuf:"varint,7,opt,name=traveler_count,json=travelerCount,proto3" json:"traveler_count,omitempty"`
+	OriginLocation       *Location              `protobuf:"bytes,8,opt,name=origin_location,json=originLocation,proto3" json:"origin_location,omitempty"`
+	DestinationLocation  *Location              `protobuf:"bytes,9,opt,name=destination_location,json=destinationLocation,proto3" json:"destination_location,omitempty"`
+	UserIds              []int64                `protobuf:"varint,10,rep,packed,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
+	PriceTotal           float32                `protobuf:"fixed32,11,opt,name=price_total,json=priceTotal,proto3" json:"price_total,omitempty"`
+	FlightPreferences    *FlightPreferences     `protobuf:"bytes,15,opt,name=flight_preferences,json=flightPreferences,proto3" json:"flight_preferences,omitempty"`
+	TrainPreferences     *TrainPreferences      `protobuf:"bytes,16,opt,name=train_preferences,json=trainPreferences,proto3" json:"train_preferences,omitempty"`
+	CarRentalPreferences *CarRentalPreferences  `protobuf:"bytes,17,opt,name=car_rental_preferences,json=carRentalPreferences,proto3" json:"car_rental_preferences,omitempty"`
 	// Types that are valid to be assigned to Details:
 	//
 	//	*Transport_Flight
@@ -392,7 +689,7 @@ type Transport struct {
 
 func (x *Transport) Reset() {
 	*x = Transport{}
-	mi := &file_itinerary_proto_msgTypes[2]
+	mi := &file_protos_itinerary_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -404,7 +701,7 @@ func (x *Transport) String() string {
 func (*Transport) ProtoMessage() {}
 
 func (x *Transport) ProtoReflect() protoreflect.Message {
-	mi := &file_itinerary_proto_msgTypes[2]
+	mi := &file_protos_itinerary_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -417,7 +714,7 @@ func (x *Transport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Transport.ProtoReflect.Descriptor instead.
 func (*Transport) Descriptor() ([]byte, []int) {
-	return file_itinerary_proto_rawDescGZIP(), []int{2}
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Transport) GetId() int64 {
@@ -462,6 +759,62 @@ func (x *Transport) GetType() TransportType {
 	return TransportType_TRANSPORT_TYPE_UNSPECIFIED
 }
 
+func (x *Transport) GetTravelerCount() int32 {
+	if x != nil {
+		return x.TravelerCount
+	}
+	return 0
+}
+
+func (x *Transport) GetOriginLocation() *Location {
+	if x != nil {
+		return x.OriginLocation
+	}
+	return nil
+}
+
+func (x *Transport) GetDestinationLocation() *Location {
+	if x != nil {
+		return x.DestinationLocation
+	}
+	return nil
+}
+
+func (x *Transport) GetUserIds() []int64 {
+	if x != nil {
+		return x.UserIds
+	}
+	return nil
+}
+
+func (x *Transport) GetPriceTotal() float32 {
+	if x != nil {
+		return x.PriceTotal
+	}
+	return 0
+}
+
+func (x *Transport) GetFlightPreferences() *FlightPreferences {
+	if x != nil {
+		return x.FlightPreferences
+	}
+	return nil
+}
+
+func (x *Transport) GetTrainPreferences() *TrainPreferences {
+	if x != nil {
+		return x.TrainPreferences
+	}
+	return nil
+}
+
+func (x *Transport) GetCarRentalPreferences() *CarRentalPreferences {
+	if x != nil {
+		return x.CarRentalPreferences
+	}
+	return nil
+}
+
 func (x *Transport) GetDetails() isTransport_Details {
 	if x != nil {
 		return x.Details
@@ -501,15 +854,15 @@ type isTransport_Details interface {
 }
 
 type Transport_Flight struct {
-	Flight *Flight `protobuf:"bytes,10,opt,name=flight,proto3,oneof"`
+	Flight *Flight `protobuf:"bytes,12,opt,name=flight,proto3,oneof"`
 }
 
 type Transport_Train struct {
-	Train *Train `protobuf:"bytes,11,opt,name=train,proto3,oneof"`
+	Train *Train `protobuf:"bytes,13,opt,name=train,proto3,oneof"`
 }
 
 type Transport_CarRental struct {
-	CarRental *CarRental `protobuf:"bytes,12,opt,name=car_rental,json=carRental,proto3,oneof"`
+	CarRental *CarRental `protobuf:"bytes,14,opt,name=car_rental,json=carRental,proto3,oneof"`
 }
 
 func (*Transport_Flight) isTransport_Details() {}
@@ -519,21 +872,18 @@ func (*Transport_Train) isTransport_Details() {}
 func (*Transport_CarRental) isTransport_Details() {}
 
 type Flight struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	CarrierCode      string                 `protobuf:"bytes,1,opt,name=carrier_code,json=carrierCode,proto3" json:"carrier_code,omitempty"`
-	FlightNumber     string                 `protobuf:"bytes,2,opt,name=flight_number,json=flightNumber,proto3" json:"flight_number,omitempty"`
-	DepartureAirport string                 `protobuf:"bytes,3,opt,name=departure_airport,json=departureAirport,proto3" json:"departure_airport,omitempty"`
-	ArrivalAirport   string                 `protobuf:"bytes,4,opt,name=arrival_airport,json=arrivalAirport,proto3" json:"arrival_airport,omitempty"`
-	DepartureTime    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=departure_time,json=departureTime,proto3" json:"departure_time,omitempty"`
-	ArrivalTime      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=arrival_time,json=arrivalTime,proto3" json:"arrival_time,omitempty"`
-	UserIds          []int64                `protobuf:"varint,7,rep,packed,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CarrierCode   string                 `protobuf:"bytes,1,opt,name=carrier_code,json=carrierCode,proto3" json:"carrier_code,omitempty"`
+	FlightNumber  string                 `protobuf:"bytes,2,opt,name=flight_number,json=flightNumber,proto3" json:"flight_number,omitempty"`
+	DepartureTime *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=departure_time,json=departureTime,proto3" json:"departure_time,omitempty"`
+	ArrivalTime   *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=arrival_time,json=arrivalTime,proto3" json:"arrival_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Flight) Reset() {
 	*x = Flight{}
-	mi := &file_itinerary_proto_msgTypes[3]
+	mi := &file_protos_itinerary_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -545,7 +895,7 @@ func (x *Flight) String() string {
 func (*Flight) ProtoMessage() {}
 
 func (x *Flight) ProtoReflect() protoreflect.Message {
-	mi := &file_itinerary_proto_msgTypes[3]
+	mi := &file_protos_itinerary_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -558,7 +908,7 @@ func (x *Flight) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Flight.ProtoReflect.Descriptor instead.
 func (*Flight) Descriptor() ([]byte, []int) {
-	return file_itinerary_proto_rawDescGZIP(), []int{3}
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Flight) GetCarrierCode() string {
@@ -571,20 +921,6 @@ func (x *Flight) GetCarrierCode() string {
 func (x *Flight) GetFlightNumber() string {
 	if x != nil {
 		return x.FlightNumber
-	}
-	return ""
-}
-
-func (x *Flight) GetDepartureAirport() string {
-	if x != nil {
-		return x.DepartureAirport
-	}
-	return ""
-}
-
-func (x *Flight) GetArrivalAirport() string {
-	if x != nil {
-		return x.ArrivalAirport
 	}
 	return ""
 }
@@ -603,28 +939,18 @@ func (x *Flight) GetArrivalTime() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *Flight) GetUserIds() []int64 {
-	if x != nil {
-		return x.UserIds
-	}
-	return nil
-}
-
 type Train struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	DepartureStation string                 `protobuf:"bytes,1,opt,name=departure_station,json=departureStation,proto3" json:"departure_station,omitempty"`
-	ArrivalStation   string                 `protobuf:"bytes,2,opt,name=arrival_station,json=arrivalStation,proto3" json:"arrival_station,omitempty"`
-	DepartureTime    *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=departure_time,json=departureTime,proto3" json:"departure_time,omitempty"`
-	ArrivalTime      *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=arrival_time,json=arrivalTime,proto3" json:"arrival_time,omitempty"`
-	TrainNumber      string                 `protobuf:"bytes,5,opt,name=train_number,json=trainNumber,proto3" json:"train_number,omitempty"`
-	UserIds          []int64                `protobuf:"varint,6,rep,packed,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DepartureTime *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=departure_time,json=departureTime,proto3" json:"departure_time,omitempty"`
+	ArrivalTime   *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=arrival_time,json=arrivalTime,proto3" json:"arrival_time,omitempty"`
+	TrainNumber   string                 `protobuf:"bytes,3,opt,name=train_number,json=trainNumber,proto3" json:"train_number,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Train) Reset() {
 	*x = Train{}
-	mi := &file_itinerary_proto_msgTypes[4]
+	mi := &file_protos_itinerary_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -636,7 +962,7 @@ func (x *Train) String() string {
 func (*Train) ProtoMessage() {}
 
 func (x *Train) ProtoReflect() protoreflect.Message {
-	mi := &file_itinerary_proto_msgTypes[4]
+	mi := &file_protos_itinerary_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -649,21 +975,7 @@ func (x *Train) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Train.ProtoReflect.Descriptor instead.
 func (*Train) Descriptor() ([]byte, []int) {
-	return file_itinerary_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *Train) GetDepartureStation() string {
-	if x != nil {
-		return x.DepartureStation
-	}
-	return ""
-}
-
-func (x *Train) GetArrivalStation() string {
-	if x != nil {
-		return x.ArrivalStation
-	}
-	return ""
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Train) GetDepartureTime() *timestamppb.Timestamp {
@@ -687,30 +999,19 @@ func (x *Train) GetTrainNumber() string {
 	return ""
 }
 
-func (x *Train) GetUserIds() []int64 {
-	if x != nil {
-		return x.UserIds
-	}
-	return nil
-}
-
 type CarRental struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Company         string                 `protobuf:"bytes,1,opt,name=company,proto3" json:"company,omitempty"`
-	PickupLocation  string                 `protobuf:"bytes,2,opt,name=pickup_location,json=pickupLocation,proto3" json:"pickup_location,omitempty"`
-	DropoffLocation string                 `protobuf:"bytes,3,opt,name=dropoff_location,json=dropoffLocation,proto3" json:"dropoff_location,omitempty"`
-	PickupTime      *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=pickup_time,json=pickupTime,proto3" json:"pickup_time,omitempty"`
-	DropoffTime     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=dropoff_time,json=dropoffTime,proto3" json:"dropoff_time,omitempty"`
-	CarType         string                 `protobuf:"bytes,6,opt,name=car_type,json=carType,proto3" json:"car_type,omitempty"`
-	PriceTotal      string                 `protobuf:"bytes,7,opt,name=price_total,json=priceTotal,proto3" json:"price_total,omitempty"`
-	UserIds         []int64                `protobuf:"varint,8,rep,packed,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Company       string                 `protobuf:"bytes,1,opt,name=company,proto3" json:"company,omitempty"`
+	PickupTime    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=pickup_time,json=pickupTime,proto3" json:"pickup_time,omitempty"`
+	DropoffTime   *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=dropoff_time,json=dropoffTime,proto3" json:"dropoff_time,omitempty"`
+	CarType       string                 `protobuf:"bytes,4,opt,name=car_type,json=carType,proto3" json:"car_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CarRental) Reset() {
 	*x = CarRental{}
-	mi := &file_itinerary_proto_msgTypes[5]
+	mi := &file_protos_itinerary_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -722,7 +1023,7 @@ func (x *CarRental) String() string {
 func (*CarRental) ProtoMessage() {}
 
 func (x *CarRental) ProtoReflect() protoreflect.Message {
-	mi := &file_itinerary_proto_msgTypes[5]
+	mi := &file_protos_itinerary_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -735,26 +1036,12 @@ func (x *CarRental) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CarRental.ProtoReflect.Descriptor instead.
 func (*CarRental) Descriptor() ([]byte, []int) {
-	return file_itinerary_proto_rawDescGZIP(), []int{5}
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CarRental) GetCompany() string {
 	if x != nil {
 		return x.Company
-	}
-	return ""
-}
-
-func (x *CarRental) GetPickupLocation() string {
-	if x != nil {
-		return x.PickupLocation
-	}
-	return ""
-}
-
-func (x *CarRental) GetDropoffLocation() string {
-	if x != nil {
-		return x.DropoffLocation
 	}
 	return ""
 }
@@ -780,39 +1067,37 @@ func (x *CarRental) GetCarType() string {
 	return ""
 }
 
-func (x *CarRental) GetPriceTotal() string {
-	if x != nil {
-		return x.PriceTotal
-	}
-	return ""
-}
+var File_protos_itinerary_proto protoreflect.FileDescriptor
 
-func (x *CarRental) GetUserIds() []int64 {
-	if x != nil {
-		return x.UserIds
-	}
-	return nil
-}
-
-var File_itinerary_proto protoreflect.FileDescriptor
-
-const file_itinerary_proto_rawDesc = "" +
+const file_protos_itinerary_proto_rawDesc = "" +
 	"\n" +
-	"\x0fitinerary.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe5\x03\n" +
-	"\tItinerary\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x19\n" +
-	"\bgroup_id\x18\x02 \x01(\x03R\agroupId\x12\x1d\n" +
+	"\x16protos/itinerary.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\"\x81\x01\n" +
+	"\x18AccommodationPreferences\x12\x1b\n" +
+	"\troom_type\x18\x01 \x01(\tR\broomType\x12\x12\n" +
+	"\x04area\x18\x02 \x01(\tR\x04area\x12\x16\n" +
+	"\x06rating\x18\x03 \x01(\x05R\x06rating\x12\x1c\n" +
+	"\tamenities\x18\x04 \x03(\tR\tamenities\"\xea\x01\n" +
+	"\x11FlightPreferences\x126\n" +
+	"\ftravel_class\x18\x01 \x01(\x0e2\x13.travelingman.ClassR\vtravelClass\x12\x1b\n" +
+	"\tmax_stops\x18\x02 \x01(\x05R\bmaxStops\x12:\n" +
+	"\x19preferred_origin_airports\x18\x03 \x03(\tR\x17preferredOriginAirports\x12D\n" +
+	"\x1epreferred_destination_airports\x18\x04 \x03(\tR\x1cpreferredDestinationAirports\"g\n" +
+	"\x10TrainPreferences\x126\n" +
+	"\ftravel_class\x18\x01 \x01(\x0e2\x13.travelingman.ClassR\vtravelClass\x12\x1b\n" +
+	"\tseat_type\x18\x02 \x01(\tR\bseatType\"s\n" +
+	"\x14CarRentalPreferences\x12>\n" +
+	"\ftransmission\x18\x01 \x01(\x0e2\x1a.travelingman.TransmissionR\ftransmission\x12\x1b\n" +
+	"\tcar_class\x18\x02 \x01(\tR\bcarClass\"\xc8\x01\n" +
+	"\bLocation\x12\x12\n" +
+	"\x04area\x18\x01 \x01(\tR\x04area\x12\x12\n" +
+	"\x04city\x18\x02 \x01(\tR\x04city\x12\x18\n" +
+	"\acountry\x18\x03 \x01(\tR\acountry\x12\x1d\n" +
 	"\n" +
-	"day_number\x18\x03 \x01(\x05R\tdayNumber\x129\n" +
-	"\n" +
-	"start_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
-	"\bend_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12/\n" +
-	"\x04type\x18\x06 \x01(\x0e2\x1b.travelingman.ItineraryTypeR\x04type\x12\x14\n" +
-	"\x05title\x18\a \x01(\tR\x05title\x12 \n" +
-	"\vdescription\x18\b \x01(\tR\vdescription\x125\n" +
-	"\ttransport\x18\v \x03(\v2\x17.travelingman.TransportR\ttransport\x12A\n" +
-	"\raccommodation\x18\f \x03(\v2\x1b.travelingman.AccommodationR\raccommodation\x129\n" +
-	"\vitineraries\x18\r \x03(\v2\x17.travelingman.ItineraryR\vitineraries\"\xd9\x02\n" +
+	"iata_codes\x18\x04 \x03(\tR\tiataCodes\x12\x1b\n" +
+	"\tcity_code\x18\x05 \x01(\tR\bcityCode\x12\x18\n" +
+	"\ageocode\x18\x06 \x01(\tR\ageocode\x12\x10\n" +
+	"\x03zip\x18\a \x01(\tR\x03zip\x12\x12\n" +
+	"\x04name\x18\b \x01(\tR\x04name\"\xfe\x03\n" +
 	"\rAccommodation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\x03R\agroupId\x12\x12\n" +
@@ -825,7 +1110,10 @@ const file_itinerary_proto_rawDesc = "" +
 	"\x11booking_reference\x18\b \x01(\tR\x10bookingReference\x12\x16\n" +
 	"\x06status\x18\t \x01(\tR\x06status\x12\x19\n" +
 	"\buser_ids\x18\n" +
-	" \x03(\x03R\auserIds\"\xe8\x02\n" +
+	" \x03(\x03R\auserIds\x12H\n" +
+	"\vpreferences\x18\v \x01(\v2&.travelingman.AccommodationPreferencesR\vpreferences\x12%\n" +
+	"\x0etraveler_count\x18\f \x01(\x05R\rtravelerCount\x122\n" +
+	"\blocation\x18\r \x01(\v2\x16.travelingman.LocationR\blocation\"\xce\x06\n" +
 	"\tTransport\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1d\n" +
 	"\n" +
@@ -833,109 +1121,120 @@ const file_itinerary_proto_rawDesc = "" +
 	"\x06plugin\x18\x03 \x01(\tR\x06plugin\x12)\n" +
 	"\x10reference_number\x18\x04 \x01(\tR\x0freferenceNumber\x12\x16\n" +
 	"\x06status\x18\x05 \x01(\tR\x06status\x12/\n" +
-	"\x04type\x18\x06 \x01(\x0e2\x1b.travelingman.TransportTypeR\x04type\x12.\n" +
-	"\x06flight\x18\n" +
-	" \x01(\v2\x14.travelingman.FlightH\x00R\x06flight\x12+\n" +
-	"\x05train\x18\v \x01(\v2\x13.travelingman.TrainH\x00R\x05train\x128\n" +
+	"\x04type\x18\x06 \x01(\x0e2\x1b.travelingman.TransportTypeR\x04type\x12%\n" +
+	"\x0etraveler_count\x18\a \x01(\x05R\rtravelerCount\x12?\n" +
+	"\x0forigin_location\x18\b \x01(\v2\x16.travelingman.LocationR\x0eoriginLocation\x12I\n" +
+	"\x14destination_location\x18\t \x01(\v2\x16.travelingman.LocationR\x13destinationLocation\x12\x19\n" +
+	"\buser_ids\x18\n" +
+	" \x03(\x03R\auserIds\x12\x1f\n" +
+	"\vprice_total\x18\v \x01(\x02R\n" +
+	"priceTotal\x12N\n" +
+	"\x12flight_preferences\x18\x0f \x01(\v2\x1f.travelingman.FlightPreferencesR\x11flightPreferences\x12K\n" +
+	"\x11train_preferences\x18\x10 \x01(\v2\x1e.travelingman.TrainPreferencesR\x10trainPreferences\x12X\n" +
+	"\x16car_rental_preferences\x18\x11 \x01(\v2\".travelingman.CarRentalPreferencesR\x14carRentalPreferences\x12.\n" +
+	"\x06flight\x18\f \x01(\v2\x14.travelingman.FlightH\x00R\x06flight\x12+\n" +
+	"\x05train\x18\r \x01(\v2\x13.travelingman.TrainH\x00R\x05train\x128\n" +
 	"\n" +
-	"car_rental\x18\f \x01(\v2\x17.travelingman.CarRentalH\x00R\tcarRentalB\t\n" +
-	"\adetails\"\xc3\x02\n" +
+	"car_rental\x18\x0e \x01(\v2\x17.travelingman.CarRentalH\x00R\tcarRentalB\t\n" +
+	"\adetails\"\xd2\x01\n" +
 	"\x06Flight\x12!\n" +
 	"\fcarrier_code\x18\x01 \x01(\tR\vcarrierCode\x12#\n" +
-	"\rflight_number\x18\x02 \x01(\tR\fflightNumber\x12+\n" +
-	"\x11departure_airport\x18\x03 \x01(\tR\x10departureAirport\x12'\n" +
-	"\x0farrival_airport\x18\x04 \x01(\tR\x0earrivalAirport\x12A\n" +
-	"\x0edeparture_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\rdepartureTime\x12=\n" +
-	"\farrival_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\varrivalTime\x12\x19\n" +
-	"\buser_ids\x18\a \x03(\x03R\auserIds\"\x9d\x02\n" +
-	"\x05Train\x12+\n" +
-	"\x11departure_station\x18\x01 \x01(\tR\x10departureStation\x12'\n" +
-	"\x0farrival_station\x18\x02 \x01(\tR\x0earrivalStation\x12A\n" +
+	"\rflight_number\x18\x02 \x01(\tR\fflightNumber\x12A\n" +
 	"\x0edeparture_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\rdepartureTime\x12=\n" +
-	"\farrival_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\varrivalTime\x12!\n" +
-	"\ftrain_number\x18\x05 \x01(\tR\vtrainNumber\x12\x19\n" +
-	"\buser_ids\x18\x06 \x03(\x03R\auserIds\"\xcc\x02\n" +
+	"\farrival_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\varrivalTime\"\xac\x01\n" +
+	"\x05Train\x12A\n" +
+	"\x0edeparture_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\rdepartureTime\x12=\n" +
+	"\farrival_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\varrivalTime\x12!\n" +
+	"\ftrain_number\x18\x03 \x01(\tR\vtrainNumber\"\xbc\x01\n" +
 	"\tCarRental\x12\x18\n" +
-	"\acompany\x18\x01 \x01(\tR\acompany\x12'\n" +
-	"\x0fpickup_location\x18\x02 \x01(\tR\x0epickupLocation\x12)\n" +
-	"\x10dropoff_location\x18\x03 \x01(\tR\x0fdropoffLocation\x12;\n" +
-	"\vpickup_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"\acompany\x18\x01 \x01(\tR\acompany\x12;\n" +
+	"\vpickup_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"pickupTime\x12=\n" +
-	"\fdropoff_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vdropoffTime\x12\x19\n" +
-	"\bcar_type\x18\x06 \x01(\tR\acarType\x12\x1f\n" +
-	"\vprice_total\x18\a \x01(\tR\n" +
-	"priceTotal\x12\x19\n" +
-	"\buser_ids\x18\b \x03(\x03R\auserIds*\x9e\x01\n" +
-	"\rItineraryType\x12\x1e\n" +
-	"\x1aITINERARY_TYPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
-	"\x18ITINERARY_TYPE_TRANSPORT\x10\x01\x12\x18\n" +
-	"\x14ITINERARY_TYPE_HOTEL\x10\x02\x12\x18\n" +
-	"\x14ITINERARY_TYPE_EVENT\x10\x03\x12\x1b\n" +
-	"\x17ITINERARY_TYPE_DAY_PLAN\x10\x04*\x98\x01\n" +
+	"\fdropoff_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vdropoffTime\x12\x19\n" +
+	"\bcar_type\x18\x04 \x01(\tR\acarType*\x98\x01\n" +
 	"\rTransportType\x12\x1e\n" +
 	"\x1aTRANSPORT_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15TRANSPORT_TYPE_FLIGHT\x10\x01\x12\x18\n" +
 	"\x14TRANSPORT_TYPE_TRAIN\x10\x02\x12\x16\n" +
 	"\x12TRANSPORT_TYPE_CAR\x10\x03\x12\x1a\n" +
-	"\x16TRANSPORT_TYPE_WALKING\x10\x04B#Z!github.com/va6996/travelingman/pbb\x06proto3"
+	"\x16TRANSPORT_TYPE_WALKING\x10\x04*q\n" +
+	"\x05Class\x12\x15\n" +
+	"\x11CLASS_UNSPECIFIED\x10\x00\x12\x11\n" +
+	"\rCLASS_ECONOMY\x10\x01\x12\x19\n" +
+	"\x15CLASS_PREMIUM_ECONOMY\x10\x02\x12\x12\n" +
+	"\x0eCLASS_BUSINESS\x10\x03\x12\x0f\n" +
+	"\vCLASS_FIRST\x10\x04*a\n" +
+	"\fTransmission\x12\x1c\n" +
+	"\x18TRANSMISSION_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13TRANSMISSION_MANUAL\x10\x01\x12\x1a\n" +
+	"\x16TRANSMISSION_AUTOMATIC\x10\x02B#Z!github.com/va6996/travelingman/pbb\x06proto3"
 
 var (
-	file_itinerary_proto_rawDescOnce sync.Once
-	file_itinerary_proto_rawDescData []byte
+	file_protos_itinerary_proto_rawDescOnce sync.Once
+	file_protos_itinerary_proto_rawDescData []byte
 )
 
-func file_itinerary_proto_rawDescGZIP() []byte {
-	file_itinerary_proto_rawDescOnce.Do(func() {
-		file_itinerary_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_itinerary_proto_rawDesc), len(file_itinerary_proto_rawDesc)))
+func file_protos_itinerary_proto_rawDescGZIP() []byte {
+	file_protos_itinerary_proto_rawDescOnce.Do(func() {
+		file_protos_itinerary_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_protos_itinerary_proto_rawDesc), len(file_protos_itinerary_proto_rawDesc)))
 	})
-	return file_itinerary_proto_rawDescData
+	return file_protos_itinerary_proto_rawDescData
 }
 
-var file_itinerary_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_itinerary_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
-var file_itinerary_proto_goTypes = []any{
-	(ItineraryType)(0),            // 0: travelingman.ItineraryType
-	(TransportType)(0),            // 1: travelingman.TransportType
-	(*Itinerary)(nil),             // 2: travelingman.Itinerary
-	(*Accommodation)(nil),         // 3: travelingman.Accommodation
-	(*Transport)(nil),             // 4: travelingman.Transport
-	(*Flight)(nil),                // 5: travelingman.Flight
-	(*Train)(nil),                 // 6: travelingman.Train
-	(*CarRental)(nil),             // 7: travelingman.CarRental
-	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
+var file_protos_itinerary_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_protos_itinerary_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_protos_itinerary_proto_goTypes = []any{
+	(TransportType)(0),               // 0: travelingman.TransportType
+	(Class)(0),                       // 1: travelingman.Class
+	(Transmission)(0),                // 2: travelingman.Transmission
+	(*AccommodationPreferences)(nil), // 3: travelingman.AccommodationPreferences
+	(*FlightPreferences)(nil),        // 4: travelingman.FlightPreferences
+	(*TrainPreferences)(nil),         // 5: travelingman.TrainPreferences
+	(*CarRentalPreferences)(nil),     // 6: travelingman.CarRentalPreferences
+	(*Location)(nil),                 // 7: travelingman.Location
+	(*Accommodation)(nil),            // 8: travelingman.Accommodation
+	(*Transport)(nil),                // 9: travelingman.Transport
+	(*Flight)(nil),                   // 10: travelingman.Flight
+	(*Train)(nil),                    // 11: travelingman.Train
+	(*CarRental)(nil),                // 12: travelingman.CarRental
+	(*timestamppb.Timestamp)(nil),    // 13: google.protobuf.Timestamp
 }
-var file_itinerary_proto_depIdxs = []int32{
-	8,  // 0: travelingman.Itinerary.start_time:type_name -> google.protobuf.Timestamp
-	8,  // 1: travelingman.Itinerary.end_time:type_name -> google.protobuf.Timestamp
-	0,  // 2: travelingman.Itinerary.type:type_name -> travelingman.ItineraryType
-	4,  // 3: travelingman.Itinerary.transport:type_name -> travelingman.Transport
-	3,  // 4: travelingman.Itinerary.accommodation:type_name -> travelingman.Accommodation
-	2,  // 5: travelingman.Itinerary.itineraries:type_name -> travelingman.Itinerary
-	8,  // 6: travelingman.Accommodation.check_in:type_name -> google.protobuf.Timestamp
-	8,  // 7: travelingman.Accommodation.check_out:type_name -> google.protobuf.Timestamp
-	1,  // 8: travelingman.Transport.type:type_name -> travelingman.TransportType
-	5,  // 9: travelingman.Transport.flight:type_name -> travelingman.Flight
-	6,  // 10: travelingman.Transport.train:type_name -> travelingman.Train
-	7,  // 11: travelingman.Transport.car_rental:type_name -> travelingman.CarRental
-	8,  // 12: travelingman.Flight.departure_time:type_name -> google.protobuf.Timestamp
-	8,  // 13: travelingman.Flight.arrival_time:type_name -> google.protobuf.Timestamp
-	8,  // 14: travelingman.Train.departure_time:type_name -> google.protobuf.Timestamp
-	8,  // 15: travelingman.Train.arrival_time:type_name -> google.protobuf.Timestamp
-	8,  // 16: travelingman.CarRental.pickup_time:type_name -> google.protobuf.Timestamp
-	8,  // 17: travelingman.CarRental.dropoff_time:type_name -> google.protobuf.Timestamp
-	18, // [18:18] is the sub-list for method output_type
-	18, // [18:18] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+var file_protos_itinerary_proto_depIdxs = []int32{
+	1,  // 0: travelingman.FlightPreferences.travel_class:type_name -> travelingman.Class
+	1,  // 1: travelingman.TrainPreferences.travel_class:type_name -> travelingman.Class
+	2,  // 2: travelingman.CarRentalPreferences.transmission:type_name -> travelingman.Transmission
+	13, // 3: travelingman.Accommodation.check_in:type_name -> google.protobuf.Timestamp
+	13, // 4: travelingman.Accommodation.check_out:type_name -> google.protobuf.Timestamp
+	3,  // 5: travelingman.Accommodation.preferences:type_name -> travelingman.AccommodationPreferences
+	7,  // 6: travelingman.Accommodation.location:type_name -> travelingman.Location
+	0,  // 7: travelingman.Transport.type:type_name -> travelingman.TransportType
+	7,  // 8: travelingman.Transport.origin_location:type_name -> travelingman.Location
+	7,  // 9: travelingman.Transport.destination_location:type_name -> travelingman.Location
+	4,  // 10: travelingman.Transport.flight_preferences:type_name -> travelingman.FlightPreferences
+	5,  // 11: travelingman.Transport.train_preferences:type_name -> travelingman.TrainPreferences
+	6,  // 12: travelingman.Transport.car_rental_preferences:type_name -> travelingman.CarRentalPreferences
+	10, // 13: travelingman.Transport.flight:type_name -> travelingman.Flight
+	11, // 14: travelingman.Transport.train:type_name -> travelingman.Train
+	12, // 15: travelingman.Transport.car_rental:type_name -> travelingman.CarRental
+	13, // 16: travelingman.Flight.departure_time:type_name -> google.protobuf.Timestamp
+	13, // 17: travelingman.Flight.arrival_time:type_name -> google.protobuf.Timestamp
+	13, // 18: travelingman.Train.departure_time:type_name -> google.protobuf.Timestamp
+	13, // 19: travelingman.Train.arrival_time:type_name -> google.protobuf.Timestamp
+	13, // 20: travelingman.CarRental.pickup_time:type_name -> google.protobuf.Timestamp
+	13, // 21: travelingman.CarRental.dropoff_time:type_name -> google.protobuf.Timestamp
+	22, // [22:22] is the sub-list for method output_type
+	22, // [22:22] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
-func init() { file_itinerary_proto_init() }
-func file_itinerary_proto_init() {
-	if File_itinerary_proto != nil {
+func init() { file_protos_itinerary_proto_init() }
+func file_protos_itinerary_proto_init() {
+	if File_protos_itinerary_proto != nil {
 		return
 	}
-	file_itinerary_proto_msgTypes[2].OneofWrappers = []any{
+	file_protos_itinerary_proto_msgTypes[6].OneofWrappers = []any{
 		(*Transport_Flight)(nil),
 		(*Transport_Train)(nil),
 		(*Transport_CarRental)(nil),
@@ -944,18 +1243,18 @@ func file_itinerary_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_itinerary_proto_rawDesc), len(file_itinerary_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   6,
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protos_itinerary_proto_rawDesc), len(file_protos_itinerary_proto_rawDesc)),
+			NumEnums:      3,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_itinerary_proto_goTypes,
-		DependencyIndexes: file_itinerary_proto_depIdxs,
-		EnumInfos:         file_itinerary_proto_enumTypes,
-		MessageInfos:      file_itinerary_proto_msgTypes,
+		GoTypes:           file_protos_itinerary_proto_goTypes,
+		DependencyIndexes: file_protos_itinerary_proto_depIdxs,
+		EnumInfos:         file_protos_itinerary_proto_enumTypes,
+		MessageInfos:      file_protos_itinerary_proto_msgTypes,
 	}.Build()
-	File_itinerary_proto = out.File
-	file_itinerary_proto_goTypes = nil
-	file_itinerary_proto_depIdxs = nil
+	File_protos_itinerary_proto = out.File
+	file_protos_itinerary_proto_goTypes = nil
+	file_protos_itinerary_proto_depIdxs = nil
 }

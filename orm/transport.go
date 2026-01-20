@@ -17,10 +17,40 @@ type Transport struct {
 	Status          string
 	Type            int32 // Enum
 
+	// Preferences (stored as JSON or separate columns, simplifed here as embedded for GORM references if needed, or just fields)
+	// For this refactor, we are adding them as pointer references similar to details, or we could store as JSON.
+	// Let's assume we map them to the PB directly for now in memory.
+	// To actually store them in DB, we'd need new tables or JSON columns.
+	// Given the scope, I will update the ToPB/FromPB mapping.
+	// But first, I need update the struct. I will add them as ignored fields (-) if not adhering to DB schema yet, or just assume DB migration happens elsewhere.
+	// Let's stick to update logic mapping first.
+	// Wait, if I don't add them to the struct, I can't map them.
+
+	FlightPreferences    *FlightPreferences    `gorm:"embedded;embeddedPrefix:flight_pref_"`
+	TrainPreferences     *TrainPreferences     `gorm:"embedded;embeddedPrefix:train_pref_"`
+	CarRentalPreferences *CarRentalPreferences `gorm:"embedded;embeddedPrefix:car_pref_"`
+
 	// One-to-One relationships (Polymorphic-like via exclusive fields)
 	Flight    *Flight    `gorm:"foreignKey:TransportID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Train     *Train     `gorm:"foreignKey:TransportID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	CarRental *CarRental `gorm:"foreignKey:TransportID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+}
+
+type FlightPreferences struct {
+	TravelClass                  int32
+	MaxStops                     int32
+	PreferredOriginAirports      []string `gorm:"type:text"` // Check GORM string array support or use serializer
+	PreferredDestinationAirports []string `gorm:"type:text"`
+}
+
+type TrainPreferences struct {
+	TravelClass int32
+	SeatType    string
+}
+
+type CarRentalPreferences struct {
+	Transmission int32
+	CarClass     string
 }
 
 type Flight struct {
@@ -70,10 +100,36 @@ func (t *Transport) ToPB() *pb.Transport {
 	}
 	if t.Flight != nil {
 		pbTrans.Details = &pb.Transport_Flight{Flight: t.Flight.ToPB()}
+		pbTrans.OriginLocation = &pb.Location{IataCodes: []string{t.Flight.DepartureAirport}}
+		pbTrans.DestinationLocation = &pb.Location{IataCodes: []string{t.Flight.ArrivalAirport}}
 	} else if t.Train != nil {
 		pbTrans.Details = &pb.Transport_Train{Train: t.Train.ToPB()}
+		pbTrans.OriginLocation = &pb.Location{IataCodes: []string{t.Train.DepartureStation}}
+		pbTrans.DestinationLocation = &pb.Location{IataCodes: []string{t.Train.ArrivalStation}}
 	} else if t.CarRental != nil {
 		pbTrans.Details = &pb.Transport_CarRental{CarRental: t.CarRental.ToPB()}
+		pbTrans.OriginLocation = &pb.Location{IataCodes: []string{t.CarRental.PickupLocation}}
+		pbTrans.DestinationLocation = &pb.Location{IataCodes: []string{t.CarRental.DropoffLocation}}
+	}
+	if t.FlightPreferences != nil {
+		pbTrans.FlightPreferences = &pb.FlightPreferences{
+			TravelClass:                  pb.Class(t.FlightPreferences.TravelClass),
+			MaxStops:                     t.FlightPreferences.MaxStops,
+			PreferredOriginAirports:      t.FlightPreferences.PreferredOriginAirports,
+			PreferredDestinationAirports: t.FlightPreferences.PreferredDestinationAirports,
+		}
+	}
+	if t.TrainPreferences != nil {
+		pbTrans.TrainPreferences = &pb.TrainPreferences{
+			TravelClass: pb.Class(t.TrainPreferences.TravelClass),
+			SeatType:    t.TrainPreferences.SeatType,
+		}
+	}
+	if t.CarRentalPreferences != nil {
+		pbTrans.CarRentalPreferences = &pb.CarRentalPreferences{
+			Transmission: pb.Transmission(t.CarRentalPreferences.Transmission),
+			CarClass:     t.CarRentalPreferences.CarClass,
+		}
 	}
 	return pbTrans
 }
@@ -90,13 +146,58 @@ func TransportFromPB(p *pb.Transport) *Transport {
 		Status:          p.Status,
 		Type:            int32(p.Type),
 	}
+
+	if p.FlightPreferences != nil {
+		t.FlightPreferences = &FlightPreferences{
+			TravelClass:                  int32(p.FlightPreferences.TravelClass),
+			MaxStops:                     p.FlightPreferences.MaxStops,
+			PreferredOriginAirports:      p.FlightPreferences.PreferredOriginAirports,
+			PreferredDestinationAirports: p.FlightPreferences.PreferredDestinationAirports,
+		}
+	}
+	if p.TrainPreferences != nil {
+		t.TrainPreferences = &TrainPreferences{
+			TravelClass: int32(p.TrainPreferences.TravelClass),
+			SeatType:    p.TrainPreferences.SeatType,
+		}
+	}
+	if p.CarRentalPreferences != nil {
+		t.CarRentalPreferences = &CarRentalPreferences{
+			Transmission: int32(p.CarRentalPreferences.Transmission),
+			CarClass:     p.CarRentalPreferences.CarClass,
+		}
+	}
+
+	origin := ""
+	if p.OriginLocation != nil {
+		if len(p.OriginLocation.IataCodes) > 0 {
+			origin = p.OriginLocation.IataCodes[0]
+		} else {
+			origin = p.OriginLocation.CityCode
+		}
+	}
+	dest := ""
+	if p.DestinationLocation != nil {
+		if len(p.DestinationLocation.IataCodes) > 0 {
+			dest = p.DestinationLocation.IataCodes[0]
+		} else {
+			dest = p.DestinationLocation.CityCode
+		}
+	}
+
 	// Details OneOf
 	if flight := p.GetFlight(); flight != nil {
 		t.Flight = FlightFromPB(flight)
+		t.Flight.DepartureAirport = origin
+		t.Flight.ArrivalAirport = dest
 	} else if train := p.GetTrain(); train != nil {
 		t.Train = TrainFromPB(train)
+		t.Train.DepartureStation = origin
+		t.Train.ArrivalStation = dest
 	} else if car := p.GetCarRental(); car != nil {
 		t.CarRental = CarRentalFromPB(car)
+		t.CarRental.PickupLocation = origin
+		t.CarRental.DropoffLocation = dest
 	}
 	return t
 }
@@ -106,12 +207,10 @@ func (f *Flight) ToPB() *pb.Flight {
 		return nil
 	}
 	return &pb.Flight{
-		CarrierCode:      f.CarrierCode,
-		FlightNumber:     f.FlightNumber,
-		DepartureAirport: f.DepartureAirport,
-		ArrivalAirport:   f.ArrivalAirport,
-		DepartureTime:    timestamppb.New(f.DepartureTime),
-		ArrivalTime:      timestamppb.New(f.ArrivalTime),
+		CarrierCode:   f.CarrierCode,
+		FlightNumber:  f.FlightNumber,
+		DepartureTime: timestamppb.New(f.DepartureTime),
+		ArrivalTime:   timestamppb.New(f.ArrivalTime),
 	}
 }
 
@@ -120,12 +219,10 @@ func FlightFromPB(p *pb.Flight) *Flight {
 		return nil
 	}
 	return &Flight{
-		CarrierCode:      p.CarrierCode,
-		FlightNumber:     p.FlightNumber,
-		DepartureAirport: p.DepartureAirport,
-		ArrivalAirport:   p.ArrivalAirport,
-		DepartureTime:    p.DepartureTime.AsTime(),
-		ArrivalTime:      p.ArrivalTime.AsTime(),
+		CarrierCode:   p.CarrierCode,
+		FlightNumber:  p.FlightNumber,
+		DepartureTime: p.DepartureTime.AsTime(),
+		ArrivalTime:   p.ArrivalTime.AsTime(),
 	}
 }
 
@@ -134,11 +231,9 @@ func (t *Train) ToPB() *pb.Train {
 		return nil
 	}
 	return &pb.Train{
-		DepartureStation: t.DepartureStation,
-		ArrivalStation:   t.ArrivalStation,
-		DepartureTime:    timestamppb.New(t.DepartureTime),
-		ArrivalTime:      timestamppb.New(t.ArrivalTime),
-		TrainNumber:      t.TrainNumber,
+		DepartureTime: timestamppb.New(t.DepartureTime),
+		ArrivalTime:   timestamppb.New(t.ArrivalTime),
+		TrainNumber:   t.TrainNumber,
 	}
 }
 
@@ -147,11 +242,9 @@ func TrainFromPB(p *pb.Train) *Train {
 		return nil
 	}
 	return &Train{
-		DepartureStation: p.DepartureStation,
-		ArrivalStation:   p.ArrivalStation,
-		DepartureTime:    p.DepartureTime.AsTime(),
-		ArrivalTime:      p.ArrivalTime.AsTime(),
-		TrainNumber:      p.TrainNumber,
+		DepartureTime: p.DepartureTime.AsTime(),
+		ArrivalTime:   p.ArrivalTime.AsTime(),
+		TrainNumber:   p.TrainNumber,
 	}
 }
 
@@ -160,13 +253,10 @@ func (c *CarRental) ToPB() *pb.CarRental {
 		return nil
 	}
 	return &pb.CarRental{
-		Company:         c.Company,
-		PickupLocation:  c.PickupLocation,
-		DropoffLocation: c.DropoffLocation,
-		PickupTime:      timestamppb.New(c.PickupTime),
-		DropoffTime:     timestamppb.New(c.DropoffTime),
-		CarType:         c.CarType,
-		PriceTotal:      c.PriceTotal,
+		Company:     c.Company,
+		PickupTime:  timestamppb.New(c.PickupTime),
+		DropoffTime: timestamppb.New(c.DropoffTime),
+		CarType:     c.CarType,
 	}
 }
 
@@ -175,13 +265,11 @@ func CarRentalFromPB(p *pb.CarRental) *CarRental {
 		return nil
 	}
 	return &CarRental{
-		Company:         p.Company,
-		PickupLocation:  p.PickupLocation,
-		DropoffLocation: p.DropoffLocation,
-		PickupTime:      p.PickupTime.AsTime(),
-		DropoffTime:     p.DropoffTime.AsTime(),
-		CarType:         p.CarType,
-		PriceTotal:      p.PriceTotal,
+		Company:     p.Company,
+		PickupTime:  p.PickupTime.AsTime(),
+		DropoffTime: p.DropoffTime.AsTime(),
+		CarType:     p.CarType,
+		// PriceTotal not in pb.CarRental anymore, handled at Transport level if needed
 	}
 }
 

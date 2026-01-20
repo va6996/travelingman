@@ -2,11 +2,11 @@
 // versions:
 //   protoc-gen-ts_proto  v2.10.0
 //   protoc               v5.29.2
-// source: graph.proto
+// source: protos/graph.proto
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import { Timestamp } from "./google/protobuf/timestamp";
+import { Timestamp } from "../google/protobuf/timestamp";
 import { Accommodation, Transport } from "./itinerary";
 
 export const protobufPackage = "travelingman";
@@ -31,7 +31,11 @@ export interface Node {
   /** Whether this node represents an inter-city travel point */
   isInterCity: boolean;
   /** Hotel/accommodation info (from Accommodation) */
-  stay: Accommodation | undefined;
+  stay:
+    | Accommodation
+    | undefined;
+  /** List of possible accommodations */
+  stayOptions: Accommodation[];
 }
 
 /**
@@ -46,7 +50,11 @@ export interface Edge {
   /** Duration of travel in seconds */
   durationSeconds: number;
   /** Full Transport struct from Transport */
-  transport: Transport | undefined;
+  transport:
+    | Transport
+    | undefined;
+  /** List of possible transports */
+  transportOptions: Transport[];
 }
 
 /** Graph represents the complete graph structure of a user's itinerary */
@@ -59,6 +67,18 @@ export interface Graph {
   subGraph: Graph | undefined;
 }
 
+export interface Itinerary {
+  id: number;
+  groupId: number;
+  dayNumber: number;
+  startTime: Date | undefined;
+  endTime: Date | undefined;
+  title: string;
+  description: string;
+  graph: Graph | undefined;
+  travelers: number;
+}
+
 function createBaseNode(): Node {
   return {
     id: "",
@@ -67,6 +87,7 @@ function createBaseNode(): Node {
     toTimestamp: undefined,
     isInterCity: false,
     stay: undefined,
+    stayOptions: [],
   };
 }
 
@@ -89,6 +110,9 @@ export const Node: MessageFns<Node> = {
     }
     if (message.stay !== undefined) {
       Accommodation.encode(message.stay, writer.uint32(50).fork()).join();
+    }
+    for (const v of message.stayOptions) {
+      Accommodation.encode(v!, writer.uint32(58).fork()).join();
     }
     return writer;
   },
@@ -148,6 +172,14 @@ export const Node: MessageFns<Node> = {
           message.stay = Accommodation.decode(reader, reader.uint32());
           continue;
         }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.stayOptions.push(Accommodation.decode(reader, reader.uint32()));
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -165,6 +197,9 @@ export const Node: MessageFns<Node> = {
       toTimestamp: isSet(object.toTimestamp) ? fromJsonTimestamp(object.toTimestamp) : undefined,
       isInterCity: isSet(object.isInterCity) ? globalThis.Boolean(object.isInterCity) : false,
       stay: isSet(object.stay) ? Accommodation.fromJSON(object.stay) : undefined,
+      stayOptions: globalThis.Array.isArray(object?.stayOptions)
+        ? object.stayOptions.map((e: any) => Accommodation.fromJSON(e))
+        : [],
     };
   },
 
@@ -188,6 +223,9 @@ export const Node: MessageFns<Node> = {
     if (message.stay !== undefined) {
       obj.stay = Accommodation.toJSON(message.stay);
     }
+    if (message.stayOptions?.length) {
+      obj.stayOptions = message.stayOptions.map((e) => Accommodation.toJSON(e));
+    }
     return obj;
   },
 
@@ -204,12 +242,13 @@ export const Node: MessageFns<Node> = {
     message.stay = (object.stay !== undefined && object.stay !== null)
       ? Accommodation.fromPartial(object.stay)
       : undefined;
+    message.stayOptions = object.stayOptions?.map((e) => Accommodation.fromPartial(e)) || [];
     return message;
   },
 };
 
 function createBaseEdge(): Edge {
-  return { fromId: "", toId: "", durationSeconds: 0, transport: undefined };
+  return { fromId: "", toId: "", durationSeconds: 0, transport: undefined, transportOptions: [] };
 }
 
 export const Edge: MessageFns<Edge> = {
@@ -225,6 +264,9 @@ export const Edge: MessageFns<Edge> = {
     }
     if (message.transport !== undefined) {
       Transport.encode(message.transport, writer.uint32(34).fork()).join();
+    }
+    for (const v of message.transportOptions) {
+      Transport.encode(v!, writer.uint32(42).fork()).join();
     }
     return writer;
   },
@@ -268,6 +310,14 @@ export const Edge: MessageFns<Edge> = {
           message.transport = Transport.decode(reader, reader.uint32());
           continue;
         }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.transportOptions.push(Transport.decode(reader, reader.uint32()));
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -283,6 +333,9 @@ export const Edge: MessageFns<Edge> = {
       toId: isSet(object.toId) ? globalThis.String(object.toId) : "",
       durationSeconds: isSet(object.durationSeconds) ? globalThis.Number(object.durationSeconds) : 0,
       transport: isSet(object.transport) ? Transport.fromJSON(object.transport) : undefined,
+      transportOptions: globalThis.Array.isArray(object?.transportOptions)
+        ? object.transportOptions.map((e: any) => Transport.fromJSON(e))
+        : [],
     };
   },
 
@@ -300,6 +353,9 @@ export const Edge: MessageFns<Edge> = {
     if (message.transport !== undefined) {
       obj.transport = Transport.toJSON(message.transport);
     }
+    if (message.transportOptions?.length) {
+      obj.transportOptions = message.transportOptions.map((e) => Transport.toJSON(e));
+    }
     return obj;
   },
 
@@ -314,6 +370,7 @@ export const Edge: MessageFns<Edge> = {
     message.transport = (object.transport !== undefined && object.transport !== null)
       ? Transport.fromPartial(object.transport)
       : undefined;
+    message.transportOptions = object.transportOptions?.map((e) => Transport.fromPartial(e)) || [];
     return message;
   },
 };
@@ -408,6 +465,204 @@ export const Graph: MessageFns<Graph> = {
     message.subGraph = (object.subGraph !== undefined && object.subGraph !== null)
       ? Graph.fromPartial(object.subGraph)
       : undefined;
+    return message;
+  },
+};
+
+function createBaseItinerary(): Itinerary {
+  return {
+    id: 0,
+    groupId: 0,
+    dayNumber: 0,
+    startTime: undefined,
+    endTime: undefined,
+    title: "",
+    description: "",
+    graph: undefined,
+    travelers: 0,
+  };
+}
+
+export const Itinerary: MessageFns<Itinerary> = {
+  encode(message: Itinerary, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== 0) {
+      writer.uint32(8).int64(message.id);
+    }
+    if (message.groupId !== 0) {
+      writer.uint32(16).int64(message.groupId);
+    }
+    if (message.dayNumber !== 0) {
+      writer.uint32(24).int32(message.dayNumber);
+    }
+    if (message.startTime !== undefined) {
+      Timestamp.encode(toTimestamp(message.startTime), writer.uint32(34).fork()).join();
+    }
+    if (message.endTime !== undefined) {
+      Timestamp.encode(toTimestamp(message.endTime), writer.uint32(42).fork()).join();
+    }
+    if (message.title !== "") {
+      writer.uint32(50).string(message.title);
+    }
+    if (message.description !== "") {
+      writer.uint32(58).string(message.description);
+    }
+    if (message.graph !== undefined) {
+      Graph.encode(message.graph, writer.uint32(66).fork()).join();
+    }
+    if (message.travelers !== 0) {
+      writer.uint32(72).int32(message.travelers);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Itinerary {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseItinerary();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.id = longToNumber(reader.int64());
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.groupId = longToNumber(reader.int64());
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.dayNumber = reader.int32();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.startTime = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.endTime = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.title = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.description = reader.string();
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.graph = Graph.decode(reader, reader.uint32());
+          continue;
+        }
+        case 9: {
+          if (tag !== 72) {
+            break;
+          }
+
+          message.travelers = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Itinerary {
+    return {
+      id: isSet(object.id) ? globalThis.Number(object.id) : 0,
+      groupId: isSet(object.groupId) ? globalThis.Number(object.groupId) : 0,
+      dayNumber: isSet(object.dayNumber) ? globalThis.Number(object.dayNumber) : 0,
+      startTime: isSet(object.startTime) ? fromJsonTimestamp(object.startTime) : undefined,
+      endTime: isSet(object.endTime) ? fromJsonTimestamp(object.endTime) : undefined,
+      title: isSet(object.title) ? globalThis.String(object.title) : "",
+      description: isSet(object.description) ? globalThis.String(object.description) : "",
+      graph: isSet(object.graph) ? Graph.fromJSON(object.graph) : undefined,
+      travelers: isSet(object.travelers) ? globalThis.Number(object.travelers) : 0,
+    };
+  },
+
+  toJSON(message: Itinerary): unknown {
+    const obj: any = {};
+    if (message.id !== 0) {
+      obj.id = Math.round(message.id);
+    }
+    if (message.groupId !== 0) {
+      obj.groupId = Math.round(message.groupId);
+    }
+    if (message.dayNumber !== 0) {
+      obj.dayNumber = Math.round(message.dayNumber);
+    }
+    if (message.startTime !== undefined) {
+      obj.startTime = message.startTime.toISOString();
+    }
+    if (message.endTime !== undefined) {
+      obj.endTime = message.endTime.toISOString();
+    }
+    if (message.title !== "") {
+      obj.title = message.title;
+    }
+    if (message.description !== "") {
+      obj.description = message.description;
+    }
+    if (message.graph !== undefined) {
+      obj.graph = Graph.toJSON(message.graph);
+    }
+    if (message.travelers !== 0) {
+      obj.travelers = Math.round(message.travelers);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Itinerary>, I>>(base?: I): Itinerary {
+    return Itinerary.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Itinerary>, I>>(object: I): Itinerary {
+    const message = createBaseItinerary();
+    message.id = object.id ?? 0;
+    message.groupId = object.groupId ?? 0;
+    message.dayNumber = object.dayNumber ?? 0;
+    message.startTime = object.startTime ?? undefined;
+    message.endTime = object.endTime ?? undefined;
+    message.title = object.title ?? "";
+    message.description = object.description ?? "";
+    message.graph = (object.graph !== undefined && object.graph !== null) ? Graph.fromPartial(object.graph) : undefined;
+    message.travelers = object.travelers ?? 0;
     return message;
   },
 };

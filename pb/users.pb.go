@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v5.29.2
-// source: users.proto
+// source: protos/users.proto
 
 package pb
 
@@ -37,7 +37,7 @@ type User struct {
 
 func (x *User) Reset() {
 	*x = User{}
-	mi := &file_users_proto_msgTypes[0]
+	mi := &file_protos_users_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -49,7 +49,7 @@ func (x *User) String() string {
 func (*User) ProtoMessage() {}
 
 func (x *User) ProtoReflect() protoreflect.Message {
-	mi := &file_users_proto_msgTypes[0]
+	mi := &file_protos_users_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -62,7 +62,7 @@ func (x *User) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use User.ProtoReflect.Descriptor instead.
 func (*User) Descriptor() ([]byte, []int) {
-	return file_users_proto_rawDescGZIP(), []int{0}
+	return file_protos_users_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *User) GetId() int64 {
@@ -127,7 +127,7 @@ type Passport struct {
 
 func (x *Passport) Reset() {
 	*x = Passport{}
-	mi := &file_users_proto_msgTypes[1]
+	mi := &file_protos_users_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -139,7 +139,7 @@ func (x *Passport) String() string {
 func (*Passport) ProtoMessage() {}
 
 func (x *Passport) ProtoReflect() protoreflect.Message {
-	mi := &file_users_proto_msgTypes[1]
+	mi := &file_protos_users_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -152,7 +152,7 @@ func (x *Passport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Passport.ProtoReflect.Descriptor instead.
 func (*Passport) Descriptor() ([]byte, []int) {
-	return file_users_proto_rawDescGZIP(), []int{1}
+	return file_protos_users_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Passport) GetId() int64 {
@@ -203,7 +203,7 @@ type DriversLicense struct {
 
 func (x *DriversLicense) Reset() {
 	*x = DriversLicense{}
-	mi := &file_users_proto_msgTypes[2]
+	mi := &file_protos_users_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -215,7 +215,7 @@ func (x *DriversLicense) String() string {
 func (*DriversLicense) ProtoMessage() {}
 
 func (x *DriversLicense) ProtoReflect() protoreflect.Message {
-	mi := &file_users_proto_msgTypes[2]
+	mi := &file_protos_users_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -228,7 +228,7 @@ func (x *DriversLicense) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DriversLicense.ProtoReflect.Descriptor instead.
 func (*DriversLicense) Descriptor() ([]byte, []int) {
-	return file_users_proto_rawDescGZIP(), []int{2}
+	return file_protos_users_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *DriversLicense) GetId() int64 {
@@ -281,7 +281,7 @@ type TravelGroup struct {
 
 func (x *TravelGroup) Reset() {
 	*x = TravelGroup{}
-	mi := &file_users_proto_msgTypes[3]
+	mi := &file_protos_users_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -293,7 +293,7 @@ func (x *TravelGroup) String() string {
 func (*TravelGroup) ProtoMessage() {}
 
 func (x *TravelGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_users_proto_msgTypes[3]
+	mi := &file_protos_users_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -306,7 +306,7 @@ func (x *TravelGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TravelGroup.ProtoReflect.Descriptor instead.
 func (*TravelGroup) Descriptor() ([]byte, []int) {
-	return file_users_proto_rawDescGZIP(), []int{3}
+	return file_protos_users_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *TravelGroup) GetGroupId() int64 {
@@ -358,11 +358,11 @@ func (x *TravelGroup) GetItinerary() []*Itinerary {
 	return nil
 }
 
-var File_users_proto protoreflect.FileDescriptor
+var File_protos_users_proto protoreflect.FileDescriptor
 
-const file_users_proto_rawDesc = "" +
+const file_protos_users_proto_rawDesc = "" +
 	"\n" +
-	"\vusers.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fitinerary.proto\"\xa8\x02\n" +
+	"\x12protos/users.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12protos/graph.proto\"\xa8\x02\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12#\n" +
@@ -397,19 +397,19 @@ const file_users_proto_rawDesc = "" +
 	"\titinerary\x18\a \x03(\v2\x17.travelingman.ItineraryR\titineraryB#Z!github.com/va6996/travelingman/pbb\x06proto3"
 
 var (
-	file_users_proto_rawDescOnce sync.Once
-	file_users_proto_rawDescData []byte
+	file_protos_users_proto_rawDescOnce sync.Once
+	file_protos_users_proto_rawDescData []byte
 )
 
-func file_users_proto_rawDescGZIP() []byte {
-	file_users_proto_rawDescOnce.Do(func() {
-		file_users_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_users_proto_rawDesc), len(file_users_proto_rawDesc)))
+func file_protos_users_proto_rawDescGZIP() []byte {
+	file_protos_users_proto_rawDescOnce.Do(func() {
+		file_protos_users_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_protos_users_proto_rawDesc), len(file_protos_users_proto_rawDesc)))
 	})
-	return file_users_proto_rawDescData
+	return file_protos_users_proto_rawDescData
 }
 
-var file_users_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_users_proto_goTypes = []any{
+var file_protos_users_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_protos_users_proto_goTypes = []any{
 	(*User)(nil),                  // 0: travelingman.User
 	(*Passport)(nil),              // 1: travelingman.Passport
 	(*DriversLicense)(nil),        // 2: travelingman.DriversLicense
@@ -417,7 +417,7 @@ var file_users_proto_goTypes = []any{
 	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
 	(*Itinerary)(nil),             // 5: travelingman.Itinerary
 }
-var file_users_proto_depIdxs = []int32{
+var file_protos_users_proto_depIdxs = []int32{
 	4, // 0: travelingman.User.created_at:type_name -> google.protobuf.Timestamp
 	1, // 1: travelingman.User.passports:type_name -> travelingman.Passport
 	2, // 2: travelingman.User.drivers_licenses:type_name -> travelingman.DriversLicense
@@ -433,27 +433,27 @@ var file_users_proto_depIdxs = []int32{
 	0, // [0:8] is the sub-list for field type_name
 }
 
-func init() { file_users_proto_init() }
-func file_users_proto_init() {
-	if File_users_proto != nil {
+func init() { file_protos_users_proto_init() }
+func file_protos_users_proto_init() {
+	if File_protos_users_proto != nil {
 		return
 	}
-	file_itinerary_proto_init()
+	file_protos_graph_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_users_proto_rawDesc), len(file_users_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protos_users_proto_rawDesc), len(file_protos_users_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_users_proto_goTypes,
-		DependencyIndexes: file_users_proto_depIdxs,
-		MessageInfos:      file_users_proto_msgTypes,
+		GoTypes:           file_protos_users_proto_goTypes,
+		DependencyIndexes: file_protos_users_proto_depIdxs,
+		MessageInfos:      file_protos_users_proto_msgTypes,
 	}.Build()
-	File_users_proto = out.File
-	file_users_proto_goTypes = nil
-	file_users_proto_depIdxs = nil
+	File_protos_users_proto = out.File
+	file_protos_users_proto_goTypes = nil
+	file_protos_users_proto_depIdxs = nil
 }

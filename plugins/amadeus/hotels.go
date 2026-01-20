@@ -4,7 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"time"
+
+	"github.com/va6996/travelingman/pb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // --- Structs for Hotel Search ---
@@ -168,23 +173,57 @@ type HotelListResponse struct {
 }
 
 // SearchHotelsByCity searches for hotels in a specific city
-func (c *Client) SearchHotelsByCity(ctx context.Context, cityCode string) (*HotelListResponse, error) {
+func (c *Client) SearchHotelsByCity(ctx context.Context, acc *pb.Accommodation) (*HotelListResponse, error) {
+	cityCode := ""
+	if acc.Location != nil {
+		if len(acc.Location.IataCodes) > 0 {
+			cityCode = acc.Location.IataCodes[0]
+		} else {
+			cityCode = acc.Location.CityCode
+		}
+	}
+	if cityCode == "" {
+		cityCode = acc.Address // Fallback
+	}
+
 	// Step 1: Get list of hotels in city
 	endpoint := fmt.Sprintf("/v1/reference-data/locations/hotels/by-city?cityCode=%s", cityCode)
 
+	if acc.Preferences != nil {
+		if acc.Preferences.Rating > 0 {
+			endpoint += fmt.Sprintf("&ratings=%d", acc.Preferences.Rating)
+		}
+
+		// Amenities is comma separated list
+		if len(acc.Preferences.Amenities) > 0 {
+			// simple join
+			joined := ""
+			for i, a := range acc.Preferences.Amenities {
+				if i > 0 {
+					joined += ","
+				}
+				joined += a
+			}
+			endpoint += fmt.Sprintf("&amenities=%s", joined)
+		}
+	}
+
 	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
 	if err != nil {
+		log.Printf("SearchHotelsByCity: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		log.Printf("SearchHotelsByCity: API returned status %s", resp.Status)
 		// Log body for debugging
 		return nil, fmt.Errorf("hotel list search failed: %s", resp.Status)
 	}
 
 	var listResp HotelListResponse
 	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+		log.Printf("SearchHotelsByCity: failed to decode response: %v", err)
 		return nil, err
 	}
 
@@ -207,20 +246,38 @@ func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adult
 
 	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
 	if err != nil {
+		log.Printf("SearchHotelOffers: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		log.Printf("SearchHotelOffers: API returned status %s", resp.Status)
 		return nil, fmt.Errorf("hotel offers search failed: %s", resp.Status)
 	}
 
 	var searchResp HotelSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
+		log.Printf("SearchHotelOffers: failed to decode response: %v", err)
 		return nil, err
 	}
 
 	return &searchResp, nil
+}
+
+// SearchHotelOffersAsAccommodations searches for hotel offers and returns them as pb.Accommodation structs
+func (c *Client) SearchHotelOffersAsAccommodations(ctx context.Context, hotelIds []string, adults int, checkIn, checkOut string) ([]*pb.Accommodation, error) {
+	resp, err := c.SearchHotelOffers(ctx, hotelIds, adults, checkIn, checkOut)
+	if err != nil {
+		return nil, err
+	}
+
+	var accommodations []*pb.Accommodation
+	for _, data := range resp.Data {
+		accommodations = append(accommodations, data.ToAccommodations()...)
+	}
+
+	return accommodations, nil
 }
 
 // BookHotel creates a hotel booking
@@ -245,18 +302,61 @@ func (c *Client) BookHotel(ctx context.Context, offerId string, guests []HotelGu
 
 	resp, err := c.doRequest(ctx, "POST", "/v2/booking/hotel-orders", reqBody)
 	if err != nil {
+		log.Printf("BookHotel: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		log.Printf("BookHotel: API returned status %s", resp.Status)
 		return nil, fmt.Errorf("hotel booking failed: %s", resp.Status)
 	}
 
 	var orderResp HotelOrderResponse
 	if err := json.NewDecoder(resp.Body).Decode(&orderResp); err != nil {
+		log.Printf("BookHotel: failed to decode response: %v", err)
 		return nil, err
 	}
 
 	return &orderResp, nil
+}
+
+// ToAccommodations converts HotelOfferData to a list of pb.Accommodation
+func (d HotelOfferData) ToAccommodations() []*pb.Accommodation {
+	var accs []*pb.Accommodation
+	for _, offer := range d.Offers {
+		acc := &pb.Accommodation{
+			Name:    d.Hotel.Name,
+			Address: d.Hotel.ChainCode, // Using ChainCode as address placeholder or similar
+			Location: &pb.Location{
+				CityCode: d.Hotel.CityCode,
+				Name:     d.Hotel.Name,
+				Geocode:  fmt.Sprintf("%f,%f", d.Hotel.Latitude, d.Hotel.Longitude),
+			},
+			Preferences: &pb.AccommodationPreferences{
+				RoomType: offer.Room.TypeEstimated.Category,
+				Amenities: []string{
+					offer.Room.Description.Text,
+				},
+				// Rating not directly in offer, maybe in HotelInfo but struct definition doesn't show it (it was in request params)
+			},
+			PriceTotal: offer.Price.Total,
+			Status:     "AVAILABLE",
+		}
+
+		if t, err := time.Parse("2006-01-02", offer.CheckInDate); err == nil {
+			acc.CheckIn = timestamppb.New(t)
+		}
+		if t, err := time.Parse("2006-01-02", offer.CheckOutDate); err == nil {
+			acc.CheckOut = timestamppb.New(t)
+		}
+
+		// If guests info is available
+		if offer.Guests.Adults > 0 {
+			acc.TravelerCount = int32(offer.Guests.Adults)
+		}
+
+		accs = append(accs, acc)
+	}
+	return accs
 }

@@ -50,48 +50,51 @@ func ConstructGraph(itinerary *pb.Itinerary) *pb.Graph {
 func collectItems(it *pb.Itinerary) []graphItem {
 	var items []graphItem
 
-	if it == nil {
+	if it == nil || it.Graph == nil {
 		return items
 	}
 
-	// Add Accommodations
-	for _, acc := range it.Accommodation {
-		items = append(items, graphItem{
-			startTime: acc.CheckIn,
-			acc:       acc,
-		})
+	// Add Accommodations from Nodes
+	for _, node := range it.Graph.Nodes {
+		if node.Stay != nil {
+			items = append(items, graphItem{
+				startTime: node.Stay.CheckIn, // Or node.FromTimestamp
+				acc:       node.Stay,
+			})
+		}
 	}
 
-	// Add Transports
-	for _, trans := range it.Transport {
-		// Determine start time based on transport type
-		var startTime *timestamppb.Timestamp
-		if trans.Details != nil {
-			switch d := trans.Details.(type) {
-			case *pb.Transport_Flight:
-				if d.Flight != nil {
-					startTime = d.Flight.DepartureTime
-				}
-			case *pb.Transport_Train:
-				if d.Train != nil {
-					startTime = d.Train.DepartureTime
-				}
-			case *pb.Transport_CarRental:
-				if d.CarRental != nil {
-					startTime = d.CarRental.PickupTime
+	// Add Transports from Edges
+	for _, edge := range it.Graph.Edges {
+		if edge.Transport != nil {
+			trans := edge.Transport
+			// Determine start time based on transport type (same logic as before)
+			var startTime *timestamppb.Timestamp
+			if trans.Details != nil {
+				switch d := trans.Details.(type) {
+				case *pb.Transport_Flight:
+					if d.Flight != nil {
+						startTime = d.Flight.DepartureTime
+					}
+				case *pb.Transport_Train:
+					if d.Train != nil {
+						startTime = d.Train.DepartureTime
+					}
+				case *pb.Transport_CarRental:
+					if d.CarRental != nil {
+						startTime = d.CarRental.PickupTime
+					}
 				}
 			}
+			items = append(items, graphItem{
+				startTime: startTime,
+				trans:     trans,
+			})
 		}
-		items = append(items, graphItem{
-			startTime: startTime,
-			trans:     trans,
-		})
 	}
 
-	// Recursively handle nested itineraries
-	for _, subIt := range it.Itineraries {
-		items = append(items, collectItems(subIt)...)
-	}
+	// Note: Nested Itineraries recursion is removed as Graph structure is flat or handled differently now.
+	// If we need recursion, we assume the input Itinerary has already flattened its graph.
 
 	return items
 }
@@ -125,25 +128,35 @@ func addTransportEdge(g *pb.Graph, t *pb.Transport) {
 	var depLoc, arrLoc string
 	var depTime, arrTime *timestamppb.Timestamp
 
+	// Extract generic locations from transport
+	if t.OriginLocation != nil {
+		if len(t.OriginLocation.IataCodes) > 0 {
+			depLoc = t.OriginLocation.IataCodes[0]
+		} else {
+			depLoc = t.OriginLocation.CityCode
+		}
+	}
+	if t.DestinationLocation != nil {
+		if len(t.DestinationLocation.IataCodes) > 0 {
+			arrLoc = t.DestinationLocation.IataCodes[0]
+		} else {
+			arrLoc = t.DestinationLocation.CityCode
+		}
+	}
+
 	switch d := t.Details.(type) {
 	case *pb.Transport_Flight:
 		if d.Flight != nil {
-			depLoc = d.Flight.DepartureAirport
-			arrLoc = d.Flight.ArrivalAirport
 			depTime = d.Flight.DepartureTime
 			arrTime = d.Flight.ArrivalTime
 		}
 	case *pb.Transport_Train:
 		if d.Train != nil {
-			depLoc = d.Train.DepartureStation
-			arrLoc = d.Train.ArrivalStation
 			depTime = d.Train.DepartureTime
 			arrTime = d.Train.ArrivalTime
 		}
 	case *pb.Transport_CarRental:
 		if d.CarRental != nil {
-			depLoc = d.CarRental.PickupLocation
-			arrLoc = d.CarRental.DropoffLocation
 			depTime = d.CarRental.PickupTime
 			arrTime = d.CarRental.DropoffTime
 		}

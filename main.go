@@ -5,11 +5,11 @@ import (
 	"log"
 	"net/http"
 
+	_ "github.com/mattn/go-sqlite3"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/va6996/travelingman/bootstrap"
 	"github.com/va6996/travelingman/config"
 	_ "github.com/va6996/travelingman/docs"
-	_ "github.com/mattn/go-sqlite3"
-	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // @title           Travelingman API
@@ -45,12 +45,10 @@ func main() {
 	}
 
 	// 2. Init App Components (AI, Genkit, Tools, Agent)
-	app, err := bootstrap.Setup(context.Background(), cfg)
+	_, err = bootstrap.Setup(context.Background(), cfg)
 	if err != nil {
 		log.Fatalf("Setup failed: %v", err)
 	}
-
-	_ = app.Agent // Suppress unused var (until used in handler)
 
 	// 4. Routes
 	// Swagger

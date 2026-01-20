@@ -5,7 +5,7 @@ package travelingman;
 option go_package = "github.com/va6996/travelingman/pb";
 
 import "google/protobuf/timestamp.proto";
-import "itinerary.proto";
+import "protos/graph.proto";
 
 message User {
     int64 id = 1;

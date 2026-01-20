@@ -6,8 +6,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/va6996/travelingman/pb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // mockAmadeusServer creates a test server that mocks Amadeus endpoints
@@ -46,11 +49,24 @@ func mockAmadeusServer() *httptest.Server {
 					Hotel:     HotelInfo{HotelId: "H1"},
 				}},
 			})
-		case "/v2/booking/hotel-orders":
 			// Mock hotel booking
 			// Just return valid JSON structure matching HotelOrderResponse
 			w.WriteHeader(http.StatusCreated)
 			w.Write([]byte(`{"data": [{"id": "hotel_order_1"}]}`))
+		case "/v1/reference-data/locations":
+			json.NewEncoder(w).Encode(LocationSearchResponse{
+				Data: []LocationData{{
+					SubType: "CITY",
+					Name:    "PARIS",
+					JobCode: "PAR",
+					Address: Address{
+						CityName:    "PARIS",
+						CityCode:    "PAR",
+						CountryName: "FRANCE",
+						CountryCode: "FR",
+					},
+				}},
+			})
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -82,7 +98,17 @@ func TestSearchFlights(t *testing.T) {
 	}
 	client.BaseURL = ts.URL
 
-	resp, err := client.SearchFlights(context.Background(), "JFK", "LHR", "2025-10-10", "", "", 1)
+	resp, err := client.SearchFlights(context.Background(), &pb.Transport{
+		Type:          pb.TransportType_TRANSPORT_TYPE_FLIGHT,
+		TravelerCount: 1,
+		Details: &pb.Transport_Flight{
+			Flight: &pb.Flight{
+				DepartureAirport: "JFK",
+				ArrivalAirport:   "LHR",
+				DepartureTime:    timestamppb.New(time.Date(2025, 10, 10, 0, 0, 0, 0, time.UTC)),
+			},
+		},
+	})
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp.Data)
 	assert.Equal(t, "1", resp.Data[0].ID)
@@ -121,4 +147,20 @@ func TestSearchHotelOffers(t *testing.T) {
 	resp, err := client.SearchHotelOffers(context.Background(), []string{"H1"}, 1, "2025-10-10", "2025-10-11")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp.Data)
+}
+
+func TestSearchLocations(t *testing.T) {
+	ts := mockAmadeusServer()
+	defer ts.Close()
+
+	client, err := NewClient("id", "secret", false, nil, nil)
+	if err != nil {
+		t.Fatalf("Failed to create client: %v", err)
+	}
+	client.BaseURL = ts.URL
+
+	resp, err := client.SearchLocations(context.Background(), "Paris")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp.Data)
+	assert.Equal(t, "PAR", resp.Data[0].JobCode)
 }

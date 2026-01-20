@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/va6996/travelingman/tools"
 	"github.com/dop251/goja"
 	"github.com/firebase/genkit/go/ai"
 	"github.com/firebase/genkit/go/genkit"
+	"github.com/va6996/travelingman/tools"
 )
 
 // DateInput defines the input for the date tool
 type DateInput struct {
-	Code string `json:"code"`
+	Expression string `json:"expression" description:"JavaScript expression to calculate a date. Variable 'now' is available as current timestamp in milliseconds."`
 }
 
 // DateTool provides current date functionality
@@ -31,65 +31,78 @@ func NewDateTool(gk *genkit.Genkit, registry *tools.Registry) *DateTool {
 		return t
 	}
 
-	registry.Register(genkit.DefineTool[*DateInput, string](
+	registry.Register(genkit.DefineTool[*DateInput, *time.Time](
 		gk,
 		"dateTool",
 		t.Description(),
-		func(ctx *ai.ToolContext, input *DateInput) (string, error) {
-			res, err := t.Execute(ctx, map[string]interface{}{"code": input.Code})
-			if err != nil {
-				return "", err
-			}
-			return fmt.Sprintf("%v", res), nil
+		func(ctx *ai.ToolContext, input *DateInput) (*time.Time, error) {
+			return t.Execute(ctx, input)
 		},
-	), t.Execute)
+	), func(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+		// Adapter for generic registry execution
+		expression, ok := args["expression"].(string)
+		if !ok {
+			return nil, fmt.Errorf("missing expression")
+		}
+		return t.Execute(ctx, &DateInput{Expression: expression})
+	})
 
 	return t
 }
 
 func (t *DateTool) Name() string {
-	return "date_tool"
+	return "dateTool"
 }
 
 func (t *DateTool) Description() string {
-	// Updated description to match the new behavior (JS execution)
-	// Or should I revert to simple date? The previous implementation seemed to execute JS.
-	// Let's stick to what was there: "Executes JavaScript code..."
-	return "Executes JavaScript code directly to calculate dates. The code must evaluate to a Date object. Variable 'now' is available holding the current date."
+	return `Executes JavaScript expression to calculate dates. Variable 'now' is available holding the current timestamp (milliseconds).
+Return a Date object or ISO string. The last expression is the return value.
+Examples:
+- Next Friday: "var d = new Date(now); d.setDate(d.getDate() + (12 - d.getDay()) % 7); if(d.getDay() !== 5 || d <= now) d.setDate(d.getDate() + 7); d"
+- Tomorrow: "new Date(now + 86400000)"`
 }
 
-func (t *DateTool) Execute(ctx context.Context, args map[string]interface{}) (interface{}, error) {
-	code, ok := args["code"].(string)
-	if !ok {
-		return nil, fmt.Errorf("argument 'code' is required and must be a string")
+func (t *DateTool) Execute(ctx context.Context, input *DateInput) (*time.Time, error) {
+	if input == nil {
+		return nil, fmt.Errorf("input is required")
 	}
+	expression := input.Expression
+	// log usage for debug
+	fmt.Printf("[DateTool] Executing expression: %s\n", expression)
 
 	vm := goja.New()
-
-	// Inject 'now' variable
-	vm.Set("now", t.Now())
-
-	// Wrap code in IIFE to support top-level return
-	wrappedCode := fmt.Sprintf("(function() { return %s })()", code)
-	val, err := vm.RunString(wrappedCode)
+	err := vm.Set("now", t.Now().UnixMilli())
 	if err != nil {
+		return nil, fmt.Errorf("failed to set 'now': %w", err)
+	}
+
+	val, err := vm.RunString(expression)
+	if err != nil {
+		fmt.Printf("[DateTool] RunString error: %v\n", err)
 		return nil, fmt.Errorf("js execution failed: %w", err)
 	}
+	fmt.Printf("[DateTool] RunString result: %v (IsUndefined: %v, IsNull: %v)\n", val, val == goja.Undefined(), val == goja.Null())
 
-	// Check if result is a Date object and get its ISO string
 	exported := val.Export()
-	if dateObj, ok := exported.(*time.Time); ok {
-		return dateObj.UTC().Format(time.RFC3339), nil
+	fmt.Printf("[DateTool] Exported result: %v (Type: %T)\n", exported, exported)
+
+	// If explicitly nil/undefined
+	if exported == nil {
+		return nil, fmt.Errorf("result is null or undefined")
 	}
 
-	// Try to call toISOString() if it's a Date object
-	isoResult, err := vm.RunString(fmt.Sprintf("(() => { try { return (function() { return %s })().toISOString(); } catch(e) { return null; } })()", code))
-	if err == nil && isoResult != nil {
-		if isoString, ok := isoResult.Export().(string); ok && isoString != "" {
-			return isoString, nil
+	// Check if it's a time.Time (Goja converts JS Date to time.Time)
+	if dateObj, ok := exported.(time.Time); ok {
+		return &dateObj, nil
+	}
+
+	// If it's a string, try to parse it
+	if str, ok := exported.(string); ok {
+		if t, err := time.Parse(time.RFC3339, str); err == nil {
+			return &t, nil
 		}
+		// Try other formats if needed, or just fail
 	}
 
-	// For other types, return string representation
-	return val.String(), nil
+	return nil, fmt.Errorf("result is not a valid Date object or ISO string")
 }

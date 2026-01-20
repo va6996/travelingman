@@ -20,6 +20,7 @@ type AIConfig struct {
 
 type GeminiConfig struct {
 	APIKey string `yaml:"api_key" env:"GEMINI_API_KEY"`
+	Model  string `yaml:"model" env:"GEMINI_MODEL" env-default:"gemini-1.5-flash"`
 }
 
 type OllamaConfig struct {

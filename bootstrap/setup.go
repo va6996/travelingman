@@ -5,51 +5,63 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/firebase/genkit/go/ai"
+	"github.com/firebase/genkit/go/genkit"
+	"github.com/firebase/genkit/go/plugins/googlegenai"
+	"github.com/firebase/genkit/go/plugins/ollama"
+	"github.com/va6996/travelingman/agents"
 	"github.com/va6996/travelingman/config"
-	"github.com/va6996/travelingman/plugins"
 	"github.com/va6996/travelingman/plugins/amadeus"
 	"github.com/va6996/travelingman/plugins/core"
-	"github.com/va6996/travelingman/plugins/gemini"
-	"github.com/va6996/travelingman/plugins/ollama"
 	"github.com/va6996/travelingman/tools"
-	"github.com/firebase/genkit/go/genkit"
 )
 
 // App holds the initialized components of the application
 type App struct {
-	Agent    *tools.Agent
-	Genkit   *genkit.Genkit
-	Registry *tools.Registry
+	TravelAgent *agents.TravelAgent
+	Genkit      *genkit.Genkit
+	Registry    *tools.Registry
+	Model       ai.Model
 }
 
 // Setup initializes the application components based on the configuration
 func Setup(ctx context.Context, cfg *config.Config) (*App, error) {
-	// 1. Setup AI Plugin
-	var aiClient plugins.LLMClient
-	var err error
+	// 1. Setup Genkit with AI Plugin
+	var gk *genkit.Genkit
+	var model ai.Model
 
 	if cfg.AI.Plugin == "ollama" {
 		log.Printf("Using Ollama Plugin (Model: %s)...", cfg.AI.Ollama.Model)
-		aiClient = ollama.NewClient(cfg.AI.Ollama.BaseURL, cfg.AI.Ollama.Model)
+		ollamaPlugin := &ollama.Ollama{
+			ServerAddress: cfg.AI.Ollama.BaseURL,
+		}
+		gk = genkit.Init(ctx, genkit.WithPlugins(ollamaPlugin))
+
+		// Define the model with capabilities - explicitly enable tool support
+		model = ollamaPlugin.DefineModel(gk, ollama.ModelDefinition{
+			Name: cfg.AI.Ollama.Model,
+			Type: "chat",
+		}, &ai.ModelOptions{
+			Supports: &ai.ModelSupports{
+				Multiturn:  true,
+				SystemRole: true,
+				Tools:      true, // Enable tool support
+				Media:      false,
+			},
+		})
 	} else {
 		log.Println("Using Gemini Plugin...")
 		if cfg.AI.Gemini.APIKey == "" {
 			return nil, fmt.Errorf("GEMINI_API_KEY must be set (or set AI_PLUGIN=ollama)")
 		}
 
-		client, err := gemini.NewClient(cfg.AI.Gemini.APIKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create Gemini client: %w", err)
-		}
-		// Note: We can't easily defer close here as we return the client.
-		// The caller might need to handle cleanup if we exposed the client directly,
-		// but currently the Agent wraps it and doesn't expose Close.
-		// For a long-running service, reliance on GC or process exit is typical for this client type unless explicit lifecycle management is added.
-		aiClient = client
+		gk = genkit.Init(ctx, genkit.WithPlugins(&googlegenai.GoogleAI{
+			APIKey: cfg.AI.Gemini.APIKey,
+		}))
+		model = googlegenai.GoogleAIModel(gk, cfg.AI.Gemini.Model)
 	}
 
-	// 2. Init Genkit & Tools
-	gk := genkit.Init(ctx)
+	// 2. Init Tools Registry
 	registry := tools.NewRegistry()
 
 	// Amadeus
@@ -58,7 +70,7 @@ func Setup(ctx context.Context, cfg *config.Config) (*App, error) {
 	}
 
 	// Initializing Amadeus client registers its tools automatically
-	_, err = amadeus.NewClient(cfg.Amadeus.ClientID, cfg.Amadeus.ClientSecret, false, gk, registry)
+	amadeusClient, err := amadeus.NewClient(cfg.Amadeus.ClientID, cfg.Amadeus.ClientSecret, false, gk, registry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize Amadeus client: %w", err)
 	}
@@ -66,16 +78,16 @@ func Setup(ctx context.Context, cfg *config.Config) (*App, error) {
 	// Core Tools
 	core.NewClient(gk, registry)
 
-	// 3. Init Agent
-	log.Println("Initializing Agent...")
-	agent, err := tools.NewAgent(gk, registry, aiClient)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize Agent: %w", err)
-	}
+	// 3. Init New Agents
+	log.Println("Initializing New Agents...")
+	tripPlanner := agents.NewTripPlannerV2(gk, registry, model)
+	travelDesk := agents.NewTravelDesk(amadeusClient)
+	travelAgent := agents.NewTravelAgent(tripPlanner, travelDesk)
 
 	return &App{
-		Agent:    agent,
-		Genkit:   gk,
-		Registry: registry,
+		TravelAgent: travelAgent,
+		Genkit:      gk,
+		Registry:    registry,
+		Model:       model,
 	}, nil
 }

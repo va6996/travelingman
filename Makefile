@@ -1,7 +1,7 @@
 .PHONY: all proto build run clean
 
 # Variables
-PROTO_DIR = models
+PROTO_DIR = protos
 PB_DIR = pb
 PB_TS_DIR = pb_ts
 BINARY_NAME = server
@@ -15,14 +15,16 @@ proto-go:
 	@mkdir -p $(PB_DIR)
 	@rm -f $(PB_DIR)/*.pb.go
 	export PATH="$(PATH):$$(go env GOPATH)/bin" && \
-	protoc -I$(PROTO_DIR) --go_out=$(PB_DIR) --go_opt=paths=source_relative $(PROTO_DIR)/*.proto
+	protoc -I. --go_out=$(PB_DIR) --go_opt=paths=source_relative $(PROTO_DIR)/*.proto && \
+	mv $(PB_DIR)/protos/*.pb.go $(PB_DIR)/ && \
+	rmdir $(PB_DIR)/protos
 
 # Generate TS code from Protobuf files
 proto-ts:
 	@echo "Generating TS protobufs..."
 	@mkdir -p $(PB_TS_DIR)
 	@rm -f $(PB_TS_DIR)/*.ts
-	protoc -I$(PROTO_DIR) --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=$(PB_TS_DIR) --ts_proto_opt=esModuleInterop=true --ts_proto_opt=outputServices=grpc-js $(PROTO_DIR)/*.proto
+	protoc -I. --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=$(PB_TS_DIR) --ts_proto_opt=esModuleInterop=true --ts_proto_opt=outputServices=grpc-js $(PROTO_DIR)/*.proto
 
 # Generate all protos
 proto: proto-go proto-ts

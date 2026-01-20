@@ -1,0 +1,124 @@
+syntax = "proto3";
+
+package travelingman;
+
+option go_package = "github.com/va6996/travelingman/pb";
+
+import "google/protobuf/timestamp.proto";
+
+
+enum TransportType {
+    TRANSPORT_TYPE_UNSPECIFIED = 0;
+    TRANSPORT_TYPE_FLIGHT = 1;
+    TRANSPORT_TYPE_TRAIN = 2;
+    TRANSPORT_TYPE_CAR = 3;
+    TRANSPORT_TYPE_WALKING = 4;
+}
+
+enum Class {
+    CLASS_UNSPECIFIED = 0;
+    CLASS_ECONOMY = 1;
+    CLASS_PREMIUM_ECONOMY = 2;
+    CLASS_BUSINESS = 3;
+    CLASS_FIRST = 4;
+}
+
+enum Transmission {
+    TRANSMISSION_UNSPECIFIED = 0;
+    TRANSMISSION_MANUAL = 1;
+    TRANSMISSION_AUTOMATIC = 2;
+}
+
+message AccommodationPreferences {
+    string room_type = 1;
+    string area = 2;
+    int32 rating = 3;
+    repeated string amenities = 4;
+}
+
+message FlightPreferences {
+    Class travel_class = 1;
+    int32 max_stops = 2;
+    repeated string preferred_origin_airports = 3;
+    repeated string preferred_destination_airports = 4;
+}
+
+message TrainPreferences {
+    Class travel_class = 1;
+    string seat_type = 2;
+}
+
+message CarRentalPreferences {
+    Transmission transmission = 1;
+    string car_class = 2;
+}
+
+message Location {
+    string area = 1;
+    string city = 2;
+    string country = 3;
+    repeated string iata_codes = 4;
+    string city_code = 5;
+    string geocode = 6;
+    string zip = 7;
+    string name = 8;
+}
+
+message Accommodation {
+    int64 id = 1;
+    int64 group_id = 2;
+    string name = 3;
+    string address = 4;
+    google.protobuf.Timestamp check_in = 5;
+    google.protobuf.Timestamp check_out = 6;
+    string price_total = 7;
+    string booking_reference = 8;
+    string status = 9;
+    repeated int64 user_ids = 10;
+    AccommodationPreferences preferences = 11;
+    int32 traveler_count = 12;
+    Location location = 13;
+}
+
+message Transport {
+    int64 id = 1;
+    int64 booking_id = 2;
+    string plugin = 3;
+    string reference_number = 4;
+    string status = 5;
+    TransportType type = 6;
+    int32 traveler_count = 7;
+    Location origin_location = 8;
+    Location destination_location = 9;
+    repeated int64 user_ids = 10;
+    float price_total = 11;
+    FlightPreferences flight_preferences = 15;
+    TrainPreferences train_preferences = 16;
+    CarRentalPreferences car_rental_preferences = 17;
+
+    oneof details {
+        Flight flight = 12;
+        Train train = 13;
+        CarRental car_rental = 14;
+    }
+}
+
+message Flight {
+    string carrier_code = 1;
+    string flight_number = 2;
+    google.protobuf.Timestamp departure_time = 3;
+    google.protobuf.Timestamp arrival_time = 4;
+}
+
+message Train {
+    google.protobuf.Timestamp departure_time = 1;
+    google.protobuf.Timestamp arrival_time = 2;
+    string train_number = 3;
+}
+
+message CarRental {
+    string company = 1;
+    google.protobuf.Timestamp pickup_time = 2;
+    google.protobuf.Timestamp dropoff_time = 3;
+    string car_type = 4;
+}
