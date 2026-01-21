@@ -40,6 +40,9 @@ func TestTripPlannerV2_Plan(t *testing.T) {
 		})
 
 		assert.NoError(t, err)
+		if result == nil {
+			t.Fatal("Result is nil")
+		}
 		assert.NotNil(t, result)
 
 		if result.NeedsClarification {
@@ -57,6 +60,9 @@ func TestTripPlannerV2_Plan(t *testing.T) {
 		})
 
 		assert.NoError(t, err)
+		if result == nil {
+			t.Fatal("Result is nil")
+		}
 		assert.NotNil(t, result)
 
 		if result.NeedsClarification {

@@ -1,8 +1,8 @@
 package core
 
 import (
-	"github.com/va6996/travelingman/tools"
 	"github.com/firebase/genkit/go/genkit"
+	"github.com/va6996/travelingman/tools"
 )
 
 // Client manages the core set of tools

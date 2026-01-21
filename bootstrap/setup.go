@@ -13,6 +13,7 @@ import (
 	"github.com/va6996/travelingman/config"
 	"github.com/va6996/travelingman/plugins/amadeus"
 	"github.com/va6996/travelingman/plugins/core"
+	"github.com/va6996/travelingman/plugins/nager"
 	"github.com/va6996/travelingman/tools"
 )
 
@@ -77,6 +78,9 @@ func Setup(ctx context.Context, cfg *config.Config) (*App, error) {
 
 	// Core Tools
 	core.NewClient(gk, registry)
+
+	// Nager Holiday API
+	nager.NewClient(gk, registry)
 
 	// 3. Init New Agents
 	log.Println("Initializing New Agents...")

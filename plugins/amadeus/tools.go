@@ -13,19 +13,31 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// ToolLocation is a simplified location struct for tool inputs to ensure valid schema generation
+type ToolLocation struct {
+	City      string   `json:"city,omitempty"`
+	Country   string   `json:"country,omitempty"`
+	IataCodes []string `json:"iata_codes,omitempty"`
+	CityCode  string   `json:"city_code,omitempty"`
+}
+
+// Distinct types to avoid schema generation issues with repeated types
+type OriginLocation ToolLocation
+type DestinationLocation ToolLocation
+
 // Input definitions for Amadeus tools
 type FlightInput struct {
-	Origin      *pb.Location `json:"origin"`
-	Destination *pb.Location `json:"destination"`
-	Date        string       `json:"date"`
-	Adults      int          `json:"adults"`
+	Origin      *OriginLocation      `json:"origin"`
+	Destination *DestinationLocation `json:"destination"`
+	Date        string               `json:"date"`
+	Adults      int                  `json:"adults"`
 }
 
 type HotelInput struct {
-	Location *pb.Location `json:"location"`
-	CheckIn  string       `json:"check_in,omitempty"`
-	CheckOut string       `json:"check_out,omitempty"`
-	Adults   int          `json:"adults,omitempty"`
+	Location *ToolLocation `json:"location"`
+	CheckIn  string        `json:"check_in,omitempty"`
+	CheckOut string        `json:"check_out,omitempty"`
+	Adults   int           `json:"adults,omitempty"`
 }
 
 type LocationInput struct {
@@ -37,6 +49,35 @@ type HotelToolOutput struct {
 	Offers  *HotelSearchResponse `json:"offers,omitempty"`
 	Warning string               `json:"warning,omitempty"`
 	Error   string               `json:"error,omitempty"`
+}
+
+// Helper to convert ToolLocation to pb.Location
+func toPBLocation(l *ToolLocation) *pb.Location {
+	if l == nil {
+		return nil
+	}
+	return &pb.Location{
+		City:      l.City,
+		Country:   l.Country,
+		IataCodes: l.IataCodes,
+		CityCode:  l.CityCode,
+	}
+}
+
+func toPBOrigin(l *OriginLocation) *pb.Location {
+	if l == nil {
+		return nil
+	}
+	tl := ToolLocation(*l)
+	return toPBLocation(&tl)
+}
+
+func toPBDestination(l *DestinationLocation) *pb.Location {
+	if l == nil {
+		return nil
+	}
+	tl := ToolLocation(*l)
+	return toPBLocation(&tl)
 }
 
 // FlightTool implementation
@@ -61,6 +102,9 @@ func (t *FlightTool) Execute(ctx context.Context, input *FlightInput) (*FlightSe
 		return nil, fmt.Errorf("input required")
 	}
 
+	inputJSON, _ := json.Marshal(input)
+	fmt.Printf("[DEBUG] FlightTool Executing with input: %s\n", string(inputJSON))
+
 	if input.Origin == nil || input.Destination == nil || input.Date == "" {
 		return nil, fmt.Errorf("origin, destination (Location objects), and date are required")
 	}
@@ -73,8 +117,8 @@ func (t *FlightTool) Execute(ctx context.Context, input *FlightInput) (*FlightSe
 	resp, err := t.Client.SearchFlights(ctx, &pb.Transport{
 		Type:                pb.TransportType_TRANSPORT_TYPE_FLIGHT,
 		TravelerCount:       int32(adults),
-		OriginLocation:      input.Origin,
-		DestinationLocation: input.Destination,
+		OriginLocation:      toPBOrigin(input.Origin),
+		DestinationLocation: toPBDestination(input.Destination),
 		Details: &pb.Transport_Flight{
 			Flight: &pb.Flight{
 				DepartureTime: timestamppb.New(parseDate(input.Date)),
@@ -140,6 +184,9 @@ func (t *HotelTool) Execute(ctx context.Context, input *HotelInput) (*HotelToolO
 		return nil, fmt.Errorf("input required")
 	}
 
+	inputJSON, _ := json.Marshal(input)
+	fmt.Printf("[DEBUG] HotelTool Executing with input: %s\n", string(inputJSON))
+
 	if input.Location == nil {
 		return nil, fmt.Errorf("location object is required")
 	}
@@ -172,7 +219,7 @@ func (t *HotelTool) Execute(ctx context.Context, input *HotelInput) (*HotelToolO
 func (t *HotelTool) executeOnce(ctx context.Context, input *HotelInput, adults int, cityCode string) (*HotelToolOutput, error) {
 	// Step 1: Search hotels by city
 	listResp, err := t.Client.SearchHotelsByCity(ctx, &pb.Accommodation{
-		Location:      input.Location, // Pass full location
+		Location:      toPBLocation(input.Location), // Pass full location
 		TravelerCount: int32(adults),
 	})
 	if err != nil {
@@ -255,6 +302,9 @@ func (t *LocationTool) Execute(ctx context.Context, input *LocationInput) ([]*pb
 	if input == nil || input.Keyword == "" {
 		return nil, fmt.Errorf("keyword is required")
 	}
+
+	inputJSON, _ := json.Marshal(input)
+	fmt.Printf("[DEBUG] LocationTool Executing with input: %s\n", string(inputJSON))
 
 	return t.Client.SearchLocations(ctx, input.Keyword)
 }

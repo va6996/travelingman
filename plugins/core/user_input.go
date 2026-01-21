@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/va6996/travelingman/tools"
-	"github.com/firebase/genkit/go/ai"
 	"github.com/firebase/genkit/go/genkit"
 )
 
@@ -52,18 +51,18 @@ func NewAskUserTool(gk *genkit.Genkit, registry *tools.Registry) *AskUserTool {
 		return t
 	}
 
-	registry.Register(genkit.DefineTool[AskUserInput, string](
-		gk,
-		"askUserTool",
-		t.Description(),
-		func(ctx *ai.ToolContext, input AskUserInput) (string, error) {
-			res, err := t.Execute(ctx, map[string]interface{}{"question": input.Question})
-			if err != nil {
-				return "", err
-			}
-			return fmt.Sprintf("%v", res), nil
-		},
-	), t.Execute)
+	// registry.Register(genkit.DefineTool[AskUserInput, string](
+	// 	gk,
+	// 	"askUserTool",
+	// 	t.Description(),
+	// 	func(ctx *ai.ToolContext, input AskUserInput) (string, error) {
+	// 		res, err := t.Execute(ctx, map[string]interface{}{"question": input.Question})
+	// 		if err != nil {
+	// 			return "", err
+	// 		}
+	// 		return fmt.Sprintf("%v", res), nil
+	// 	},
+	// ), t.Execute)
 
 	return t
 }

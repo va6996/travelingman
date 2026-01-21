@@ -1,13 +1,14 @@
 # Agent Configuration
 ai:
   # Plugin can be "gemini" or "ollama"
-  plugin: "ollama"
+  plugin: "gemini"
   
   gemini:
-    # api_key: "YOUR_KEY_HERE" # Can be set via GEMINI_API_KEY env var
+    api_key: "YOUR_KEY_HERE" # Can be set via GEMINI_API_KEY env var
+    model: "gemini-2.5-pro"
 
   ollama:
-    model: "llama3.2:3b" # Can be set via OLLAMA_MODEL
+    model: "qwen2.5:3b" # Can be set via OLLAMA_MODEL
     base_url: "http://localhost:11434"
 
 amadeus:

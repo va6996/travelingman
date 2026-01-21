@@ -50,26 +50,38 @@ type PlanResult struct {
 
 // Internal structs for JSON unmarshalling
 type JSONItinerary struct {
-	Title         string          `json:"title"`
-	Description   string          `json:"description"`
-	StartTime     string          `json:"start_time"`
-	EndTime       string          `json:"end_time"`
-	Travelers     int32           `json:"travelers"`
-	Accommodation []Accommodation `json:"accommodation"`
-	Transport     []Transport     `json:"transport"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	StartTime   string    `json:"start_time"`
+	EndTime     string    `json:"end_time"`
+	Travelers   int32     `json:"travelers"`
+	Graph       JSONGraph `json:"graph"`
 }
 
-type JSONPlanResponse struct {
-	Itinerary   *JSONItinerary  `json:"itinerary"`
-	Itineraries []JSONItinerary `json:"itineraries"`
-	Reasoning   string          `json:"reasoning"`
-	Question    string          `json:"question"`
-	NeedClarify bool            `json:"need_clarification"`
+type JSONGraph struct {
+	Nodes []JSONNode `json:"nodes"`
+	Edges []JSONEdge `json:"edges"`
 }
 
-type Accommodation struct {
+type JSONNode struct {
+	ID            string            `json:"id"`
+	Location      string            `json:"location"`
+	FromTimestamp string            `json:"from_timestamp"`
+	ToTimestamp   string            `json:"to_timestamp"`
+	IsInterCity   bool              `json:"is_inter_city"`
+	Stay          *JSONAccomDetails `json:"stay,omitempty"`
+}
+
+type JSONEdge struct {
+	FromID          string                `json:"from_id"`
+	ToID            string                `json:"to_id"`
+	DurationSeconds int64                 `json:"duration_seconds"`
+	Transport       *JSONTransportDetails `json:"transport,omitempty"`
+}
+
+type JSONAccomDetails struct {
 	Name          string   `json:"name"`
-	CityCode      string   `json:"city_code"`
+	CityCode      string   `json:"city_code"` // Helper for location resolution
 	CheckIn       string   `json:"check_in"`
 	CheckOut      string   `json:"check_out"`
 	TravelerCount int32    `json:"traveler_count"`
@@ -79,11 +91,12 @@ type Accommodation struct {
 	Amenities     []string `json:"amenities"`
 }
 
-type Transport struct {
-	Type          string         `json:"type"`
+type JSONTransportDetails struct {
+	Type          string         `json:"type"` // "TRANSPORT_TYPE_FLIGHT", etc.
 	TravelerCount int32          `json:"traveler_count"`
-	Class         string         `json:"class"` // ECONOMY, BUSINESS, etc.
-	Flight        *FlightDetails `json:"flight"`
+	Class         string         `json:"class"`
+	Flight        *FlightDetails `json:"flight,omitempty"`
+	// Add Train/Car if needed later
 }
 
 type FlightDetails struct {
@@ -91,6 +104,14 @@ type FlightDetails struct {
 	ArrAirport string `json:"arrival_airport"`
 	DepTime    string `json:"departure_time"`
 	ArrTime    string `json:"arrival_time"`
+}
+
+type JSONPlanResponse struct {
+	Itinerary   *JSONItinerary  `json:"itinerary"`
+	Itineraries []JSONItinerary `json:"itineraries"`
+	Reasoning   string          `json:"reasoning"`
+	Question    string          `json:"question"`
+	NeedClarify bool            `json:"need_clarification"`
 }
 
 // Helper to map string class to pb enum
@@ -326,114 +347,101 @@ func (p *TripPlanner) convertItinerary(in *JSONItinerary) *pb.Itinerary {
 		itin.EndTime = timestamppb.New(t)
 	}
 
-	// Map Accommodation to Nodes
-	for i, acc := range in.Accommodation {
-		node := &pb.Node{
-			Id: fmt.Sprintf("node_acc_%d", i),
-			// Node.Location is a string, keep it for general identification if needed, or remove if redundant.
-			// For now, setting it to CityCode.
-			Location: acc.CityCode,
-			Stay: &pb.Accommodation{
-				Name: acc.Name,
-				Location: &pb.Location{
-					CityCode: acc.CityCode,
-				},
-			},
+	// Map Nodes
+	for _, n := range in.Graph.Nodes {
+		pbNode := &pb.Node{
+			Id:          n.ID,
+			Location:    n.Location,
+			IsInterCity: n.IsInterCity,
 		}
-		// Parse check-in date
-		if acc.CheckIn != "" {
-			if t, err := parseFlexibleTime(acc.CheckIn); err == nil {
-				node.Stay.CheckIn = timestamppb.New(t)
-				node.FromTimestamp = timestamppb.New(t)
-			} else {
-				log.Printf("TripPlanner: Warning - failed to parse check-in date '%s': %v", acc.CheckIn, err)
+
+		// Timestamps
+		if n.FromTimestamp != "" {
+			if t, err := parseFlexibleTime(n.FromTimestamp); err == nil {
+				pbNode.FromTimestamp = timestamppb.New(t)
 			}
 		}
-		// Parse check-out date
-		if acc.CheckOut != "" {
-			if t, err := parseFlexibleTime(acc.CheckOut); err == nil {
-				node.Stay.CheckOut = timestamppb.New(t)
-				node.ToTimestamp = timestamppb.New(t)
-			} else {
-				log.Printf("TripPlanner: Warning - failed to parse check-out date '%s': %v", acc.CheckOut, err)
+		if n.ToTimestamp != "" {
+			if t, err := parseFlexibleTime(n.ToTimestamp); err == nil {
+				pbNode.ToTimestamp = timestamppb.New(t)
 			}
 		}
 
-		// Preferences
-		node.Stay.Preferences = &pb.AccommodationPreferences{
-			RoomType:  acc.RoomType,
-			Area:      acc.Area,
-			Rating:    acc.Rating,
-			Amenities: acc.Amenities,
+		// Stay details
+		if n.Stay != nil {
+			pbNode.Stay = &pb.Accommodation{
+				Name:          n.Stay.Name,
+				Location:      &pb.Location{CityCode: n.Stay.CityCode},
+				TravelerCount: in.Travelers,
+			}
+			if n.Stay.TravelerCount > 0 {
+				pbNode.Stay.TravelerCount = n.Stay.TravelerCount
+			}
+			if n.Stay.CheckIn != "" {
+				if t, err := parseFlexibleTime(n.Stay.CheckIn); err == nil {
+					pbNode.Stay.CheckIn = timestamppb.New(t)
+				}
+			}
+			if n.Stay.CheckOut != "" {
+				if t, err := parseFlexibleTime(n.Stay.CheckOut); err == nil {
+					pbNode.Stay.CheckOut = timestamppb.New(t)
+				}
+			}
+			pbNode.Stay.Preferences = &pb.AccommodationPreferences{
+				RoomType:  n.Stay.RoomType,
+				Area:      n.Stay.Area,
+				Rating:    n.Stay.Rating,
+				Amenities: n.Stay.Amenities,
+			}
 		}
-		// Use item-level traveler_count if provided, otherwise use itinerary-level
-		if acc.TravelerCount > 0 {
-			node.Stay.TravelerCount = acc.TravelerCount
-		} else {
-			node.Stay.TravelerCount = in.Travelers
-		}
-
-		itin.Graph.Nodes = append(itin.Graph.Nodes, node)
+		itin.Graph.Nodes = append(itin.Graph.Nodes, pbNode)
 	}
 
-	// Map Transport to Edges
-	for i, tr := range in.Transport {
-		edge := &pb.Edge{
-			Transport: &pb.Transport{},
+	// Map Edges
+	for _, e := range in.Graph.Edges {
+		pbEdge := &pb.Edge{
+			FromId:          e.FromID,
+			ToId:            e.ToID,
+			DurationSeconds: e.DurationSeconds,
+			Transport:       &pb.Transport{TravelerCount: in.Travelers},
 		}
 
-		// Use item-level traveler_count if provided, otherwise use itinerary-level
-		if tr.TravelerCount > 0 {
-			edge.Transport.TravelerCount = tr.TravelerCount
-		} else {
-			edge.Transport.TravelerCount = in.Travelers
-		}
-
-		if tr.Type == "TRANSPORT_TYPE_FLIGHT" {
-			edge.Transport.Type = pb.TransportType_TRANSPORT_TYPE_FLIGHT
-			if tr.Flight != nil {
-				edge.Transport.OriginLocation = &pb.Location{
-					IataCodes: []string{tr.Flight.DepAirport},
-				}
-				edge.Transport.DestinationLocation = &pb.Location{
-					IataCodes: []string{tr.Flight.ArrAirport},
-				}
-
-				edge.Transport.FlightPreferences = &pb.FlightPreferences{
-					TravelClass: mapClass(tr.Class),
-				}
-				f := &pb.Flight{}
-				// Parse departure time with multiple format support
-				if tr.Flight.DepTime != "" {
-					if tm, err := parseFlexibleTime(tr.Flight.DepTime); err == nil {
-						f.DepartureTime = timestamppb.New(tm)
-					} else {
-						log.Printf("TripPlanner: Warning - failed to parse departure time '%s': %v", tr.Flight.DepTime, err)
-					}
-				}
-				// Parse arrival time with multiple format support
-				if tr.Flight.ArrTime != "" {
-					if tm, err := parseFlexibleTime(tr.Flight.ArrTime); err == nil {
-						f.ArrivalTime = timestamppb.New(tm)
-					} else {
-						log.Printf("TripPlanner: Warning - failed to parse arrival time '%s': %v", tr.Flight.ArrTime, err)
-					}
-				}
-				edge.Transport.Details = &pb.Transport_Flight{Flight: f}
+		if e.Transport != nil {
+			if e.Transport.TravelerCount > 0 {
+				pbEdge.Transport.TravelerCount = e.Transport.TravelerCount
 			}
-		} else {
-			edge.Transport.Type = pb.TransportType_TRANSPORT_TYPE_UNSPECIFIED
-		}
 
-		// Simple linking for now
-		if i > 0 && i <= len(itin.Graph.Nodes) {
-			edge.FromId = itin.Graph.Nodes[i-1].Id
-		}
-		if i < len(itin.Graph.Nodes) {
-			edge.ToId = itin.Graph.Nodes[i].Id
-		}
+			// Map transport type string to enum
+			switch e.Transport.Type {
+			case "TRANSPORT_TYPE_FLIGHT":
+				pbEdge.Transport.Type = pb.TransportType_TRANSPORT_TYPE_FLIGHT
+				if e.Transport.Flight != nil {
+					pbEdge.Transport.OriginLocation = &pb.Location{IataCodes: []string{e.Transport.Flight.DepAirport}}
+					pbEdge.Transport.DestinationLocation = &pb.Location{IataCodes: []string{e.Transport.Flight.ArrAirport}}
+					pbEdge.Transport.FlightPreferences = &pb.FlightPreferences{TravelClass: mapClass(e.Transport.Class)}
 
-		itin.Graph.Edges = append(itin.Graph.Edges, edge)
+					f := &pb.Flight{}
+					if e.Transport.Flight.DepTime != "" {
+						if t, err := parseFlexibleTime(e.Transport.Flight.DepTime); err == nil {
+							f.DepartureTime = timestamppb.New(t)
+						}
+					}
+					if e.Transport.Flight.ArrTime != "" {
+						if t, err := parseFlexibleTime(e.Transport.Flight.ArrTime); err == nil {
+							f.ArrivalTime = timestamppb.New(t)
+						}
+					}
+					pbEdge.Transport.Details = &pb.Transport_Flight{Flight: f}
+				}
+			case "TRANSPORT_TYPE_TRAIN":
+				pbEdge.Transport.Type = pb.TransportType_TRANSPORT_TYPE_TRAIN
+			case "TRANSPORT_TYPE_CAR":
+				pbEdge.Transport.Type = pb.TransportType_TRANSPORT_TYPE_CAR
+			default:
+				pbEdge.Transport.Type = pb.TransportType_TRANSPORT_TYPE_UNSPECIFIED
+			}
+		}
+		itin.Graph.Edges = append(itin.Graph.Edges, pbEdge)
 	}
 
 	// Populate options by re-running search (post-processing)
@@ -473,13 +481,16 @@ func (p *TripPlanner) resolveCityCodes(ctx context.Context, itin *JSONItinerary)
 	}
 
 	// Use a channel to collect results from goroutines
-	results := make(chan resolutionResult, len(itin.Accommodation))
+	results := make(chan resolutionResult, len(itin.Graph.Nodes))
 	var wg sync.WaitGroup
 
 	// Heuristic: if CityCode looks like a name (> 3 chars or lowercase), try to resolve it
-	for i := range itin.Accommodation {
-		acc := &itin.Accommodation[i]
-		if len(acc.CityCode) > 3 || (len(acc.CityCode) == 3 && acc.CityCode != "NYC" && acc.CityCode != "LON") { // Basic check
+	for i := range itin.Graph.Nodes {
+		node := &itin.Graph.Nodes[i]
+		if node.Stay == nil {
+			continue
+		}
+		if len(node.Stay.CityCode) > 3 || (len(node.Stay.CityCode) == 3 && node.Stay.CityCode != "NYC" && node.Stay.CityCode != "LON") { // Basic check
 			wg.Add(1)
 			go func(idx int, cityCode string) {
 				defer wg.Done()
@@ -508,7 +519,7 @@ func (p *TripPlanner) resolveCityCodes(ctx context.Context, itin *JSONItinerary)
 					log.Printf("TripPlanner: Resolved '%s' to '%s'", cityCode, searchResp.Data[0].JobCode)
 					results <- resolutionResult{index: idx, code: searchResp.Data[0].JobCode}
 				}
-			}(i, acc.CityCode)
+			}(i, node.Stay.CityCode)
 		}
 	}
 
@@ -520,7 +531,9 @@ func (p *TripPlanner) resolveCityCodes(ctx context.Context, itin *JSONItinerary)
 
 	// Apply results
 	for res := range results {
-		itin.Accommodation[res.index].CityCode = res.code
+		if itin.Graph.Nodes[res.index].Stay != nil {
+			itin.Graph.Nodes[res.index].Stay.CityCode = res.code
+		}
 	}
 }
 

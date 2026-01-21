@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/firebase/genkit/go/ai"
 	"github.com/firebase/genkit/go/genkit"
@@ -76,20 +77,66 @@ IMPORTANT WORKFLOW:
 
 CRITICAL RULES:
 - If the user specifies a timeframe (like "next weekend"), use dateTool to calculate it, then create the itinerary
-- DO NOT ask for information that's already provided in the query
-- Only use askUser if something is genuinely unclear or missing
 - Return itinerary with ACTUAL dates in YYYY-MM-DD format
 
 Final Answer Schema:
 {
-  "itineraries": [ { 
-    "destination": "Paris", 
-    "startDate": "2026-01-25",  // Actual date, not "next weekend"
-    "endDate": "2026-01-26",
-    "activities": []
-  } ],
-  "reasoning": "Calculated next weekend as Jan 25-26, 2026"
+  "itineraries": [
+    {
+      "title": "Weekend in Paris",
+      "description": "A wonderful weekend trip to Paris visiting key landmarks.",
+      "start_time": "2026-01-25T10:00:00Z",
+      "end_time": "2026-01-27T18:00:00Z",
+      "travelers": 2,
+      "graph": {
+        "nodes": [
+          {
+            "id": "node_1",
+            "location": "PAR",
+            "from_timestamp": "2026-01-25T14:00:00Z",
+            "to_timestamp": "2026-01-27T11:00:00Z",
+            "is_inter_city": false,
+            "stay": {
+              "name": "Hotel Paris",
+              "city_code": "PAR",
+              "check_in": "2026-01-25T14:00:00Z",
+              "check_out": "2026-01-27T11:00:00Z",
+              "traveler_count": 2,
+              "room_type": "Standard",
+              "area": "City Center",
+              "rating": 4,
+              "amenities": ["wifi", "breakfast"]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from_id": "start_loc", // Logical start if needed, or previous node
+            "to_id": "node_1",
+            "duration_seconds": 25200,
+            "transport": {
+              "type": "TRANSPORT_TYPE_FLIGHT",
+              "traveler_count": 2,
+              "class": "ECONOMY",
+              "flight": {
+                "departure_airport": "JFK",
+                "arrival_airport": "CDG",
+                "departure_time": "2026-01-25T10:00:00Z",
+                "arrival_time": "2026-01-25T17:00:00Z"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "reasoning": "Calculated next weekend as Jan 25-27, 2026 and constructed graph with flight to Paris and hotel stay."
 }`
+
+	// Inject current date context into system prompt
+	today := time.Now().Format("2006-01-02")
+	systemPrompt = fmt.Sprintf("Today is %s.\n%s", today, systemPrompt)
+	log.Printf("[DEBUG] Full system prompt: %s", systemPrompt)
 
 	log.Printf("[DEBUG] Calling genkit.Generate with model: %v, tools: %d", p.model, len(toolRefs))
 
@@ -108,22 +155,6 @@ Final Answer Schema:
 	}
 
 	log.Printf("[DEBUG] Response finish reason: %v", response.FinishReason)
-
-	// Log if any tool calls were made in history
-	history := response.History()
-	log.Printf("[DEBUG] Response history has %d messages", len(history))
-
-	// Log if any tool calls were made
-	toolCallCount := 0
-	for _, msg := range history {
-		for _, part := range msg.Content {
-			if part.ToolRequest != nil {
-				toolCallCount++
-				log.Printf("[DEBUG] Tool call detected: %s", part.ToolRequest.Name)
-			}
-		}
-	}
-	log.Printf("[DEBUG] Total tool calls in response: %d", toolCallCount)
 
 	// Handle interrupts (askUser tool calls)
 	for response.FinishReason == ai.FinishReasonInterrupted {
