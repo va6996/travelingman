@@ -4,33 +4,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/firebase/genkit/go/ai"
 	"github.com/firebase/genkit/go/genkit"
+	"github.com/va6996/travelingman/log"
 	"github.com/va6996/travelingman/pb"
 	"github.com/va6996/travelingman/plugins/amadeus"
 	"github.com/va6996/travelingman/tools"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// TripPlanner is responsible for high-level planning
+// TripPlanner is responsible for high-level travel planning using Genkit's native tool calling
 type TripPlanner struct {
 	genkit   *genkit.Genkit
 	registry *tools.Registry
 	model    ai.Model
-}
-
-// NewTripPlanner creates a new TripPlanner
-func NewTripPlanner(gk *genkit.Genkit, registry *tools.Registry, model ai.Model) *TripPlanner {
-	return &TripPlanner{
-		genkit:   gk,
-		registry: registry,
-		model:    model,
-	}
+	// askUser  ai.Tool
 }
 
 // PlanRequest contains the user's query and context
@@ -48,429 +40,240 @@ type PlanResult struct {
 	Reasoning           string
 }
 
-// Internal structs for JSON unmarshalling
-type JSONItinerary struct {
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	StartTime   string    `json:"start_time"`
-	EndTime     string    `json:"end_time"`
-	Travelers   int32     `json:"travelers"`
-	Graph       JSONGraph `json:"graph"`
+// AskUserRequest is the input for the askUser tool
+type AskUserRequest struct {
+	Question string `json:"question" description:"The clarifying question to ask the user"`
 }
 
-type JSONGraph struct {
-	Nodes []JSONNode `json:"nodes"`
-	Edges []JSONEdge `json:"edges"`
-}
+const SYSTEM_PROMPT = `You are an expert Trip Planner. Your goal is to create a high-level travel itinerary.
 
-type JSONNode struct {
-	ID            string            `json:"id"`
-	Location      string            `json:"location"`
-	FromTimestamp string            `json:"from_timestamp"`
-	ToTimestamp   string            `json:"to_timestamp"`
-	IsInterCity   bool              `json:"is_inter_city"`
-	Stay          *JSONAccomDetails `json:"stay,omitempty"`
-}
+IMPORTANT WORKFLOW:
+1. First, gather information using tools ONLY if needed:
+   - Use dateTool to calculate dates (e.g., "next weekend" → actual dates like "2026-01-25")
 
-type JSONEdge struct {
-	FromID          string                `json:"from_id"`
-	ToID            string                `json:"to_id"`
-	DurationSeconds int64                 `json:"duration_seconds"`
-	Transport       *JSONTransportDetails `json:"transport,omitempty"`
-}
+2. Then, create the itinerary JSON with the gathered information:
+   - DO NOT call hotelTool or flightTool - these are for the TravelDesk, not for planning
+   - Just return the itinerary json with destination, dates, and activities
+   - Use the actual dates you calculated, not relative terms
 
-type JSONAccomDetails struct {
-	Name          string   `json:"name"`
-	CityCode      string   `json:"city_code"` // Helper for location resolution
-	CheckIn       string   `json:"check_in"`
-	CheckOut      string   `json:"check_out"`
-	TravelerCount int32    `json:"traveler_count"`
-	RoomType      string   `json:"room_type"`
-	Area          string   `json:"area"`
-	Rating        int32    `json:"rating"`
-	Amenities     []string `json:"amenities"`
-}
-
-type JSONTransportDetails struct {
-	Type          string         `json:"type"` // "TRANSPORT_TYPE_FLIGHT", etc.
-	TravelerCount int32          `json:"traveler_count"`
-	Class         string         `json:"class"`
-	Flight        *FlightDetails `json:"flight,omitempty"`
-	// Add Train/Car if needed later
-}
-
-type FlightDetails struct {
-	DepAirport string `json:"departure_airport"`
-	ArrAirport string `json:"arrival_airport"`
-	DepTime    string `json:"departure_time"`
-	ArrTime    string `json:"arrival_time"`
-}
-
-type JSONPlanResponse struct {
-	Itinerary   *JSONItinerary  `json:"itinerary"`
-	Itineraries []JSONItinerary `json:"itineraries"`
-	Reasoning   string          `json:"reasoning"`
-	Question    string          `json:"question"`
-	NeedClarify bool            `json:"need_clarification"`
-}
-
-// Helper to map string class to pb enum
-func mapClass(c string) pb.Class {
-	switch c {
-	case "ECONOMY":
-		return pb.Class_CLASS_ECONOMY
-	case "PREMIUM_ECONOMY":
-		return pb.Class_CLASS_PREMIUM_ECONOMY
-	case "BUSINESS":
-		return pb.Class_CLASS_BUSINESS
-	case "FIRST":
-		return pb.Class_CLASS_FIRST
-	default:
-		return pb.Class_CLASS_UNSPECIFIED
-	}
-}
-
-// Plan generates a high-level itinerary based on the user query
-func (p *TripPlanner) Plan(ctx context.Context, req PlanRequest) (*PlanResult, error) {
-	// ReAct Loop
-	maxSteps := 15
-	chatHistory := req.History
-
-	// Define tools available
-	var toolsDefs []string
-	if p.registry != nil {
-		for _, tool := range p.registry.GetTools() {
-			def := tool.Definition()
-			// Format tool with its input schema
-			toolDef := fmt.Sprintf("- %s: %s", def.Name, def.Description)
-
-			// Add input schema if available
-			if def.InputSchema != nil {
-				schemaJSON, err := json.MarshalIndent(def.InputSchema, "  ", "  ")
-				if err == nil {
-					toolDef += fmt.Sprintf("\n  Input Schema: %s", string(schemaJSON))
-				}
-			}
-			toolsDefs = append(toolsDefs, toolDef)
-		}
-	}
-	toolsDef := strings.Join(toolsDefs, "\n")
-
-	basePrompt := fmt.Sprintf(`You are an expert Trip Planner. Your goal is to create a high-level travel itinerary.
-You have access to tools. You must use them to get accurate information (dates, etc) before generating the final plan.
-
-User Query: %s
-Current Time: %s
-
-Available Tools:
-%s
-
-Instructions:
-1. Analyze the request. 
-2. If you need to calculate dates (e.g. "next weekend", "next friday"), USE the dateTool. Do NOT guess.
-3. You can call MULTIPLE tools in parallel by returning a list of JSON objects.
-   Example: [{"tool": "dateTool", "args": {"expression": "..."}}, {"tool": "flightTool", "args": {"origin": "NYC", ...}}]
-4. If you have enough info, return the FINAL PLAN as a JSON object with "itinerary" (or "itineraries" for multiple options) or "question".
+CRITICAL RULES:
+- If the user specifies a timeframe (like "next weekend"), use dateTool to calculate it, then create the itinerary
+- Return itinerary with ACTUAL dates in RFC3339 format (YYYY-MM-DDTHH:mm:ssZ)
+- Structure your response exactly as the JSON schema below. Use camelCase for keys.
 
 Final Answer Schema:
 {
-  "itineraries": [ { ... }, { ... } ], // For multiple options (e.g. different weekends)
-  "reasoning": "..."
+  "itineraries": [
+    {
+      "title": "Weekend in Paris",
+      "description": "A wonderful weekend trip to Paris visiting key landmarks.",
+      "startTime": "2026-01-25T10:00:00Z",
+      "endTime": "2026-01-27T18:00:00Z",
+      "travelers": 2,
+      "graph": {
+        "nodes": [
+          {
+            "id": "node_1",
+            "location": "PAR",
+            "fromTimestamp": "2026-01-25T14:00:00Z",
+            "toTimestamp": "2026-01-27T11:00:00Z",
+            "isInterCity": false,
+            "stay": {
+              "name": "Hotel Paris",
+              "location": { "cityCode": "PAR" },
+              "checkIn": "2026-01-25T14:00:00Z",
+              "checkOut": "2026-01-27T11:00:00Z",
+              "travelerCount": 2,
+              "preferences": {
+                "roomType": "Standard",
+                "area": "City Center",
+                "rating": 4,
+                "amenities": ["wifi", "breakfast"]
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "fromId": "start_loc",
+            "toId": "node_1",
+            "durationSeconds": 25200,
+            "transport": {
+              "type": "TRANSPORT_TYPE_FLIGHT",
+              "travelerCount": 2,
+              "flightPreferences": { "travelClass": "CLASS_ECONOMY" },
+              "flight": {
+                "departureTime": "2026-01-25T10:00:00Z",
+                "arrivalTime": "2026-01-25T17:00:00Z"
+              },
+              "originLocation": { "iataCodes": ["JFK"] },
+              "destinationLocation": { "iataCodes": ["CDG"] }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "reasoning": "Calculated next weekend as Jan 25-27, 2026 and constructed graph with flight to Paris and hotel stay."
+}`
+
+// NewTripPlanner creates a new TripPlanner with Genkit native tool calling
+func NewTripPlanner(gk *genkit.Genkit, registry *tools.Registry, model ai.Model) *TripPlanner {
+	// Define the askUser tool for clarifications
+	// askUser := genkit.DefineTool(gk, "askUser", "Ask the user a clarifying question when you need more information to plan the trip.",
+	// 	func(ctx *ai.ToolContext, req *AskUserRequest) (string, error) {
+	// 		// This tool interrupts the flow to ask the user a question
+	// 		return "", ctx.Interrupt(&ai.InterruptOptions{
+	// 			Metadata: map[string]any{
+	// 				"question": req.Question,
+	// 			},
+	// 		})
+	// 	},
+	// )
+
+	// toolRefs = append(toolRefs, p.askUser)
+
+	return &TripPlanner{
+		genkit:   gk,
+		registry: registry,
+		model:    model,
+		// askUser:  askUser,
+	}
 }
-OR
-{ "question": "...", "reasoning": "..." }
 
-CRITICAL INSTRUCTIONS:
-- Return ONLY valid JSON.
-- DO NOT generate Python, JavaScript, or any other code. 
-- DO NOT define functions like 'def hotelTool(...)'.
-- DO NOT use variables. Use actual values in args.
-- Just output the JSON object or list of objects.`, req.UserQuery, time.Now().Format(time.RFC3339), toolsDef)
+func (p *TripPlanner) Plan(ctx context.Context, req PlanRequest) (*PlanResult, error) {
+	log.Infof(ctx, "TripPlanner: Planning for query: %s", req.UserQuery)
 
-	var lastItin *JSONItinerary
-	var lastItineraries []JSONItinerary
-	var finalRes JSONPlanResponse
+	// Inject current date context into system prompt
+	today := time.Now().Format("2006-01-02")
+	systemPromptWithDate := fmt.Sprintf("Today is %s.\n%s", today, SYSTEM_PROMPT)
+	log.Debugf(ctx, "Full system prompt: %s", systemPromptWithDate)
 
-	for step := 0; step < maxSteps; step++ {
-		log.Printf("TripPlanner: Step %d/%d", step+1, maxSteps)
+	log.Debugf(ctx, "Calling genkit.Generate with model: %v, tools: %d", p.model, len(p.registry.GetTools()))
 
-		// Construct dynamic prompt with history
-		stepPrompt := basePrompt
-		if chatHistory != "" {
-			stepPrompt += fmt.Sprintf("\n\nHistory:\n%s", chatHistory)
-		}
+	// Increase timeout for the tool calls
+	// We wrap the context with a longer timeout if it's not already long enough
+	// But `genkit.Generate` uses the passed context.
+	// The user reported "context canceled", which likely means the parent context or a default timeout was hit.
+	// We'll use a generous timeout here.
+	tCtx, cancel := context.WithTimeout(ctx, 220*time.Second) // 2 minutes
+	defer cancel()
 
-		log.Println("TripPlanner: Sending prompt to LLM...")
+	// Use Genkit's native tool calling with automatic iteration
+	response, err := genkit.Generate(tCtx,
+		p.genkit,
+		ai.WithModel(p.model),
+		ai.WithSystem(systemPromptWithDate),
+		ai.WithPrompt(req.UserQuery),
+		ai.WithTools(p.registry.GetToolRefs()...),
+		ai.WithMaxTurns(15), // Automatic iteration limit
+	)
+	if err != nil {
+		log.Errorf(ctx, "TripPlanner: Generate error: %v", err)
+		return nil, fmt.Errorf("planning failed: %w", err)
+	}
 
-		// Use Genkit's Generate API
-		resp, err := genkit.Generate(ctx,
-			p.genkit,
-			ai.WithModel(p.model),
-			ai.WithPrompt(stepPrompt),
-		)
-		if err != nil {
-			log.Printf("TripPlanner: LLM error: %v", err)
-			return nil, fmt.Errorf("planning step failed: %w", err)
-		}
+	log.Infof(ctx, "Response finish reason: %v", response.FinishReason)
 
-		text := resp.Text()
-		log.Printf("[DEBUG] LLM Raw Response: %s", text)
-		extractedJSON := extractUsageJSON(text)
-		if extractedJSON != "" {
-			text = extractedJSON
-		}
+	// Handle interrupts (askUser tool calls)
+	for response.FinishReason == ai.FinishReasonInterrupted {
+		var answers []*ai.Part
+		// for _, part := range response.Interrupts() {
+		// 	if part.ToolRequest.Name == "askUser" {
+		// 		// Extract the question from metadata
+		// 		question := part.ToolRequest.Input.(map[string]any)["question"]
+		// 		log.Printf(ctx, "TripPlanner: Asking user: %s", question)
 
-		// Try to parse as Tool Call (List or Single)
-		// We define a struct to hold tool call data
-		type ToolCall struct {
-			Tool string                 `json:"tool"`
-			Args map[string]interface{} `json:"args"`
-		}
+		// 		// Return the question to the user
+		// 		return &PlanResult{
+		// 			NeedsClarification: true,
+		// 			Question:           fmt.Sprintf("%v", question),
+		// 		}, nil
+		// 	}
+		// }
 
-		var toolCalls []ToolCall
-		var singleToolCall ToolCall
-		isToolCall := false
-
-		// Try parsing as list first
-		if err := json.Unmarshal([]byte(text), &toolCalls); err == nil && len(toolCalls) > 0 {
-			isToolCall = true
-		} else if err := json.Unmarshal([]byte(text), &singleToolCall); err == nil && singleToolCall.Tool != "" {
-			// If single object, wrap in list
-			toolCalls = []ToolCall{singleToolCall}
-			isToolCall = true
-		}
-
-		if isToolCall {
-			log.Printf("TripPlanner: Found %d tool calls", len(toolCalls))
-
-			// Execute tools sequentially
-			type toolResult struct {
-				idx    int
-				output string
-				param  ToolCall
+		// If we handled all interrupts, continue generation
+		if len(answers) > 0 {
+			response, err = genkit.Generate(tCtx,
+				p.genkit,
+				ai.WithMessages(response.History()...),
+				ai.WithTools(p.registry.GetToolRefs()...),
+				ai.WithToolResponses(answers...),
+				ai.WithMaxTurns(15),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("planning continuation failed: %w", err)
 			}
-			results := make([]toolResult, len(toolCalls))
-
-			for i, tc := range toolCalls {
-				log.Printf("TripPlanner: Executing tool %s args: %v", tc.Tool, tc.Args)
-				res, err := p.registry.ExecuteTool(ctx, tc.Tool, tc.Args)
-				var outStr string
-				if err != nil {
-					outStr = fmt.Sprintf("Error: %v", err)
-					log.Printf("TripPlanner: Tool %s execution failed: %v", tc.Tool, err)
-				} else {
-					b, err := json.Marshal(res)
-					if err != nil {
-						outStr = fmt.Sprintf("Tool call returned %v", res)
-					} else {
-						outStr = string(b)
-					}
-				}
-				results[i] = toolResult{idx: i, output: outStr, param: tc}
-			}
-
-			// Append to history
-			for _, r := range results {
-				log.Printf("TripPlanner: Tool Output [%d]: %s", r.idx, r.output)
-				chatHistory += fmt.Sprintf("\nAssistant: Call %s(%v)\nSystem: Output: %s", r.param.Tool, r.param.Args, r.output)
-			}
-			continue
-		}
-
-		// Try to parse as Final Response
-		if err := json.Unmarshal([]byte(text), &finalRes); err == nil && (finalRes.Itinerary != nil || len(finalRes.Itineraries) > 0 || finalRes.Question != "") {
-			log.Println("TripPlanner: Parsed Final Response.")
-			lastItin = finalRes.Itinerary
-			lastItineraries = finalRes.Itineraries
+		} else {
 			break
 		}
-
-		// If neither, invalid or reasoning
-		log.Printf("TripPlanner: Could not parse response, assuming reasoning or failure: %s", text)
-		chatHistory += fmt.Sprintf("\nAssistant: Output: %s", text)
 	}
 
-	result := &PlanResult{
-		Reasoning: finalRes.Reasoning,
+	text := response.Text()
+	log.Infof(ctx, "LLM Final Response: %s", text)
+
+	// Extract JSON from response
+	extractedJSON := extractUsageJSON(text)
+	if extractedJSON != "" {
+		text = extractedJSON
 	}
 
-	if finalRes.NeedClarify || finalRes.Question != "" {
-		result.NeedsClarification = true
-		result.Question = finalRes.Question
-		return result, nil
+	// Try to parse as final answer
+	var finalAnswer struct {
+		Itineraries []json.RawMessage `json:"itineraries"`
+		Reasoning   string            `json:"reasoning"`
 	}
 
-	output := finalRes
-	output.Itinerary = lastItin // Ensure we have the itinerary if parsed
+	if err := json.Unmarshal([]byte(text), &finalAnswer); err == nil {
+		// Handle itineraries
+		if len(finalAnswer.Itineraries) > 0 {
+			log.Infof(ctx, "TripPlanner: Generated %d itineraries", len(finalAnswer.Itineraries))
 
-	// Handle single itinerary
-	if output.Itinerary != nil {
-		p.resolveCityCodes(ctx, output.Itinerary)
-		result.Itinerary = p.convertItinerary(output.Itinerary)
-	}
-
-	// Handle multiple itineraries
-	if len(lastItineraries) > 0 {
-		for i := range lastItineraries {
-			p.resolveCityCodes(ctx, &lastItineraries[i])
-			if pbItin := p.convertItinerary(&lastItineraries[i]); pbItin != nil {
-				result.PossibleItineraries = append(result.PossibleItineraries, pbItin)
+			result := &PlanResult{
+				Reasoning: finalAnswer.Reasoning,
 			}
-		}
-		// If both single and multiple are present, usually prefer one or merge.
-		// For now if multiple exist, let's treat the first one as "main" if not set,
-		// or just rely on PossibleItineraries in the caller.
-		if result.Itinerary == nil && len(result.PossibleItineraries) > 0 {
-			result.Itinerary = result.PossibleItineraries[0]
-		}
-	}
 
-	return result, nil
-}
-
-// convertItinerary maps the internal JSON itinerary to packet buffer format
-func (p *TripPlanner) convertItinerary(in *JSONItinerary) *pb.Itinerary {
-	if in == nil {
-		return nil
-	}
-	itin := &pb.Itinerary{
-		Title:       in.Title,
-		Description: in.Description,
-		Travelers:   in.Travelers,
-		Graph:       &pb.Graph{},
-	}
-
-	if t, err := time.Parse(time.RFC3339, in.StartTime); err == nil {
-		itin.StartTime = timestamppb.New(t)
-	}
-	if t, err := time.Parse(time.RFC3339, in.EndTime); err == nil {
-		itin.EndTime = timestamppb.New(t)
-	}
-
-	// Map Nodes
-	for _, n := range in.Graph.Nodes {
-		pbNode := &pb.Node{
-			Id:          n.ID,
-			Location:    n.Location,
-			IsInterCity: n.IsInterCity,
-		}
-
-		// Timestamps
-		if n.FromTimestamp != "" {
-			if t, err := parseFlexibleTime(n.FromTimestamp); err == nil {
-				pbNode.FromTimestamp = timestamppb.New(t)
+			// Configure protojson unmarshaler to discard unknown fields
+			unmarshaler := protojson.UnmarshalOptions{
+				DiscardUnknown: true,
 			}
-		}
-		if n.ToTimestamp != "" {
-			if t, err := parseFlexibleTime(n.ToTimestamp); err == nil {
-				pbNode.ToTimestamp = timestamppb.New(t)
-			}
-		}
 
-		// Stay details
-		if n.Stay != nil {
-			pbNode.Stay = &pb.Accommodation{
-				Name:          n.Stay.Name,
-				Location:      &pb.Location{CityCode: n.Stay.CityCode},
-				TravelerCount: in.Travelers,
+			// Convert first itinerary
+			result.Itinerary = &pb.Itinerary{}
+			if err := unmarshaler.Unmarshal(finalAnswer.Itineraries[0], result.Itinerary); err != nil {
+				log.Errorf(ctx, "TripPlanner: Failed to unmarshal first itinerary: %v", err)
+				return nil, fmt.Errorf("failed to parse itinerary: %w", err)
 			}
-			if n.Stay.TravelerCount > 0 {
-				pbNode.Stay.TravelerCount = n.Stay.TravelerCount
-			}
-			if n.Stay.CheckIn != "" {
-				if t, err := parseFlexibleTime(n.Stay.CheckIn); err == nil {
-					pbNode.Stay.CheckIn = timestamppb.New(t)
+
+			// Convert possible itineraries
+			for i := range finalAnswer.Itineraries {
+				pbItin := &pb.Itinerary{}
+				if err := unmarshaler.Unmarshal(finalAnswer.Itineraries[i], pbItin); err == nil {
+					result.PossibleItineraries = append(result.PossibleItineraries, pbItin)
+				} else {
+					log.Warnf(ctx, "TripPlanner: Failed to unmarshal itinerary %d: %v", i, err)
 				}
 			}
-			if n.Stay.CheckOut != "" {
-				if t, err := parseFlexibleTime(n.Stay.CheckOut); err == nil {
-					pbNode.Stay.CheckOut = timestamppb.New(t)
-				}
-			}
-			pbNode.Stay.Preferences = &pb.AccommodationPreferences{
-				RoomType:  n.Stay.RoomType,
-				Area:      n.Stay.Area,
-				Rating:    n.Stay.Rating,
-				Amenities: n.Stay.Amenities,
-			}
-		}
-		itin.Graph.Nodes = append(itin.Graph.Nodes, pbNode)
-	}
 
-	// Map Edges
-	for _, e := range in.Graph.Edges {
-		pbEdge := &pb.Edge{
-			FromId:          e.FromID,
-			ToId:            e.ToID,
-			DurationSeconds: e.DurationSeconds,
-			Transport:       &pb.Transport{TravelerCount: in.Travelers},
-		}
-
-		if e.Transport != nil {
-			if e.Transport.TravelerCount > 0 {
-				pbEdge.Transport.TravelerCount = e.Transport.TravelerCount
+			// Resolve city codes
+			if result.Itinerary != nil {
+				// We need to implement resolveCityCodes if we want the airport codes to be correct
+				p.resolveCityCodes(ctx, result.Itinerary)
 			}
 
-			// Map transport type string to enum
-			switch e.Transport.Type {
-			case "TRANSPORT_TYPE_FLIGHT":
-				pbEdge.Transport.Type = pb.TransportType_TRANSPORT_TYPE_FLIGHT
-				if e.Transport.Flight != nil {
-					pbEdge.Transport.OriginLocation = &pb.Location{IataCodes: []string{e.Transport.Flight.DepAirport}}
-					pbEdge.Transport.DestinationLocation = &pb.Location{IataCodes: []string{e.Transport.Flight.ArrAirport}}
-					pbEdge.Transport.FlightPreferences = &pb.FlightPreferences{TravelClass: mapClass(e.Transport.Class)}
-
-					f := &pb.Flight{}
-					if e.Transport.Flight.DepTime != "" {
-						if t, err := parseFlexibleTime(e.Transport.Flight.DepTime); err == nil {
-							f.DepartureTime = timestamppb.New(t)
-						}
-					}
-					if e.Transport.Flight.ArrTime != "" {
-						if t, err := parseFlexibleTime(e.Transport.Flight.ArrTime); err == nil {
-							f.ArrivalTime = timestamppb.New(t)
-						}
-					}
-					pbEdge.Transport.Details = &pb.Transport_Flight{Flight: f}
-				}
-			case "TRANSPORT_TYPE_TRAIN":
-				pbEdge.Transport.Type = pb.TransportType_TRANSPORT_TYPE_TRAIN
-			case "TRANSPORT_TYPE_CAR":
-				pbEdge.Transport.Type = pb.TransportType_TRANSPORT_TYPE_CAR
-			default:
-				pbEdge.Transport.Type = pb.TransportType_TRANSPORT_TYPE_UNSPECIFIED
-			}
-		}
-		itin.Graph.Edges = append(itin.Graph.Edges, pbEdge)
-	}
-
-	// Populate options by re-running search (post-processing)
-	p.populateOptions(context.Background(), itin)
-
-	return itin
-}
-
-// parseFlexibleTime attempts to parse time strings in multiple formats
-func parseFlexibleTime(timeStr string) (time.Time, error) {
-	formats := []string{
-		time.RFC3339,
-		"2006-01-02T15:04:05",
-		"2006-01-02 15:04:05",
-		"2006-01-02T15:04",
-		"2006-01-02",
-	}
-
-	for _, format := range formats {
-		if t, err := time.Parse(format, timeStr); err == nil {
-			return t, nil
+			return result, nil
 		}
 	}
 
-	return time.Time{}, fmt.Errorf("unable to parse time string: %s", timeStr)
+	// Fallback: return raw text
+	log.Warnf(ctx, "TripPlanner: Could not parse response, returning raw text %s", text)
+	return &PlanResult{
+		Question: "I couldn't generate a proper itinerary. Here's what I found: " + text,
+	}, nil
 }
 
 // resolveCityCodes updates the itinerary with correct IATA codes
-func (p *TripPlanner) resolveCityCodes(ctx context.Context, itin *JSONItinerary) {
+func (p *TripPlanner) resolveCityCodes(ctx context.Context, itin *pb.Itinerary) {
 	if p.registry == nil {
 		return
 	}
@@ -486,40 +289,52 @@ func (p *TripPlanner) resolveCityCodes(ctx context.Context, itin *JSONItinerary)
 
 	// Heuristic: if CityCode looks like a name (> 3 chars or lowercase), try to resolve it
 	for i := range itin.Graph.Nodes {
-		node := &itin.Graph.Nodes[i]
-		if node.Stay == nil {
+		node := itin.Graph.Nodes[i]
+		if node.Stay == nil || node.Stay.Location == nil {
 			continue
 		}
-		if len(node.Stay.CityCode) > 3 || (len(node.Stay.CityCode) == 3 && node.Stay.CityCode != "NYC" && node.Stay.CityCode != "LON") { // Basic check
+
+		cityCode := node.Stay.Location.CityCode
+		// Basic check: if it looks like a city name rather than a code
+		if len(cityCode) > 3 || (len(cityCode) == 3 && cityCode != strings.ToUpper(cityCode)) {
 			wg.Add(1)
-			go func(idx int, cityCode string) {
+			go func(idx int, kw string) {
 				defer wg.Done()
-				log.Printf("TripPlanner: Resolving city code for '%s'", cityCode)
+				log.Debugf(ctx, "TripPlanner: Resolving city code for '%s'", kw)
 
 				// Create a derived context with timeout for individual lookups to avoid hanging
 				tCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 				defer cancel()
 
-				res, err := p.registry.ExecuteTool(tCtx, "locationTool", map[string]interface{}{
-					"keyword": cityCode,
+				res, err := p.registry.ExecuteTool(tCtx, "amadeus_location_tool", map[string]interface{}{
+					"keyword": kw,
 				})
 				if err != nil {
-					log.Printf("TripPlanner: Location search failed for %s: %v", cityCode, err)
+					log.Errorf(ctx, "TripPlanner: Location search failed for %s: %v", kw, err)
 					return
 				}
 
-				// Map result
-				resBytes, _ := json.Marshal(res)
-				var searchResp struct {
-					Data []struct {
-						JobCode string `json:"iataCode"`
-					} `json:"data"`
+				// Map result - tool returns []*pb.Location directly now?
+				// Let's check tool definition. Yes, returns []*pb.Location.
+				// But ExecuteTool returns interface{}, so we need to cast or marshal/unmarshal.
+				// Since we are inside the same process using Genkit local runner, it might return the struct.
+				// However, to be safe and consistent with previous patterns:
+
+				if locations, ok := res.([]*pb.Location); ok && len(locations) > 0 {
+					if len(locations[0].IataCodes) > 0 {
+						log.Debugf(ctx, "TripPlanner: Resolved '%s' to '%s'", kw, locations[0].IataCodes[0])
+						results <- resolutionResult{index: idx, code: locations[0].IataCodes[0]}
+					}
+				} else {
+					// Fallback using JSON roundtrip if it's map[string]interface{}
+					b, _ := json.Marshal(res)
+					var locs []*pb.Location
+					if err := json.Unmarshal(b, &locs); err == nil && len(locs) > 0 && len(locs[0].IataCodes) > 0 {
+						log.Debugf(ctx, "TripPlanner: Resolved '%s' to '%s'", kw, locs[0].IataCodes[0])
+						results <- resolutionResult{index: idx, code: locs[0].IataCodes[0]}
+					}
 				}
-				if err := json.Unmarshal(resBytes, &searchResp); err == nil && len(searchResp.Data) > 0 {
-					log.Printf("TripPlanner: Resolved '%s' to '%s'", cityCode, searchResp.Data[0].JobCode)
-					results <- resolutionResult{index: idx, code: searchResp.Data[0].JobCode}
-				}
-			}(i, node.Stay.CityCode)
+			}(i, cityCode)
 		}
 	}
 
@@ -531,74 +346,14 @@ func (p *TripPlanner) resolveCityCodes(ctx context.Context, itin *JSONItinerary)
 
 	// Apply results
 	for res := range results {
-		if itin.Graph.Nodes[res.index].Stay != nil {
-			itin.Graph.Nodes[res.index].Stay.CityCode = res.code
-		}
-	}
-}
-
-// extractUsageJSON attempts to find the first valid JSON object or list in a string.
-func extractUsageJSON(text string) string {
-	// Look for first '{' or '['
-	startObj := strings.Index(text, "{")
-	startArr := strings.Index(text, "[")
-
-	start := -1
-	if startObj != -1 && startArr != -1 {
-		if startObj < startArr {
-			start = startObj
-		} else {
-			start = startArr
-		}
-	} else if startObj != -1 {
-		start = startObj
-	} else if startArr != -1 {
-		start = startArr
-	}
-
-	if start == -1 {
-		return ""
-	}
-
-	trimmed := strings.TrimSpace(text[start:])
-	// remove trailing ; if present
-	if strings.HasSuffix(trimmed, ";") {
-		trimmed = trimmed[:len(trimmed)-1]
-	}
-	if json.Valid([]byte(trimmed)) {
-		return trimmed
-	}
-
-	// Heuristic: matching brackets
-	balance := 0
-	foundStart := false
-	openChar := '{'
-	closeChar := '}'
-	if text[start] == '[' {
-		openChar = '['
-		closeChar = ']'
-	}
-
-	for i, r := range text {
-		if i < start {
-			continue
-		}
-		if r == openChar {
-			balance++
-			foundStart = true
-		} else if r == closeChar {
-			balance--
-		}
-
-		if foundStart && balance == 0 {
-			// Potential end
-			candidate := text[start : i+1]
-			if json.Valid([]byte(candidate)) {
-				return candidate
+		if itin.Graph.Nodes[res.index].Stay != nil && itin.Graph.Nodes[res.index].Stay.Location != nil {
+			itin.Graph.Nodes[res.index].Stay.Location.CityCode = res.code
+			// Also update the IataCodes list if empty
+			if len(itin.Graph.Nodes[res.index].Stay.Location.IataCodes) == 0 {
+				itin.Graph.Nodes[res.index].Stay.Location.IataCodes = []string{res.code}
 			}
 		}
 	}
-	return ""
 }
 
 // populateOptions fetches live options for transport and accommodation
@@ -646,15 +401,19 @@ func (p *TripPlanner) populateOptions(ctx context.Context, itin *pb.Itinerary) {
 					tCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 					defer cancel()
 
-					log.Printf("TripPlanner: Fetching flight options for %s -> %s on %s", o, d, dt)
-					res, err := p.registry.ExecuteTool(tCtx, "flightTool", map[string]interface{}{
-						"origin":        o,
-						"destination":   d,
-						"departureDate": dt,
-						"adults":        int(e.Transport.TravelerCount),
+					log.Debugf(ctx, "TripPlanner: Fetching flight options for %s -> %s on %s", o, d, dt)
+					res, err := p.registry.ExecuteTool(tCtx, "amadeus_flight_tool", map[string]interface{}{
+						"origin": map[string]interface{}{
+							"iata_codes": []string{o},
+						},
+						"destination": map[string]interface{}{
+							"iata_codes": []string{d},
+						},
+						"date":   dt,
+						"adults": int(e.Transport.TravelerCount),
 					})
 					if err != nil {
-						log.Printf("TripPlanner: Flight search failed: %v", err)
+						log.Errorf(ctx, "TripPlanner: Flight search failed: %v", err)
 						return
 					}
 
@@ -672,7 +431,7 @@ func (p *TripPlanner) populateOptions(ctx context.Context, itin *pb.Itinerary) {
 						// as long as we don't resize the slice header concurrently in a way that affects others.
 						// Edges is a slice of pointers, so modifying the pointed-to struct is safe.
 						e.TransportOptions = options
-						log.Printf("TripPlanner: Added %d flight options", len(options))
+						log.Debugf(ctx, "TripPlanner: Added %d flight options", len(options))
 					}
 				}(edge, origin, dest, date)
 			}
@@ -713,19 +472,47 @@ func (p *TripPlanner) populateOptions(ctx context.Context, itin *pb.Itinerary) {
 				tCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 				defer cancel()
 
-				log.Printf("TripPlanner: Fetching hotel options for %s (%s to %s)", c, ci, co)
-				res, err := p.registry.ExecuteTool(tCtx, "hotelTool", map[string]interface{}{
-					"cityCode":     c,
-					"checkInDate":  ci,
-					"checkOutDate": co,
-					"adults":       int(n.Stay.TravelerCount),
+				log.Debugf(ctx, "TripPlanner: Fetching hotel options for %s (%s to %s)", c, ci, co)
+
+				// Step 1: List hotels
+				listRes, err := p.registry.ExecuteTool(tCtx, "amadeus_hotel_list", map[string]interface{}{
+					"location": map[string]interface{}{
+						"iata_codes": []string{c},
+					},
 				})
 				if err != nil {
-					log.Printf("TripPlanner: Hotel search failed: %v", err)
+					log.Errorf(ctx, "TripPlanner: Hotel list search failed: %v", err)
 					return
 				}
 
-				if resp, ok := res.(*amadeus.HotelSearchResponse); ok {
+				listResp, ok := listRes.(*amadeus.HotelListResponse)
+				if !ok || len(listResp.Data) == 0 {
+					log.Warnf(ctx, "TripPlanner: No hotels found for %s", c)
+					return
+				}
+
+				// Step 2: Get Offers
+				var hotelIds []string
+				limit := 5
+				if len(listResp.Data) < limit {
+					limit = len(listResp.Data)
+				}
+				for i := 0; i < limit; i++ {
+					hotelIds = append(hotelIds, listResp.Data[i].HotelId)
+				}
+
+				offersRes, err := p.registry.ExecuteTool(tCtx, "amadeus_hotel_offers", map[string]interface{}{
+					"hotel_ids": hotelIds,
+					"check_in":  ci,
+					"check_out": co,
+					"adults":    int(n.Stay.TravelerCount),
+				})
+				if err != nil {
+					log.Errorf(ctx, "TripPlanner: Hotel offers search failed: %v", err)
+					return
+				}
+
+				if resp, ok := offersRes.(*amadeus.HotelSearchResponse); ok {
 					var options []*pb.Accommodation
 					for _, data := range resp.Data {
 						options = append(options, data.ToAccommodations()...)
@@ -734,13 +521,68 @@ func (p *TripPlanner) populateOptions(ctx context.Context, itin *pb.Itinerary) {
 						options = options[:10]
 					}
 					n.StayOptions = options
-					log.Printf("TripPlanner: Added %d stay options", len(options))
-				} else if _, ok := res.(*amadeus.HotelListResponse); ok {
-					log.Printf("TripPlanner: Received HotelListResponse, skipping options population for now as offers are required.")
+					log.Debugf(ctx, "TripPlanner: Added %d stay options", len(options))
 				}
 			}(node, city, checkIn, checkOut)
 		}
 	}
 
 	wg.Wait()
+}
+
+// Helper to map string class to pb enum
+func mapClass(c string) pb.Class {
+	switch c {
+	case "ECONOMY":
+		return pb.Class_CLASS_ECONOMY
+	case "PREMIUM_ECONOMY":
+		return pb.Class_CLASS_PREMIUM_ECONOMY
+	case "BUSINESS":
+		return pb.Class_CLASS_BUSINESS
+	case "FIRST":
+		return pb.Class_CLASS_FIRST
+	default:
+		return pb.Class_CLASS_UNSPECIFIED
+	}
+}
+
+// extractUsageJSON extracts JSON from a response that might have markdown code blocks
+func extractUsageJSON(text string) string {
+	// Try to extract JSON from markdown code blocks
+	trimmed := strings.TrimSpace(text)
+	if strings.HasPrefix(trimmed, "```") {
+		// Find the closing ```
+		firstNewline := strings.Index(trimmed, "\n")
+		if firstNewline != -1 {
+			afterFirstLine := trimmed[firstNewline+1:]
+			lastTripleBackticks := strings.LastIndex(afterFirstLine, "```")
+			if lastTripleBackticks != -1 {
+				return strings.TrimSpace(afterFirstLine[:lastTripleBackticks])
+			}
+			// No closing ```, return everything after the first line
+			return strings.TrimSpace(afterFirstLine)
+		}
+	}
+	return text
+}
+
+// parseFlexibleTime tries multiple time formats
+func parseFlexibleTime(s string) (time.Time, error) {
+	// Try RFC3339 first
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t, nil
+	}
+	// Try other common formats
+	formats := []string{
+		"2006-01-02T15:04:05Z",
+		"2006-01-02T15:04:05",
+		"2006-01-02 15:04:05",
+		"2006-01-02",
+	}
+	for _, format := range formats {
+		if t, err := time.Parse(format, s); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unable to parse time: %s", s)
 }

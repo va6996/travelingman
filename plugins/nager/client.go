@@ -1,6 +1,7 @@
 package nager
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/firebase/genkit/go/genkit"
+	"github.com/va6996/travelingman/pb"
 	"github.com/va6996/travelingman/tools"
 )
 
@@ -36,8 +38,11 @@ func (c *Client) initTools(gk *genkit.Genkit, registry *tools.Registry) {
 		return
 	}
 
-	// Register the Nager holiday tool
-	NewNagerTool(c, gk, registry)
+	// Register Nager tools
+	NewAvailableCountriesTool(c, gk, registry)
+	NewPublicHolidaysTool(c, gk, registry)
+	NewLongWeekendsTool(c, gk, registry)
+	NewIsTodayHolidayTool(c, gk, registry)
 }
 
 // Country represents a country from Nager.Date API
@@ -171,4 +176,34 @@ func (c *Client) IsTodayPublicHoliday(ctx context.Context, countryCode string) (
 	}
 
 	return false, nil
+}
+
+// MapError categorizes an error into a protobuf ErrorCode
+func (c *Client) MapError(err error) pb.ErrorCode {
+	if err == nil {
+		return pb.ErrorCode_ERROR_CODE_UNSPECIFIED
+	}
+
+	errMsg := err.Error()
+
+	if fmt.Sprintf("%v", http.StatusNotFound) == "404" && (bytes.Contains([]byte(errMsg), []byte("404")) || bytes.Contains([]byte(errMsg), []byte("Not Found"))) {
+		return pb.ErrorCode_ERROR_CODE_DATA_NOT_FOUND
+	}
+
+	// Nager errors are often simple HTTP status errors based on our implementation
+	// "API request failed with status 404"
+	if bytes.Contains([]byte(errMsg), []byte("status 404")) {
+		return pb.ErrorCode_ERROR_CODE_DATA_NOT_FOUND
+	}
+	if bytes.Contains([]byte(errMsg), []byte("status 429")) {
+		return pb.ErrorCode_ERROR_CODE_API_LIMIT_REACHED
+	}
+	if bytes.Contains([]byte(errMsg), []byte("status 400")) {
+		return pb.ErrorCode_ERROR_CODE_INVALID_INPUT
+	}
+	if bytes.Contains([]byte(errMsg), []byte("status 500")) {
+		return pb.ErrorCode_ERROR_CODE_INTERNAL_SERVER_ERROR
+	}
+
+	return pb.ErrorCode_ERROR_CODE_SEARCH_FAILED
 }

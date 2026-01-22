@@ -19,6 +19,7 @@ type ToolExecutor func(ctx context.Context, args map[string]interface{}) (interf
 // Registry manages the registration of AI tools
 type Registry struct {
 	tools     []ai.Tool
+	toolRefs  []ai.ToolRef
 	executors map[string]ToolExecutor
 }
 
@@ -26,6 +27,7 @@ type Registry struct {
 func NewRegistry() *Registry {
 	return &Registry{
 		tools:     make([]ai.Tool, 0),
+		toolRefs:  make([]ai.ToolRef, 0),
 		executors: make(map[string]ToolExecutor),
 	}
 }
@@ -33,12 +35,17 @@ func NewRegistry() *Registry {
 // Register adds a tool to the registry with its executor
 func (r *Registry) Register(tool ai.Tool, executor ToolExecutor) {
 	r.tools = append(r.tools, tool)
+	r.toolRefs = append(r.toolRefs, tool)
 	r.executors[tool.Definition().Name] = executor
 }
 
 // GetTools returns all registered tools
 func (r *Registry) GetTools() []ai.Tool {
 	return r.tools
+}
+
+func (r *Registry) GetToolRefs() []ai.ToolRef {
+	return r.toolRefs
 }
 
 // Lookup finds a tool definition by name

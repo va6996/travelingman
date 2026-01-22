@@ -3,6 +3,7 @@ package plugins
 import (
 	"context"
 
+	"github.com/va6996/travelingman/pb"
 	"github.com/va6996/travelingman/plugins/amadeus"
 	"github.com/va6996/travelingman/plugins/googlemaps"
 	"googlemaps.github.io/maps"
@@ -12,7 +13,7 @@ import (
 type FlightClient interface {
 	SearchFlights(ctx context.Context, origin, destination, departureDate, returnDate, arrivalBy string, adults int) (*amadeus.FlightSearchResponse, error)
 	ConfirmPrice(ctx context.Context, offer amadeus.FlightOffer) (*amadeus.FlightSearchResponse, error)
-	BookFlight(ctx context.Context, offer amadeus.FlightOffer, travelers []amadeus.TravelerInfo) (*amadeus.FlightOrderResponse, error)
+	BookFlight(ctx context.Context, offer amadeus.FlightOffer, travelers []*pb.User) (*amadeus.FlightOrderResponse, error)
 }
 
 // HotelClient defines the interface for hotel interaction

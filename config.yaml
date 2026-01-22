@@ -11,6 +11,12 @@ ai:
     model: "qwen2.5:3b" # Can be set via OLLAMA_MODEL
     base_url: "http://localhost:11434"
 
+  zai:
+    model: "glm-4.5"
+
 amadeus:
   # client_id: "YOUR_ID" # Can be set via AMADEUS_CLIENT_ID
   # client_secret: "YOUR_SECRET" # Can be set via AMADEUS_CLIENT_SECRET
+
+log:
+  level: "debug"

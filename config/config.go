@@ -10,12 +10,19 @@ import (
 type Config struct {
 	AI      AIConfig      `yaml:"ai"`
 	Amadeus AmadeusConfig `yaml:"amadeus"`
+	Tavily  TavilyConfig  `yaml:"tavily"`
+	Log     LogConfig     `yaml:"log"`
+}
+
+type LogConfig struct {
+	Level string `yaml:"level" env:"LOG_LEVEL" env-default:"info"`
 }
 
 type AIConfig struct {
 	Plugin string       `yaml:"plugin" env:"AI_PLUGIN" env-default:"gemini"`
 	Gemini GeminiConfig `yaml:"gemini"`
 	Ollama OllamaConfig `yaml:"ollama"`
+	Zai    ZaiConfig    `yaml:"zai"`
 }
 
 type GeminiConfig struct {
@@ -28,9 +35,18 @@ type OllamaConfig struct {
 	BaseURL string `yaml:"base_url" env:"OLLAMA_BASE_URL" env-default:"http://localhost:11434"`
 }
 
+type ZaiConfig struct {
+	APIKey string `yaml:"api_key" env:"ZAI_API_KEY"`
+	Model  string `yaml:"model" env:"ZAI_MODEL" env-default:"glm-4.7"`
+}
+
 type AmadeusConfig struct {
 	ClientID     string `yaml:"client_id" env:"AMADEUS_CLIENT_ID"`
 	ClientSecret string `yaml:"client_secret" env:"AMADEUS_CLIENT_SECRET"`
+}
+
+type TavilyConfig struct {
+	APIKey string `yaml:"api_key" env:"TAVILY_API_KEY"`
 }
 
 // Load reads configuration from config.yaml and environment variables

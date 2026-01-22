@@ -1,10 +1,11 @@
 package main
 
 import (
+	"context"
 	"database/sql"
-	"log"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/va6996/travelingman/log"
 )
 
 func InitDB(filepath string) (*sql.DB, error) {
@@ -218,7 +219,7 @@ func RunMigrations(db *sql.DB) error {
 			return err
 		}
 	}
-	log.Println("Migrations completed.")
+	log.Info(context.Background(), "Migrations completed.")
 	return nil
 
 }

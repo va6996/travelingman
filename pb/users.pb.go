@@ -31,6 +31,9 @@ type User struct {
 	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	Passports       []*Passport            `protobuf:"bytes,6,rep,name=passports,proto3" json:"passports,omitempty"`
 	DriversLicenses []*DriversLicense      `protobuf:"bytes,7,rep,name=drivers_licenses,json=driversLicenses,proto3" json:"drivers_licenses,omitempty"`
+	DateOfBirth     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=date_of_birth,json=dateOfBirth,proto3" json:"date_of_birth,omitempty"`
+	Gender          string                 `protobuf:"bytes,9,opt,name=gender,proto3" json:"gender,omitempty"` // MALE, FEMALE
+	Phone           string                 `protobuf:"bytes,10,opt,name=phone,proto3" json:"phone,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -114,15 +117,40 @@ func (x *User) GetDriversLicenses() []*DriversLicense {
 	return nil
 }
 
+func (x *User) GetDateOfBirth() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DateOfBirth
+	}
+	return nil
+}
+
+func (x *User) GetGender() string {
+	if x != nil {
+		return x.Gender
+	}
+	return ""
+}
+
+func (x *User) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
 type Passport struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	UserId         int64                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Number         string                 `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
-	IssuingCountry string                 `protobuf:"bytes,4,opt,name=issuing_country,json=issuingCountry,proto3" json:"issuing_country,omitempty"`
-	ExpiryDate     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=expiry_date,json=expiryDate,proto3" json:"expiry_date,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserId           int64                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Number           string                 `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
+	IssuingCountry   string                 `protobuf:"bytes,4,opt,name=issuing_country,json=issuingCountry,proto3" json:"issuing_country,omitempty"`
+	ExpiryDate       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=expiry_date,json=expiryDate,proto3" json:"expiry_date,omitempty"`
+	IssuanceDate     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=issuance_date,json=issuanceDate,proto3" json:"issuance_date,omitempty"`
+	Nationality      string                 `protobuf:"bytes,7,opt,name=nationality,proto3" json:"nationality,omitempty"`
+	BirthPlace       string                 `protobuf:"bytes,8,opt,name=birth_place,json=birthPlace,proto3" json:"birth_place,omitempty"`
+	IssuanceLocation string                 `protobuf:"bytes,9,opt,name=issuance_location,json=issuanceLocation,proto3" json:"issuance_location,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Passport) Reset() {
@@ -188,6 +216,34 @@ func (x *Passport) GetExpiryDate() *timestamppb.Timestamp {
 		return x.ExpiryDate
 	}
 	return nil
+}
+
+func (x *Passport) GetIssuanceDate() *timestamppb.Timestamp {
+	if x != nil {
+		return x.IssuanceDate
+	}
+	return nil
+}
+
+func (x *Passport) GetNationality() string {
+	if x != nil {
+		return x.Nationality
+	}
+	return ""
+}
+
+func (x *Passport) GetBirthPlace() string {
+	if x != nil {
+		return x.BirthPlace
+	}
+	return ""
+}
+
+func (x *Passport) GetIssuanceLocation() string {
+	if x != nil {
+		return x.IssuanceLocation
+	}
+	return ""
 }
 
 type DriversLicense struct {
@@ -362,7 +418,7 @@ var File_protos_users_proto protoreflect.FileDescriptor
 
 const file_protos_users_proto_rawDesc = "" +
 	"\n" +
-	"\x12protos/users.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12protos/graph.proto\"\xa8\x02\n" +
+	"\x12protos/users.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12protos/graph.proto\"\x96\x03\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12#\n" +
@@ -371,14 +427,23 @@ const file_protos_users_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x124\n" +
 	"\tpassports\x18\x06 \x03(\v2\x16.travelingman.PassportR\tpassports\x12G\n" +
-	"\x10drivers_licenses\x18\a \x03(\v2\x1c.travelingman.DriversLicenseR\x0fdriversLicenses\"\xb1\x01\n" +
+	"\x10drivers_licenses\x18\a \x03(\v2\x1c.travelingman.DriversLicenseR\x0fdriversLicenses\x12>\n" +
+	"\rdate_of_birth\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\vdateOfBirth\x12\x16\n" +
+	"\x06gender\x18\t \x01(\tR\x06gender\x12\x14\n" +
+	"\x05phone\x18\n" +
+	" \x01(\tR\x05phone\"\xe2\x02\n" +
 	"\bPassport\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12\x16\n" +
 	"\x06number\x18\x03 \x01(\tR\x06number\x12'\n" +
 	"\x0fissuing_country\x18\x04 \x01(\tR\x0eissuingCountry\x12;\n" +
 	"\vexpiry_date\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"expiryDate\"\xb7\x01\n" +
+	"expiryDate\x12?\n" +
+	"\rissuance_date\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\fissuanceDate\x12 \n" +
+	"\vnationality\x18\a \x01(\tR\vnationality\x12\x1f\n" +
+	"\vbirth_place\x18\b \x01(\tR\n" +
+	"birthPlace\x12+\n" +
+	"\x11issuance_location\x18\t \x01(\tR\x10issuanceLocation\"\xb7\x01\n" +
 	"\x0eDriversLicense\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12\x16\n" +
@@ -418,19 +483,21 @@ var file_protos_users_proto_goTypes = []any{
 	(*Itinerary)(nil),             // 5: travelingman.Itinerary
 }
 var file_protos_users_proto_depIdxs = []int32{
-	4, // 0: travelingman.User.created_at:type_name -> google.protobuf.Timestamp
-	1, // 1: travelingman.User.passports:type_name -> travelingman.Passport
-	2, // 2: travelingman.User.drivers_licenses:type_name -> travelingman.DriversLicense
-	4, // 3: travelingman.Passport.expiry_date:type_name -> google.protobuf.Timestamp
-	4, // 4: travelingman.DriversLicense.expiry_date:type_name -> google.protobuf.Timestamp
-	4, // 5: travelingman.TravelGroup.travel_date:type_name -> google.protobuf.Timestamp
-	0, // 6: travelingman.TravelGroup.members:type_name -> travelingman.User
-	5, // 7: travelingman.TravelGroup.itinerary:type_name -> travelingman.Itinerary
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	4,  // 0: travelingman.User.created_at:type_name -> google.protobuf.Timestamp
+	1,  // 1: travelingman.User.passports:type_name -> travelingman.Passport
+	2,  // 2: travelingman.User.drivers_licenses:type_name -> travelingman.DriversLicense
+	4,  // 3: travelingman.User.date_of_birth:type_name -> google.protobuf.Timestamp
+	4,  // 4: travelingman.Passport.expiry_date:type_name -> google.protobuf.Timestamp
+	4,  // 5: travelingman.Passport.issuance_date:type_name -> google.protobuf.Timestamp
+	4,  // 6: travelingman.DriversLicense.expiry_date:type_name -> google.protobuf.Timestamp
+	4,  // 7: travelingman.TravelGroup.travel_date:type_name -> google.protobuf.Timestamp
+	0,  // 8: travelingman.TravelGroup.members:type_name -> travelingman.User
+	5,  // 9: travelingman.TravelGroup.itinerary:type_name -> travelingman.Itinerary
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_protos_users_proto_init() }

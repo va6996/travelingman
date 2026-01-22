@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
+	"github.com/va6996/travelingman/log"
 	"github.com/va6996/travelingman/pb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -194,7 +195,7 @@ type AssociatedRecord struct {
 // --- Methods ---
 
 // SearchFlights searches for flight offers
-func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) (*FlightSearchResponse, error) {
+func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]*pb.Transport, error) {
 	// Extract flight from transport
 	flight := transport.GetFlight()
 	if flight == nil {
@@ -212,13 +213,7 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) (*F
 					transport.FlightPreferences = &pb.FlightPreferences{}
 				}
 				// Check if already present
-				found := false
-				for _, code := range transport.FlightPreferences.PreferredOriginAirports {
-					if code == transport.OriginLocation.IataCodes[0] {
-						found = true
-						break
-					}
-				}
+				found := slices.Contains(transport.FlightPreferences.PreferredOriginAirports, transport.OriginLocation.IataCodes[0])
 				if !found {
 					transport.FlightPreferences.PreferredOriginAirports = append(transport.FlightPreferences.PreferredOriginAirports, transport.OriginLocation.IataCodes[0])
 				}
@@ -238,13 +233,7 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) (*F
 					transport.FlightPreferences = &pb.FlightPreferences{}
 				}
 				// Check if already present
-				found := false
-				for _, code := range transport.FlightPreferences.PreferredDestinationAirports {
-					if code == transport.DestinationLocation.IataCodes[0] {
-						found = true
-						break
-					}
-				}
+				found := slices.Contains(transport.FlightPreferences.PreferredDestinationAirports, transport.DestinationLocation.IataCodes[0])
 				if !found {
 					transport.FlightPreferences.PreferredDestinationAirports = append(transport.FlightPreferences.PreferredDestinationAirports, transport.DestinationLocation.IataCodes[0])
 				}
@@ -303,25 +292,32 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) (*F
 	// API doesn't seem to support arrivalBy filter directly in V2 GET.
 	// We will handle filtering in the upper layer or just ignore for now in the raw plugin call.
 
+	log.Debugf(ctx, "SearchFlights: Requesting %s", endpoint)
+
 	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
 	if err != nil {
-		log.Printf("SearchFlights: request failed: %v", err)
+		log.Errorf(ctx, "SearchFlights: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("SearchFlights: API returned status %s", resp.Status)
+		log.Errorf(ctx, "SearchFlights: API returned status %s", resp.Status)
 		return nil, fmt.Errorf("search failed: %s", resp.Status)
 	}
 
 	var searchResp FlightSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
-		log.Printf("SearchFlights: failed to decode response: %v", err)
+		log.Errorf(ctx, "SearchFlights: failed to decode response: %v", err)
 		return nil, err
 	}
 
-	return &searchResp, nil
+	var transports []*pb.Transport
+	for _, offer := range searchResp.Data {
+		transports = append(transports, offer.ToTransport())
+	}
+
+	return transports, nil
 }
 
 // ConfirmPrice confirms the price of a selected flight offer
@@ -332,19 +328,19 @@ func (c *Client) ConfirmPrice(ctx context.Context, offer FlightOffer) (*FlightSe
 
 	resp, err := c.doRequest(ctx, "POST", "/v1/shopping/flight-offers/pricing", reqBody)
 	if err != nil {
-		log.Printf("ConfirmPrice: request failed: %v", err)
+		log.Errorf(ctx, "ConfirmPrice: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("ConfirmPrice: API returned status %s", resp.Status)
+		log.Errorf(ctx, "ConfirmPrice: API returned status %s", resp.Status)
 		return nil, fmt.Errorf("price confirmation failed: %s", resp.Status)
 	}
 
 	var priceResp FlightSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&priceResp); err != nil {
-		log.Printf("ConfirmPrice: failed to decode response: %v", err)
+		log.Errorf(ctx, "ConfirmPrice: failed to decode response: %v", err)
 		return nil, err
 	}
 
@@ -352,7 +348,47 @@ func (c *Client) ConfirmPrice(ctx context.Context, offer FlightOffer) (*FlightSe
 }
 
 // BookFlight creates a flight order
-func (c *Client) BookFlight(ctx context.Context, offer FlightOffer, travelers []TravelerInfo) (*FlightOrderResponse, error) {
+func (c *Client) BookFlight(ctx context.Context, offer FlightOffer, users []*pb.User) (*FlightOrderResponse, error) {
+	var travelers []TravelerInfo
+	for _, user := range users {
+		traveler := TravelerInfo{
+			ID:          fmt.Sprintf("%d", user.Id),
+			DateOfBirth: user.DateOfBirth.AsTime().Format("2006-01-02"),
+			Name: Name{
+				FirstName: getFirstName(user.FullName),
+				LastName:  getLastName(user.FullName),
+			},
+			Gender: user.Gender,
+			Contact: &Contact{
+				EmailAddress: user.Email,
+				Phones: []Phone{
+					{
+						DeviceType:         "MOBILE",
+						CountryCallingCode: "1", // TODO: Extract from phone number
+						Number:             user.Phone,
+					},
+				},
+			},
+		}
+
+		if len(user.Passports) > 0 {
+			passport := user.Passports[0]
+			traveler.Documents = append(traveler.Documents, Document{
+				DocumentType:     "PASSPORT",
+				BirthPlace:       passport.BirthPlace,
+				IssuanceLocation: passport.IssuanceLocation,
+				IssuanceDate:     passport.IssuanceDate.AsTime().Format("2006-01-02"),
+				Number:           passport.Number,
+				ExpiryDate:       passport.ExpiryDate.AsTime().Format("2006-01-02"),
+				IssuanceCountry:  passport.IssuingCountry,
+				ValidityCountry:  passport.IssuingCountry,
+				Nationality:      passport.Nationality,
+				Holder:           true,
+			})
+		}
+		travelers = append(travelers, traveler)
+	}
+
 	reqBody := FlightOrderRequest{}
 	reqBody.Data.Type = "flight-order"
 	reqBody.Data.FlightOffers = []FlightOffer{offer}
@@ -360,23 +396,40 @@ func (c *Client) BookFlight(ctx context.Context, offer FlightOffer, travelers []
 
 	resp, err := c.doRequest(ctx, "POST", "/v1/booking/flight-orders", reqBody)
 	if err != nil {
-		log.Printf("BookFlight: request failed: %v", err)
+		log.Errorf(ctx, "BookFlight: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		log.Printf("BookFlight: API returned status %s", resp.Status)
+		log.Errorf(ctx, "BookFlight: API returned status %s", resp.Status)
 		return nil, fmt.Errorf("booking failed: %s", resp.Status)
 	}
 
 	var orderResp FlightOrderResponse
 	if err := json.NewDecoder(resp.Body).Decode(&orderResp); err != nil {
-		log.Printf("BookFlight: failed to decode response: %v", err)
+		log.Errorf(ctx, "BookFlight: failed to decode response: %v", err)
 		return nil, err
 	}
 
 	return &orderResp, nil
+}
+
+func getFirstName(fullName string) string {
+	// Simple split, assuming First Last
+	// In production, robust name parsing is needed
+	var firstName string
+	fmt.Sscanf(fullName, "%s", &firstName)
+	return firstName
+}
+
+func getLastName(fullName string) string {
+	var firstName, lastName string
+	fmt.Sscanf(fullName, "%s %s", &firstName, &lastName)
+	if lastName == "" {
+		return firstName // Fallback
+	}
+	return lastName
 }
 
 // ToTransport converts a FlightOffer to a pb.Transport

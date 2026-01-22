@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,11 +10,13 @@ import (
 
 	"github.com/va6996/travelingman/bootstrap"
 	"github.com/va6996/travelingman/config"
+	logcontext "github.com/va6996/travelingman/context"
+	"github.com/va6996/travelingman/log"
 )
 
 func main() {
-	// Configure logging to include file and line number
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	// Initialize logging
+	log.Init()
 
 	// Setup signal handling for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -26,20 +27,20 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT)
 	go func() {
 		<-sigChan
-		log.Println("\nProgram terminated externally. Exiting...")
+		log.Info(context.Background(), "\nProgram terminated externally. Exiting...")
 		cancel()
 	}()
 
 	// 0. Load Config
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		log.Fatalf(context.Background(), "Failed to load config: %v", err)
 	}
 
 	// 1-3. Init App Components using Bootstrap
 	app, err := bootstrap.Setup(context.Background(), cfg)
 	if err != nil {
-		log.Fatalf("Setup failed: %v", err)
+		log.Fatalf(context.Background(), "Setup failed: %v", err)
 	}
 
 	// 4. Start API Server
@@ -60,13 +61,13 @@ func main() {
 
 	go func() {
 		<-ctx.Done()
-		log.Println("Shutting down server...")
+		log.Info(context.Background(), "Shutting down server...")
 		srv.Shutdown(context.Background())
 	}()
 
-	log.Printf("Starting server on port %s", port)
+	log.Infof(context.Background(), "Starting server on port %s", port)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("Server failed: %v", err)
+		log.Fatalf(context.Background(), "Server failed: %v", err)
 	}
 }
 
@@ -89,6 +90,12 @@ func handlePlanTrip(w http.ResponseWriter, r *http.Request, app *bootstrap.App) 
 		return
 	}
 
+	// Generate request ID for tracking
+	requestID := logcontext.NewRequestID()
+
+	// Add request ID to context
+	ctx := logcontext.WithRequestID(r.Context(), requestID)
+
 	var req PlanTripRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -100,13 +107,13 @@ func handlePlanTrip(w http.ResponseWriter, r *http.Request, app *bootstrap.App) 
 		return
 	}
 
-	log.Printf("Received planning request: %s", req.Query)
+	log.Infof(ctx, "Received planning request: %s", req.Query)
 
-	res, err := app.TravelAgent.OrchestrateRequest(r.Context(), req.Query, "")
+	res, err := app.TravelAgent.OrchestrateRequest(ctx, req.Query, "")
 
 	resp := PlanTripResponse{}
 	if err != nil {
-		log.Printf("Error processing request: %v", err)
+		log.Errorf(ctx, "Error processing request: %v", err)
 		resp.Error = err.Error()
 		w.WriteHeader(http.StatusInternalServerError)
 	} else {

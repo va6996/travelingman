@@ -8,6 +8,7 @@ import (
 	"github.com/dop251/goja"
 	"github.com/firebase/genkit/go/ai"
 	"github.com/firebase/genkit/go/genkit"
+	"github.com/sirupsen/logrus"
 	"github.com/va6996/travelingman/tools"
 )
 
@@ -68,7 +69,7 @@ func (t *DateTool) Execute(ctx context.Context, input *DateInput) (*time.Time, e
 	}
 	expression := input.Expression
 	// log usage for debug
-	fmt.Printf("[DateTool] Executing expression: %s\n", expression)
+	logrus.Debugf("[DateTool] Executing expression: %s", expression)
 
 	vm := goja.New()
 	err := vm.Set("now", t.Now().UnixMilli())
@@ -78,13 +79,13 @@ func (t *DateTool) Execute(ctx context.Context, input *DateInput) (*time.Time, e
 
 	val, err := vm.RunString(expression)
 	if err != nil {
-		fmt.Printf("[DateTool] RunString error: %v\n", err)
+		logrus.Errorf("[DateTool] RunString error: %v", err)
 		return nil, fmt.Errorf("js execution failed: %w", err)
 	}
-	fmt.Printf("[DateTool] RunString result: %v (IsUndefined: %v, IsNull: %v)\n", val, val == goja.Undefined(), val == goja.Null())
+	logrus.Debugf("[DateTool] RunString result: %v (IsUndefined: %v, IsNull: %v)", val, val == goja.Undefined(), val == goja.Null())
 
 	exported := val.Export()
-	fmt.Printf("[DateTool] Exported result: %v (Type: %T)\n", exported, exported)
+	logrus.Debugf("[DateTool] Exported result: %v (Type: %T)", exported, exported)
 
 	// If explicitly nil/undefined
 	if exported == nil {

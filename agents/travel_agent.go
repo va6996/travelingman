@@ -2,22 +2,23 @@ package agents
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
+	"github.com/va6996/travelingman/log"
 	"github.com/va6996/travelingman/pb"
 )
 
 // TravelAgent is the main orchestrator
 type TravelAgent struct {
 	planner Planner
-	desk    *TravelDesk
+	desk    Assistant
 }
 
 // NewTravelAgent creates a new TravelAgent
-func NewTravelAgent(p Planner, d *TravelDesk) *TravelAgent {
+func NewTravelAgent(p Planner, d Assistant) *TravelAgent {
 	return &TravelAgent{
 		planner: p,
 		desk:    d,
@@ -30,10 +31,10 @@ func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string,
 	maxIterations := 5
 
 	for i := 0; i < maxIterations; i++ {
-		log.Printf("Orchestration iteration %d", i+1)
+		log.Debugf(ctx, "Orchestration iteration %d", i+1)
 
 		// 1. Ask Planner for a plan
-		log.Println("STEP 1: Requesting trip plan from TripPlanner...")
+		log.Infof(ctx, "STEP 1: Requesting trip plan from TripPlanner...")
 		planReq := PlanRequest{
 			UserQuery: userQuery,
 			History:   currentHistory,
@@ -46,21 +47,21 @@ func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string,
 
 		// If Planner needs user clarification, return immediately
 		if planRes.NeedsClarification {
-			log.Printf("TripPlanner requests clarification: %q", planRes.Question)
+			log.Infof(ctx, "TripPlanner requests clarification: %q", planRes.Question)
 			return planRes.Question, nil
 		}
 
 		if planRes.Itinerary == nil {
-			log.Println("ERROR: TripPlanner returned nil itinerary.")
+			log.Errorf(ctx, "ERROR: TripPlanner returned nil itinerary.")
 			return "", fmt.Errorf("planner returned no itinerary and no question")
 		}
-		log.Printf("TripPlanner proposed itinerary: %q. Proceeding to verification.", planRes.Itinerary.Title)
+		log.Debugf(ctx, "TripPlanner proposed itinerary: %q. Proceeding to verification.", planRes.Itinerary.Title)
 
 		var successfulItineraries []*pb.Itinerary
 		var errors []string
 
 		// 2. Parallel Verification for each proposed itinerary
-		log.Println("STEP 2: Verifying itineraries with TravelDesk...")
+		log.Infof(ctx, "STEP 2: Verifying itineraries with TravelDesk...")
 
 		itinerariesToCheck := []*pb.Itinerary{}
 		if planRes.Itinerary != nil {
@@ -70,7 +71,6 @@ func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string,
 
 		type deskResult struct {
 			itinerary *pb.Itinerary
-			issues    []string
 			err       error
 		}
 
@@ -78,27 +78,49 @@ func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string,
 
 		for _, it := range itinerariesToCheck {
 			go func(it *pb.Itinerary) {
-				deskReq := BookingRequest{
-					Itinerary: it,
-				}
-				deskRes, err := ta.desk.CheckAvailabilityAndBook(ctx, deskReq)
+				itinerary, err := ta.desk.CheckAvailability(ctx, it)
 				if err != nil {
 					resChan <- deskResult{err: err}
 					return
 				}
-				resChan <- deskResult{itinerary: deskRes.Itinerary, issues: deskRes.Issues}
+				resChan <- deskResult{itinerary: itinerary}
 			}(it)
 		}
 
 		for i := 0; i < len(itinerariesToCheck); i++ {
 			res := <-resChan
 			if res.err != nil {
-				log.Printf("TravelDesk verification error: %v", res.err)
+				log.Errorf(ctx, "TravelDesk verification error: %v", res.err)
 				continue
 			}
-			if len(res.issues) > 0 {
-				log.Printf("TravelDesk issues for %s: %v", res.itinerary.Title, res.issues)
-				errors = append(errors, fmt.Sprintf("Plan '%s': %s", res.itinerary.Title, strings.Join(res.issues, "; ")))
+
+			// Check for errors in the itinerary
+			var itineraryIssues []string
+			if res.itinerary.Graph != nil {
+				// Check Flights
+				for _, edge := range res.itinerary.Graph.Edges {
+					if edge.Transport != nil && edge.Transport.Error != nil && edge.Transport.Error.Severity == pb.ErrorSeverity_ERROR_SEVERITY_ERROR {
+						itineraryIssues = append(itineraryIssues, fmt.Sprintf("Transport error: %s", edge.Transport.Error.Message))
+					}
+				}
+				// Check Accommodation
+				for _, node := range res.itinerary.Graph.Nodes {
+					if node.Stay != nil && node.Stay.Error != nil && node.Stay.Error.Severity == pb.ErrorSeverity_ERROR_SEVERITY_ERROR {
+						itineraryIssues = append(itineraryIssues, fmt.Sprintf("Stay error: %s", node.Stay.Error.Message))
+					}
+				}
+			}
+
+			// Log itinerary as JSON
+			if b, err := json.MarshalIndent(res.itinerary, "", "  "); err == nil {
+				log.Debugf(ctx, "TravelDesk itinerary: %s", string(b))
+			} else {
+				log.Debugf(ctx, "TravelDesk itinerary: %v", res.itinerary)
+			}
+
+			if len(itineraryIssues) > 0 {
+				log.Warnf(ctx, "TravelDesk issues for %s: %v", res.itinerary.Title, itineraryIssues)
+				errors = append(errors, fmt.Sprintf("Plan '%s': %s", res.itinerary.Title, strings.Join(itineraryIssues, "; ")))
 			} else {
 				successfulItineraries = append(successfulItineraries, res.itinerary)
 			}
@@ -107,7 +129,7 @@ func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string,
 
 		// 3. check results
 		if len(successfulItineraries) == 0 {
-			log.Printf("STEP 3: All plans had issues. Initiating re-planning...")
+			log.Warnf(ctx, "STEP 3: All plans had issues. Initiating re-planning...")
 			// Feed issues back to Planner
 			issueStr := strings.Join(errors, "\n")
 			currentHistory += fmt.Sprintf("\nSystem: The proposed plans had issues:\n%s\nPlease revise.", issueStr)
@@ -120,6 +142,12 @@ func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string,
 			finalResponse += fmt.Sprintf("### Option %d: %s\n", i+1, itin.Title)
 			finalResponse += ta.formatItinerary(itin, 0)
 			finalResponse += "\n"
+
+			// Pretty print the itinerary JSON
+			b, err := json.MarshalIndent(itin, "", "  ")
+			if err == nil {
+				log.Debugf(ctx, "Final Itinerary JSON (Option %d):\n%s", i+1, string(b))
+			}
 		}
 
 		return finalResponse, nil

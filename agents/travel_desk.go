@@ -3,8 +3,8 @@ package agents
 import (
 	"context"
 	"fmt"
-	"log"
 
+	"github.com/va6996/travelingman/log"
 	"github.com/va6996/travelingman/pb"
 	"github.com/va6996/travelingman/plugins/amadeus"
 )
@@ -21,33 +21,18 @@ func NewTravelDesk(client *amadeus.Client) *TravelDesk {
 	}
 }
 
-// BookingRequest contains the itinerary to book/check
-type BookingRequest struct {
-	Itinerary *pb.Itinerary
+// CheckAvailability validates the itinerary against real availability
+func (td *TravelDesk) CheckAvailability(ctx context.Context, itinerary *pb.Itinerary) (*pb.Itinerary, error) {
+	log.Infof(ctx, "TravelDesk: Starting availability check for: %s", itinerary.Title)
+	td.checkRecursive(ctx, itinerary)
+	log.Infof(ctx, "TravelDesk: Finished check.")
+
+	return itinerary, nil
 }
 
-// BookingResult contains the updated itinerary with booking details
-type BookingResult struct {
-	Itinerary *pb.Itinerary
-	Issues    []string
-}
-
-// CheckAvailabilityAndBook validates the itinerary against real availability
-func (td *TravelDesk) CheckAvailabilityAndBook(ctx context.Context, req BookingRequest) (*BookingResult, error) {
-	log.Printf("TravelDesk: Starting availability check for: %s", req.Itinerary.Title)
-	issues := td.checkRecursive(ctx, req.Itinerary)
-	log.Printf("TravelDesk: Finished check. Total issues found: %d", len(issues))
-
-	return &BookingResult{
-		Itinerary: req.Itinerary,
-		Issues:    issues,
-	}, nil
-}
-
-func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerary) []string {
-	var issues []string
+func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerary) {
 	if itinerary.Graph == nil {
-		return issues
+		return
 	}
 
 	// 1. Check Flights (Edges)
@@ -55,33 +40,32 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 		if t := edge.Transport; t != nil {
 			if t.Type == pb.TransportType_TRANSPORT_TYPE_FLIGHT {
 				if flight := t.GetFlight(); flight != nil {
-					log.Printf("TravelDesk: Checking flights on %s", flight.DepartureTime.AsTime().Format("2006-01-02"))
+					log.Debugf(ctx, "TravelDesk: Checking flights on %s", flight.DepartureTime.AsTime().Format("2006-01-02"))
 
 					// SearchFlights handles location extraction internally
-					resp, err := td.amadeus.SearchFlights(ctx, t)
+					transports, err := td.amadeus.SearchFlights(ctx, t)
 
 					if err != nil {
-						issues = append(issues, fmt.Sprintf("Flight search failed: %v", err))
-					} else if len(resp.Data) > 0 {
+						errMsg := fmt.Sprintf("Flight search failed: %v", err)
+						log.Errorf(ctx, "TravelDesk: ISSUE: %s", errMsg)
+						t.Error = &pb.Error{
+							Message:  errMsg,
+							Code:     td.amadeus.MapError(err),
+							Severity: pb.ErrorSeverity_ERROR_SEVERITY_ERROR,
+						}
+					} else if len(transports) > 0 {
 						// Collect ALL flight options
-						var options []*pb.Transport
-						for _, offer := range resp.Data {
-							options = append(options, offer.ToTransport())
-						}
-						edge.TransportOptions = options
+						edge.TransportOptions = transports
 
-						// Set first option as selected (backward compatibility)
-						offer := resp.Data[0]
-						t.Status = "AVAILABLE"
-						t.ReferenceNumber = offer.ID
-
-						// Update flight details
-						if len(offer.Itineraries) > 0 && len(offer.Itineraries[0].Segments) > 0 {
-							seg := offer.Itineraries[0].Segments[0]
-							t.Details.(*pb.Transport_Flight).Flight.FlightNumber = seg.Number
-							t.Details.(*pb.Transport_Flight).Flight.CarrierCode = seg.CarrierCode
+						log.Infof(ctx, "TravelDesk: Found %d flight options", len(transports))
+					} else {
+						errMsg := fmt.Sprintf("No flights found for %s on %s", t.OriginLocation.IataCodes, flight.DepartureTime.AsTime().Format("2006-01-02"))
+						log.Errorf(ctx, "TravelDesk: ISSUE: %s", errMsg)
+						t.Error = &pb.Error{
+							Message:  errMsg,
+							Code:     pb.ErrorCode_ERROR_CODE_DATA_NOT_FOUND,
+							Severity: pb.ErrorSeverity_ERROR_SEVERITY_ERROR,
 						}
-						log.Printf("TravelDesk: Found %d flight options, selected: %s price: %s", len(options), offer.ID, offer.Price.Total)
 					}
 				}
 			}
@@ -91,29 +75,37 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 	// 2. Check Hotels (Nodes)
 	for _, node := range itinerary.Graph.Nodes {
 		if acc := node.Stay; acc != nil {
-			log.Printf("TravelDesk: Checking hotels in city %s", acc.Address)
+			log.Debugf(ctx, "TravelDesk: Checking hotels in city %s", acc.Address)
 
 			// Direct API Flow:
 			// A. Search hotels by city to            // Use preferences
 			listResp, err := td.amadeus.SearchHotelsByCity(ctx, acc) // acc.Address holds CityCode
 			if err != nil {
-				issues = append(issues, fmt.Sprintf("Hotel city search failed for %s: %v", acc.Address, err))
+				errMsg := fmt.Sprintf("Hotel city search failed for %s: %v", acc.Address, err)
+				log.Errorf(ctx, "TravelDesk: ISSUE: %s", errMsg)
+				acc.Error = &pb.Error{
+					Message:  errMsg,
+					Code:     td.amadeus.MapError(err),
+					Severity: pb.ErrorSeverity_ERROR_SEVERITY_ERROR,
+				}
 				continue
 			}
 
 			if len(listResp.Data) == 0 {
-				issues = append(issues, fmt.Sprintf("No hotels found in city %s", acc.Address))
+				errMsg := fmt.Sprintf("No hotels found in city %s", acc.Address)
+				log.Errorf(ctx, "TravelDesk: ISSUE: %s", errMsg)
+				acc.Error = &pb.Error{
+					Message:  errMsg,
+					Code:     pb.ErrorCode_ERROR_CODE_DATA_NOT_FOUND,
+					Severity: pb.ErrorSeverity_ERROR_SEVERITY_ERROR,
+				}
 				continue
 			}
 
 			// B. Pick top hotels to check for offers
 			var hotelIds []string
-			limit := 5
-			if len(listResp.Data) < limit {
-				limit = len(listResp.Data)
-			}
-			for i := 0; i < limit; i++ {
-				hotelIds = append(hotelIds, listResp.Data[i].HotelId)
+			for _, hotel := range listResp.Data {
+				hotelIds = append(hotelIds, hotel.HotelId)
 			}
 
 			// C. Search offers for these hotels
@@ -126,26 +118,33 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 				adults = 1
 			}
 
-			log.Printf("TravelDesk: Checking offers for %d hotels for %d adults...", len(hotelIds), adults)
-			accommodations, err := td.amadeus.SearchHotelOffersAsAccommodations(ctx, hotelIds, adults, checkIn, checkOut)
+			log.Debugf(ctx, "TravelDesk: Checking offers for %d hotels for %d adults...", len(hotelIds), adults)
+			accommodations, err := td.amadeus.SearchHotelOffers(ctx, hotelIds, adults, checkIn, checkOut)
 			if err != nil {
-				// SearchHotelOffersAsAccommodations might error if none available or API error
-				issues = append(issues, fmt.Sprintf("Hotel offers search failed: %v", err))
+				// SearchHotelOffers might error if none available or API error
+				errMsg := fmt.Sprintf("Hotel offers search failed: %v", err)
+				log.Infof(ctx, "TravelDesk: %s", errMsg)
+				acc.Error = &pb.Error{
+					Message:  errMsg,
+					Code:     td.amadeus.MapError(err),
+					Severity: pb.ErrorSeverity_ERROR_SEVERITY_ERROR,
+				}
+				// Do not add to issues, just log and continue
+				continue
 			} else if len(accommodations) > 0 {
 				node.StayOptions = accommodations
 
-				// Set first option as selected (backward compatibility)
-				firstOffer := accommodations[0]
-				acc.Status = "AVAILABLE"
-				acc.BookingReference = firstOffer.BookingReference
-				acc.PriceTotal = firstOffer.PriceTotal
-				acc.Name = firstOffer.Name
-
-				log.Printf("TravelDesk: Found %d hotel options, selected: %s price: %s", len(accommodations), acc.Name, acc.PriceTotal)
+				log.Infof(ctx, "TravelDesk: Found %d hotel options", len(accommodations))
 			} else {
 				// No data returned
 				acc.Status = "NO_OFFERS"
-				issues = append(issues, fmt.Sprintf("No hotel offers found in %s", acc.Address))
+				errMsg := fmt.Sprintf("No hotel offers found in %s", acc.Address)
+				acc.Error = &pb.Error{
+					Message:  errMsg,
+					Code:     pb.ErrorCode_ERROR_CODE_DATA_NOT_FOUND,
+					Severity: pb.ErrorSeverity_ERROR_SEVERITY_ERROR,
+				}
+				log.Infof(ctx, "TravelDesk: %s", errMsg)
 			}
 		}
 	}
@@ -153,9 +152,6 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 	// 3. Recurse for sub-graph if needed
 	if itinerary.Graph.SubGraph != nil {
 		subItin := &pb.Itinerary{Graph: itinerary.Graph.SubGraph}
-		subIssues := td.checkRecursive(ctx, subItin)
-		issues = append(issues, subIssues...)
+		td.checkRecursive(ctx, subItin)
 	}
-
-	return issues
 }

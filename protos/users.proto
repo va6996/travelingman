@@ -15,6 +15,9 @@ message User {
     google.protobuf.Timestamp created_at = 5;
     repeated Passport passports = 6;
     repeated DriversLicense drivers_licenses = 7;
+    google.protobuf.Timestamp date_of_birth = 8;
+    string gender = 9; // MALE, FEMALE
+    string phone = 10;
 }
 
 message Passport {
@@ -23,6 +26,10 @@ message Passport {
     string number = 3;
     string issuing_country = 4;
     google.protobuf.Timestamp expiry_date = 5;
+    google.protobuf.Timestamp issuance_date = 6;
+    string nationality = 7;
+    string birth_place = 8;
+    string issuance_location = 9;
 }
 
 message DriversLicense {

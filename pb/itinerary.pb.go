@@ -181,6 +181,122 @@ func (Transmission) EnumDescriptor() ([]byte, []int) {
 	return file_protos_itinerary_proto_rawDescGZIP(), []int{2}
 }
 
+type ErrorCode int32
+
+const (
+	ErrorCode_ERROR_CODE_UNSPECIFIED           ErrorCode = 0
+	ErrorCode_ERROR_CODE_SEARCH_FAILED         ErrorCode = 1
+	ErrorCode_ERROR_CODE_DATA_NOT_FOUND        ErrorCode = 2
+	ErrorCode_ERROR_CODE_API_LIMIT_REACHED     ErrorCode = 3
+	ErrorCode_ERROR_CODE_INVALID_INPUT         ErrorCode = 4
+	ErrorCode_ERROR_CODE_AUTHENTICATION_FAILED ErrorCode = 5
+	ErrorCode_ERROR_CODE_INTERNAL_SERVER_ERROR ErrorCode = 6
+	ErrorCode_ERROR_CODE_CONNECTION_FAILED     ErrorCode = 7
+)
+
+// Enum value maps for ErrorCode.
+var (
+	ErrorCode_name = map[int32]string{
+		0: "ERROR_CODE_UNSPECIFIED",
+		1: "ERROR_CODE_SEARCH_FAILED",
+		2: "ERROR_CODE_DATA_NOT_FOUND",
+		3: "ERROR_CODE_API_LIMIT_REACHED",
+		4: "ERROR_CODE_INVALID_INPUT",
+		5: "ERROR_CODE_AUTHENTICATION_FAILED",
+		6: "ERROR_CODE_INTERNAL_SERVER_ERROR",
+		7: "ERROR_CODE_CONNECTION_FAILED",
+	}
+	ErrorCode_value = map[string]int32{
+		"ERROR_CODE_UNSPECIFIED":           0,
+		"ERROR_CODE_SEARCH_FAILED":         1,
+		"ERROR_CODE_DATA_NOT_FOUND":        2,
+		"ERROR_CODE_API_LIMIT_REACHED":     3,
+		"ERROR_CODE_INVALID_INPUT":         4,
+		"ERROR_CODE_AUTHENTICATION_FAILED": 5,
+		"ERROR_CODE_INTERNAL_SERVER_ERROR": 6,
+		"ERROR_CODE_CONNECTION_FAILED":     7,
+	}
+)
+
+func (x ErrorCode) Enum() *ErrorCode {
+	p := new(ErrorCode)
+	*p = x
+	return p
+}
+
+func (x ErrorCode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ErrorCode) Descriptor() protoreflect.EnumDescriptor {
+	return file_protos_itinerary_proto_enumTypes[3].Descriptor()
+}
+
+func (ErrorCode) Type() protoreflect.EnumType {
+	return &file_protos_itinerary_proto_enumTypes[3]
+}
+
+func (x ErrorCode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ErrorCode.Descriptor instead.
+func (ErrorCode) EnumDescriptor() ([]byte, []int) {
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{3}
+}
+
+type ErrorSeverity int32
+
+const (
+	ErrorSeverity_ERROR_SEVERITY_UNSPECIFIED ErrorSeverity = 0
+	ErrorSeverity_ERROR_SEVERITY_INFO        ErrorSeverity = 1
+	ErrorSeverity_ERROR_SEVERITY_WARNING     ErrorSeverity = 2
+	ErrorSeverity_ERROR_SEVERITY_ERROR       ErrorSeverity = 3
+)
+
+// Enum value maps for ErrorSeverity.
+var (
+	ErrorSeverity_name = map[int32]string{
+		0: "ERROR_SEVERITY_UNSPECIFIED",
+		1: "ERROR_SEVERITY_INFO",
+		2: "ERROR_SEVERITY_WARNING",
+		3: "ERROR_SEVERITY_ERROR",
+	}
+	ErrorSeverity_value = map[string]int32{
+		"ERROR_SEVERITY_UNSPECIFIED": 0,
+		"ERROR_SEVERITY_INFO":        1,
+		"ERROR_SEVERITY_WARNING":     2,
+		"ERROR_SEVERITY_ERROR":       3,
+	}
+)
+
+func (x ErrorSeverity) Enum() *ErrorSeverity {
+	p := new(ErrorSeverity)
+	*p = x
+	return p
+}
+
+func (x ErrorSeverity) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ErrorSeverity) Descriptor() protoreflect.EnumDescriptor {
+	return file_protos_itinerary_proto_enumTypes[4].Descriptor()
+}
+
+func (ErrorSeverity) Type() protoreflect.EnumType {
+	return &file_protos_itinerary_proto_enumTypes[4]
+}
+
+func (x ErrorSeverity) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ErrorSeverity.Descriptor instead.
+func (ErrorSeverity) EnumDescriptor() ([]byte, []int) {
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{4}
+}
+
 type AccommodationPreferences struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RoomType      string                 `protobuf:"bytes,1,opt,name=room_type,json=roomType,proto3" json:"room_type,omitempty"`
@@ -521,6 +637,66 @@ func (x *Location) GetName() string {
 	return ""
 }
 
+type Error struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Code          ErrorCode              `protobuf:"varint,2,opt,name=code,proto3,enum=travelingman.ErrorCode" json:"code,omitempty"`
+	Severity      ErrorSeverity          `protobuf:"varint,3,opt,name=severity,proto3,enum=travelingman.ErrorSeverity" json:"severity,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Error) Reset() {
+	*x = Error{}
+	mi := &file_protos_itinerary_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Error) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Error) ProtoMessage() {}
+
+func (x *Error) ProtoReflect() protoreflect.Message {
+	mi := &file_protos_itinerary_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Error.ProtoReflect.Descriptor instead.
+func (*Error) Descriptor() ([]byte, []int) {
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *Error) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *Error) GetCode() ErrorCode {
+	if x != nil {
+		return x.Code
+	}
+	return ErrorCode_ERROR_CODE_UNSPECIFIED
+}
+
+func (x *Error) GetSeverity() ErrorSeverity {
+	if x != nil {
+		return x.Severity
+	}
+	return ErrorSeverity_ERROR_SEVERITY_UNSPECIFIED
+}
+
 type Accommodation struct {
 	state            protoimpl.MessageState    `protogen:"open.v1"`
 	Id               int64                     `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -536,13 +712,14 @@ type Accommodation struct {
 	Preferences      *AccommodationPreferences `protobuf:"bytes,11,opt,name=preferences,proto3" json:"preferences,omitempty"`
 	TravelerCount    int32                     `protobuf:"varint,12,opt,name=traveler_count,json=travelerCount,proto3" json:"traveler_count,omitempty"`
 	Location         *Location                 `protobuf:"bytes,13,opt,name=location,proto3" json:"location,omitempty"`
+	Error            *Error                    `protobuf:"bytes,14,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Accommodation) Reset() {
 	*x = Accommodation{}
-	mi := &file_protos_itinerary_proto_msgTypes[5]
+	mi := &file_protos_itinerary_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -554,7 +731,7 @@ func (x *Accommodation) String() string {
 func (*Accommodation) ProtoMessage() {}
 
 func (x *Accommodation) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_itinerary_proto_msgTypes[5]
+	mi := &file_protos_itinerary_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -567,7 +744,7 @@ func (x *Accommodation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Accommodation.ProtoReflect.Descriptor instead.
 func (*Accommodation) Descriptor() ([]byte, []int) {
-	return file_protos_itinerary_proto_rawDescGZIP(), []int{5}
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Accommodation) GetId() int64 {
@@ -661,6 +838,13 @@ func (x *Accommodation) GetLocation() *Location {
 	return nil
 }
 
+func (x *Accommodation) GetError() *Error {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
 type Transport struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Id                   int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -677,6 +861,7 @@ type Transport struct {
 	FlightPreferences    *FlightPreferences     `protobuf:"bytes,15,opt,name=flight_preferences,json=flightPreferences,proto3" json:"flight_preferences,omitempty"`
 	TrainPreferences     *TrainPreferences      `protobuf:"bytes,16,opt,name=train_preferences,json=trainPreferences,proto3" json:"train_preferences,omitempty"`
 	CarRentalPreferences *CarRentalPreferences  `protobuf:"bytes,17,opt,name=car_rental_preferences,json=carRentalPreferences,proto3" json:"car_rental_preferences,omitempty"`
+	Error                *Error                 `protobuf:"bytes,18,opt,name=error,proto3" json:"error,omitempty"`
 	// Types that are valid to be assigned to Details:
 	//
 	//	*Transport_Flight
@@ -689,7 +874,7 @@ type Transport struct {
 
 func (x *Transport) Reset() {
 	*x = Transport{}
-	mi := &file_protos_itinerary_proto_msgTypes[6]
+	mi := &file_protos_itinerary_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -701,7 +886,7 @@ func (x *Transport) String() string {
 func (*Transport) ProtoMessage() {}
 
 func (x *Transport) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_itinerary_proto_msgTypes[6]
+	mi := &file_protos_itinerary_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -714,7 +899,7 @@ func (x *Transport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Transport.ProtoReflect.Descriptor instead.
 func (*Transport) Descriptor() ([]byte, []int) {
-	return file_protos_itinerary_proto_rawDescGZIP(), []int{6}
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Transport) GetId() int64 {
@@ -815,6 +1000,13 @@ func (x *Transport) GetCarRentalPreferences() *CarRentalPreferences {
 	return nil
 }
 
+func (x *Transport) GetError() *Error {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
 func (x *Transport) GetDetails() isTransport_Details {
 	if x != nil {
 		return x.Details
@@ -883,7 +1075,7 @@ type Flight struct {
 
 func (x *Flight) Reset() {
 	*x = Flight{}
-	mi := &file_protos_itinerary_proto_msgTypes[7]
+	mi := &file_protos_itinerary_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -895,7 +1087,7 @@ func (x *Flight) String() string {
 func (*Flight) ProtoMessage() {}
 
 func (x *Flight) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_itinerary_proto_msgTypes[7]
+	mi := &file_protos_itinerary_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -908,7 +1100,7 @@ func (x *Flight) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Flight.ProtoReflect.Descriptor instead.
 func (*Flight) Descriptor() ([]byte, []int) {
-	return file_protos_itinerary_proto_rawDescGZIP(), []int{7}
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Flight) GetCarrierCode() string {
@@ -950,7 +1142,7 @@ type Train struct {
 
 func (x *Train) Reset() {
 	*x = Train{}
-	mi := &file_protos_itinerary_proto_msgTypes[8]
+	mi := &file_protos_itinerary_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -962,7 +1154,7 @@ func (x *Train) String() string {
 func (*Train) ProtoMessage() {}
 
 func (x *Train) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_itinerary_proto_msgTypes[8]
+	mi := &file_protos_itinerary_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -975,7 +1167,7 @@ func (x *Train) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Train.ProtoReflect.Descriptor instead.
 func (*Train) Descriptor() ([]byte, []int) {
-	return file_protos_itinerary_proto_rawDescGZIP(), []int{8}
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Train) GetDepartureTime() *timestamppb.Timestamp {
@@ -1011,7 +1203,7 @@ type CarRental struct {
 
 func (x *CarRental) Reset() {
 	*x = CarRental{}
-	mi := &file_protos_itinerary_proto_msgTypes[9]
+	mi := &file_protos_itinerary_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1023,7 +1215,7 @@ func (x *CarRental) String() string {
 func (*CarRental) ProtoMessage() {}
 
 func (x *CarRental) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_itinerary_proto_msgTypes[9]
+	mi := &file_protos_itinerary_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1036,7 +1228,7 @@ func (x *CarRental) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CarRental.ProtoReflect.Descriptor instead.
 func (*CarRental) Descriptor() ([]byte, []int) {
-	return file_protos_itinerary_proto_rawDescGZIP(), []int{9}
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CarRental) GetCompany() string {
@@ -1097,7 +1289,11 @@ const file_protos_itinerary_proto_rawDesc = "" +
 	"\tcity_code\x18\x05 \x01(\tR\bcityCode\x12\x18\n" +
 	"\ageocode\x18\x06 \x01(\tR\ageocode\x12\x10\n" +
 	"\x03zip\x18\a \x01(\tR\x03zip\x12\x12\n" +
-	"\x04name\x18\b \x01(\tR\x04name\"\xfe\x03\n" +
+	"\x04name\x18\b \x01(\tR\x04name\"\x87\x01\n" +
+	"\x05Error\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\x12+\n" +
+	"\x04code\x18\x02 \x01(\x0e2\x17.travelingman.ErrorCodeR\x04code\x127\n" +
+	"\bseverity\x18\x03 \x01(\x0e2\x1b.travelingman.ErrorSeverityR\bseverity\"\xa9\x04\n" +
 	"\rAccommodation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\x03R\agroupId\x12\x12\n" +
@@ -1113,7 +1309,8 @@ const file_protos_itinerary_proto_rawDesc = "" +
 	" \x03(\x03R\auserIds\x12H\n" +
 	"\vpreferences\x18\v \x01(\v2&.travelingman.AccommodationPreferencesR\vpreferences\x12%\n" +
 	"\x0etraveler_count\x18\f \x01(\x05R\rtravelerCount\x122\n" +
-	"\blocation\x18\r \x01(\v2\x16.travelingman.LocationR\blocation\"\xce\x06\n" +
+	"\blocation\x18\r \x01(\v2\x16.travelingman.LocationR\blocation\x12)\n" +
+	"\x05error\x18\x0e \x01(\v2\x13.travelingman.ErrorR\x05error\"\xf9\x06\n" +
 	"\tTransport\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1d\n" +
 	"\n" +
@@ -1131,7 +1328,8 @@ const file_protos_itinerary_proto_rawDesc = "" +
 	"priceTotal\x12N\n" +
 	"\x12flight_preferences\x18\x0f \x01(\v2\x1f.travelingman.FlightPreferencesR\x11flightPreferences\x12K\n" +
 	"\x11train_preferences\x18\x10 \x01(\v2\x1e.travelingman.TrainPreferencesR\x10trainPreferences\x12X\n" +
-	"\x16car_rental_preferences\x18\x11 \x01(\v2\".travelingman.CarRentalPreferencesR\x14carRentalPreferences\x12.\n" +
+	"\x16car_rental_preferences\x18\x11 \x01(\v2\".travelingman.CarRentalPreferencesR\x14carRentalPreferences\x12)\n" +
+	"\x05error\x18\x12 \x01(\v2\x13.travelingman.ErrorR\x05error\x12.\n" +
 	"\x06flight\x18\f \x01(\v2\x14.travelingman.FlightH\x00R\x06flight\x12+\n" +
 	"\x05train\x18\r \x01(\v2\x13.travelingman.TrainH\x00R\x05train\x128\n" +
 	"\n" +
@@ -1167,7 +1365,21 @@ const file_protos_itinerary_proto_rawDesc = "" +
 	"\fTransmission\x12\x1c\n" +
 	"\x18TRANSMISSION_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13TRANSMISSION_MANUAL\x10\x01\x12\x1a\n" +
-	"\x16TRANSMISSION_AUTOMATIC\x10\x02B#Z!github.com/va6996/travelingman/pbb\x06proto3"
+	"\x16TRANSMISSION_AUTOMATIC\x10\x02*\x92\x02\n" +
+	"\tErrorCode\x12\x1a\n" +
+	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18ERROR_CODE_SEARCH_FAILED\x10\x01\x12\x1d\n" +
+	"\x19ERROR_CODE_DATA_NOT_FOUND\x10\x02\x12 \n" +
+	"\x1cERROR_CODE_API_LIMIT_REACHED\x10\x03\x12\x1c\n" +
+	"\x18ERROR_CODE_INVALID_INPUT\x10\x04\x12$\n" +
+	" ERROR_CODE_AUTHENTICATION_FAILED\x10\x05\x12$\n" +
+	" ERROR_CODE_INTERNAL_SERVER_ERROR\x10\x06\x12 \n" +
+	"\x1cERROR_CODE_CONNECTION_FAILED\x10\a*~\n" +
+	"\rErrorSeverity\x12\x1e\n" +
+	"\x1aERROR_SEVERITY_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13ERROR_SEVERITY_INFO\x10\x01\x12\x1a\n" +
+	"\x16ERROR_SEVERITY_WARNING\x10\x02\x12\x18\n" +
+	"\x14ERROR_SEVERITY_ERROR\x10\x03B#Z!github.com/va6996/travelingman/pbb\x06proto3"
 
 var (
 	file_protos_itinerary_proto_rawDescOnce sync.Once
@@ -1181,52 +1393,59 @@ func file_protos_itinerary_proto_rawDescGZIP() []byte {
 	return file_protos_itinerary_proto_rawDescData
 }
 
-var file_protos_itinerary_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_protos_itinerary_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_protos_itinerary_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_protos_itinerary_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_protos_itinerary_proto_goTypes = []any{
 	(TransportType)(0),               // 0: travelingman.TransportType
 	(Class)(0),                       // 1: travelingman.Class
 	(Transmission)(0),                // 2: travelingman.Transmission
-	(*AccommodationPreferences)(nil), // 3: travelingman.AccommodationPreferences
-	(*FlightPreferences)(nil),        // 4: travelingman.FlightPreferences
-	(*TrainPreferences)(nil),         // 5: travelingman.TrainPreferences
-	(*CarRentalPreferences)(nil),     // 6: travelingman.CarRentalPreferences
-	(*Location)(nil),                 // 7: travelingman.Location
-	(*Accommodation)(nil),            // 8: travelingman.Accommodation
-	(*Transport)(nil),                // 9: travelingman.Transport
-	(*Flight)(nil),                   // 10: travelingman.Flight
-	(*Train)(nil),                    // 11: travelingman.Train
-	(*CarRental)(nil),                // 12: travelingman.CarRental
-	(*timestamppb.Timestamp)(nil),    // 13: google.protobuf.Timestamp
+	(ErrorCode)(0),                   // 3: travelingman.ErrorCode
+	(ErrorSeverity)(0),               // 4: travelingman.ErrorSeverity
+	(*AccommodationPreferences)(nil), // 5: travelingman.AccommodationPreferences
+	(*FlightPreferences)(nil),        // 6: travelingman.FlightPreferences
+	(*TrainPreferences)(nil),         // 7: travelingman.TrainPreferences
+	(*CarRentalPreferences)(nil),     // 8: travelingman.CarRentalPreferences
+	(*Location)(nil),                 // 9: travelingman.Location
+	(*Error)(nil),                    // 10: travelingman.Error
+	(*Accommodation)(nil),            // 11: travelingman.Accommodation
+	(*Transport)(nil),                // 12: travelingman.Transport
+	(*Flight)(nil),                   // 13: travelingman.Flight
+	(*Train)(nil),                    // 14: travelingman.Train
+	(*CarRental)(nil),                // 15: travelingman.CarRental
+	(*timestamppb.Timestamp)(nil),    // 16: google.protobuf.Timestamp
 }
 var file_protos_itinerary_proto_depIdxs = []int32{
 	1,  // 0: travelingman.FlightPreferences.travel_class:type_name -> travelingman.Class
 	1,  // 1: travelingman.TrainPreferences.travel_class:type_name -> travelingman.Class
 	2,  // 2: travelingman.CarRentalPreferences.transmission:type_name -> travelingman.Transmission
-	13, // 3: travelingman.Accommodation.check_in:type_name -> google.protobuf.Timestamp
-	13, // 4: travelingman.Accommodation.check_out:type_name -> google.protobuf.Timestamp
-	3,  // 5: travelingman.Accommodation.preferences:type_name -> travelingman.AccommodationPreferences
-	7,  // 6: travelingman.Accommodation.location:type_name -> travelingman.Location
-	0,  // 7: travelingman.Transport.type:type_name -> travelingman.TransportType
-	7,  // 8: travelingman.Transport.origin_location:type_name -> travelingman.Location
-	7,  // 9: travelingman.Transport.destination_location:type_name -> travelingman.Location
-	4,  // 10: travelingman.Transport.flight_preferences:type_name -> travelingman.FlightPreferences
-	5,  // 11: travelingman.Transport.train_preferences:type_name -> travelingman.TrainPreferences
-	6,  // 12: travelingman.Transport.car_rental_preferences:type_name -> travelingman.CarRentalPreferences
-	10, // 13: travelingman.Transport.flight:type_name -> travelingman.Flight
-	11, // 14: travelingman.Transport.train:type_name -> travelingman.Train
-	12, // 15: travelingman.Transport.car_rental:type_name -> travelingman.CarRental
-	13, // 16: travelingman.Flight.departure_time:type_name -> google.protobuf.Timestamp
-	13, // 17: travelingman.Flight.arrival_time:type_name -> google.protobuf.Timestamp
-	13, // 18: travelingman.Train.departure_time:type_name -> google.protobuf.Timestamp
-	13, // 19: travelingman.Train.arrival_time:type_name -> google.protobuf.Timestamp
-	13, // 20: travelingman.CarRental.pickup_time:type_name -> google.protobuf.Timestamp
-	13, // 21: travelingman.CarRental.dropoff_time:type_name -> google.protobuf.Timestamp
-	22, // [22:22] is the sub-list for method output_type
-	22, // [22:22] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	3,  // 3: travelingman.Error.code:type_name -> travelingman.ErrorCode
+	4,  // 4: travelingman.Error.severity:type_name -> travelingman.ErrorSeverity
+	16, // 5: travelingman.Accommodation.check_in:type_name -> google.protobuf.Timestamp
+	16, // 6: travelingman.Accommodation.check_out:type_name -> google.protobuf.Timestamp
+	5,  // 7: travelingman.Accommodation.preferences:type_name -> travelingman.AccommodationPreferences
+	9,  // 8: travelingman.Accommodation.location:type_name -> travelingman.Location
+	10, // 9: travelingman.Accommodation.error:type_name -> travelingman.Error
+	0,  // 10: travelingman.Transport.type:type_name -> travelingman.TransportType
+	9,  // 11: travelingman.Transport.origin_location:type_name -> travelingman.Location
+	9,  // 12: travelingman.Transport.destination_location:type_name -> travelingman.Location
+	6,  // 13: travelingman.Transport.flight_preferences:type_name -> travelingman.FlightPreferences
+	7,  // 14: travelingman.Transport.train_preferences:type_name -> travelingman.TrainPreferences
+	8,  // 15: travelingman.Transport.car_rental_preferences:type_name -> travelingman.CarRentalPreferences
+	10, // 16: travelingman.Transport.error:type_name -> travelingman.Error
+	13, // 17: travelingman.Transport.flight:type_name -> travelingman.Flight
+	14, // 18: travelingman.Transport.train:type_name -> travelingman.Train
+	15, // 19: travelingman.Transport.car_rental:type_name -> travelingman.CarRental
+	16, // 20: travelingman.Flight.departure_time:type_name -> google.protobuf.Timestamp
+	16, // 21: travelingman.Flight.arrival_time:type_name -> google.protobuf.Timestamp
+	16, // 22: travelingman.Train.departure_time:type_name -> google.protobuf.Timestamp
+	16, // 23: travelingman.Train.arrival_time:type_name -> google.protobuf.Timestamp
+	16, // 24: travelingman.CarRental.pickup_time:type_name -> google.protobuf.Timestamp
+	16, // 25: travelingman.CarRental.dropoff_time:type_name -> google.protobuf.Timestamp
+	26, // [26:26] is the sub-list for method output_type
+	26, // [26:26] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_protos_itinerary_proto_init() }
@@ -1234,7 +1453,7 @@ func file_protos_itinerary_proto_init() {
 	if File_protos_itinerary_proto != nil {
 		return
 	}
-	file_protos_itinerary_proto_msgTypes[6].OneofWrappers = []any{
+	file_protos_itinerary_proto_msgTypes[7].OneofWrappers = []any{
 		(*Transport_Flight)(nil),
 		(*Transport_Train)(nil),
 		(*Transport_CarRental)(nil),
@@ -1244,8 +1463,8 @@ func file_protos_itinerary_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protos_itinerary_proto_rawDesc), len(file_protos_itinerary_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   10,
+			NumEnums:      5,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

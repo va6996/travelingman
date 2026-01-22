@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
+	"github.com/va6996/travelingman/log"
 	"github.com/va6996/travelingman/pb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -154,22 +154,25 @@ type HotelOrderResponse struct {
 
 // --- Methods ---
 
+// HotelData represents basic hotel info in list response
+type HotelData struct {
+	ChainCode string `json:"chainCode"`
+	IataCode  string `json:"iataCode"`
+	DupeId    int    `json:"dupeId"`
+	Name      string `json:"name"`
+	HotelId   string `json:"hotelId"`
+	GeoCode   struct {
+		Latitude  float64 `json:"latitude"`
+		Longitude float64 `json:"longitude"`
+	} `json:"geoCode"`
+	Address struct {
+		CountryCode string `json:"countryCode"`
+	} `json:"address"`
+}
+
 // HotelListResponse is the response from /v1/reference-data/locations/hotels/by-city
 type HotelListResponse struct {
-	Data []struct {
-		ChainCode string `json:"chainCode"`
-		IataCode  string `json:"iataCode"`
-		DupeId    int    `json:"dupeId"`
-		Name      string `json:"name"`
-		HotelId   string `json:"hotelId"`
-		GeoCode   struct {
-			Latitude  float64 `json:"latitude"`
-			Longitude float64 `json:"longitude"`
-		} `json:"geoCode"`
-		Address struct {
-			CountryCode string `json:"countryCode"`
-		} `json:"address"`
-	} `json:"data"`
+	Data []HotelData `json:"data"`
 }
 
 // SearchHotelsByCity searches for hotels in a specific city
@@ -210,71 +213,86 @@ func (c *Client) SearchHotelsByCity(ctx context.Context, acc *pb.Accommodation) 
 
 	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
 	if err != nil {
-		log.Printf("SearchHotelsByCity: request failed: %v", err)
+		log.Errorf(ctx, "SearchHotelsByCity: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("SearchHotelsByCity: API returned status %s", resp.Status)
+		log.Errorf(ctx, "SearchHotelsByCity: API returned status %s", resp.Status)
 		// Log body for debugging
 		return nil, fmt.Errorf("hotel list search failed: %s", resp.Status)
 	}
 
 	var listResp HotelListResponse
 	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
-		log.Printf("SearchHotelsByCity: failed to decode response: %v", err)
+		log.Errorf(ctx, "SearchHotelsByCity: failed to decode response: %v", err)
 		return nil, err
 	}
 
 	return &listResp, nil
 }
 
-// SearchHotelOffers searches for offers for a specific hotel
-func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adults int, checkIn, checkOut string) (*HotelSearchResponse, error) {
-	// construct hotelIds string
-	ids := ""
-	for i, id := range hotelIds {
-		if i > 0 {
-			ids += ","
-		}
-		ids += id
-	}
-
-	endpoint := fmt.Sprintf("/v3/shopping/hotel-offers?hotelIds=%s&adults=%d&checkInDate=%s&checkOutDate=%s",
-		ids, adults, checkIn, checkOut)
-
-	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
-	if err != nil {
-		log.Printf("SearchHotelOffers: request failed: %v", err)
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("SearchHotelOffers: API returned status %s", resp.Status)
-		return nil, fmt.Errorf("hotel offers search failed: %s", resp.Status)
-	}
-
-	var searchResp HotelSearchResponse
-	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
-		log.Printf("SearchHotelOffers: failed to decode response: %v", err)
-		return nil, err
-	}
-
-	return &searchResp, nil
-}
-
-// SearchHotelOffersAsAccommodations searches for hotel offers and returns them as pb.Accommodation structs
-func (c *Client) SearchHotelOffersAsAccommodations(ctx context.Context, hotelIds []string, adults int, checkIn, checkOut string) ([]*pb.Accommodation, error) {
-	resp, err := c.SearchHotelOffers(ctx, hotelIds, adults, checkIn, checkOut)
-	if err != nil {
-		return nil, err
-	}
-
+// SearchHotelOffers searches for hotel offers and returns them as pb.Accommodation structs
+func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adults int, checkIn, checkOut string) ([]*pb.Accommodation, error) {
+	// Amadeus API often has limits on the number of IDs (e.g. 50-100).
+	// We chunk them to be safe (e.g., 20).
+	const chunkSize = 20
 	var accommodations []*pb.Accommodation
-	for _, data := range resp.Data {
-		accommodations = append(accommodations, data.ToAccommodations()...)
+
+	// Chunk the hotel IDs
+	for i := 0; i < len(hotelIds); i += chunkSize {
+		end := i + chunkSize
+		if end > len(hotelIds) {
+			end = len(hotelIds)
+		}
+
+		batchIds := hotelIds[i:end]
+
+		// construct hotelIds string for this batch
+		ids := ""
+		for j, id := range batchIds {
+			if j > 0 {
+				ids += ","
+			}
+			ids += id
+		}
+
+		endpoint := fmt.Sprintf("/v3/shopping/hotel-offers?hotelIds=%s&adults=%d&checkInDate=%s&checkOutDate=%s",
+			ids, adults, checkIn, checkOut)
+
+		log.Debugf(ctx, "SearchHotelOffers: Requesting batch %d/%d: %s", (i/chunkSize)+1, (len(hotelIds)+chunkSize-1)/chunkSize, endpoint)
+
+		resp, err := c.doRequest(ctx, "GET", endpoint, nil)
+		if err != nil {
+			log.Errorf(ctx, "SearchHotelOffers: batch request failed: %v", err)
+			continue // Try next batch
+		}
+
+		// 400 likely due to invalid parameters in this batch, or dates.
+		// If dates are invalid, all batches will fail. If IDs are invalid, maybe just this batch.
+		if resp.StatusCode != http.StatusOK {
+			log.Errorf(ctx, "SearchHotelOffers: API returned status %s for batch", resp.Status)
+			// Log body for more details if possible in future, but for now just continue
+			resp.Body.Close()
+			continue
+		}
+
+		var searchResp HotelSearchResponse
+		if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
+			log.Errorf(ctx, "SearchHotelOffers: failed to decode response: %v", err)
+			resp.Body.Close()
+			continue
+		}
+		resp.Body.Close()
+
+		for _, data := range searchResp.Data {
+			accommodations = append(accommodations, data.ToAccommodations()...)
+		}
+	}
+
+	if len(accommodations) == 0 && len(hotelIds) > 0 {
+		return nil, fmt.Errorf("hotel offers search failed for all %d hotels (likely 400 Bad Request or no availability)", len(hotelIds))
 	}
 
 	return accommodations, nil
@@ -302,19 +320,19 @@ func (c *Client) BookHotel(ctx context.Context, offerId string, guests []HotelGu
 
 	resp, err := c.doRequest(ctx, "POST", "/v2/booking/hotel-orders", reqBody)
 	if err != nil {
-		log.Printf("BookHotel: request failed: %v", err)
+		log.Errorf(ctx, "BookHotel: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		log.Printf("BookHotel: API returned status %s", resp.Status)
+		log.Errorf(ctx, "BookHotel: API returned status %s", resp.Status)
 		return nil, fmt.Errorf("hotel booking failed: %s", resp.Status)
 	}
 
 	var orderResp HotelOrderResponse
 	if err := json.NewDecoder(resp.Body).Decode(&orderResp); err != nil {
-		log.Printf("BookHotel: failed to decode response: %v", err)
+		log.Errorf(ctx, "BookHotel: failed to decode response: %v", err)
 		return nil, err
 	}
 

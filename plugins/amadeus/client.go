@@ -5,12 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/firebase/genkit/go/genkit"
+	"github.com/va6996/travelingman/log"
 	"github.com/va6996/travelingman/pb"
 	"github.com/va6996/travelingman/tools"
 )
@@ -22,14 +22,15 @@ const (
 
 // Client is the main Amadeus API client
 type Client struct {
-	ClientID     string
-	ClientSecret string
-	BaseURL      string
-	HTTPClient   *http.Client
-	Token        *AuthToken
-	FlightTool   *FlightTool
-	HotelTool    *HotelTool
-	LocationTool *LocationTool
+	ClientID        string
+	ClientSecret    string
+	BaseURL         string
+	HTTPClient      *http.Client
+	Token           *AuthToken
+	FlightTool      *FlightTool
+	HotelListTool   *HotelListTool
+	HotelOffersTool *HotelOffersTool
+	LocationTool    *LocationTool
 }
 
 // LocationSearchResponse wraps the API response for locations
@@ -79,14 +80,23 @@ func NewClient(clientID, clientSecret string, isProduction bool, gk *genkit.Genk
 	}
 
 	// Initialize tools
-	c.FlightTool = NewFlightTool(c, gk, registry)
-	c.HotelTool = NewHotelTool(c, gk, registry)
-	c.LocationTool = NewLocationTool(c, gk, registry)
+	c.initTools(gk, registry)
 
 	return c, nil
 }
 
-// Authenticate obtains a new access token
+// initTools registers all Amadeus tools
+func (c *Client) initTools(gk *genkit.Genkit, registry *tools.Registry) {
+	if gk == nil || registry == nil {
+		return
+	}
+
+	// Register Amadeus tools
+	c.LocationTool = NewLocationTool(c, gk, registry)
+	c.FlightTool = NewFlightTool(c, gk, registry)
+	c.HotelListTool = NewHotelListTool(c, gk, registry)
+	c.HotelOffersTool = NewHotelOffersTool(c, gk, registry)
+}
 func (c *Client) Authenticate() error {
 	data := url.Values{}
 	data.Set("grant_type", "client_credentials")
@@ -150,7 +160,7 @@ func (c *Client) doRequest(ctx context.Context, method, endpoint string, body in
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		log.Printf("Amadeus API request failed: %v", err)
+		log.Errorf(ctx, "Amadeus API request failed: %v", err)
 		return nil, err
 	}
 
@@ -167,19 +177,19 @@ func (c *Client) SearchLocations(ctx context.Context, keyword string) ([]*pb.Loc
 	endpoint := fmt.Sprintf("/v1/reference-data/locations?%s", data.Encode())
 	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
 	if err != nil {
-		log.Printf("SearchLocations: request failed: %v", err)
+		log.Errorf(ctx, "SearchLocations: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("SearchLocations: API returned status %s", resp.Status)
+		log.Errorf(ctx, "SearchLocations: API returned status %s", resp.Status)
 		return nil, fmt.Errorf("location search failed: %s", resp.Status)
 	}
 
 	var result LocationSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		log.Printf("SearchLocations: failed to decode response: %v", err)
+		log.Errorf(ctx, "SearchLocations: failed to decode response: %v", err)
 		return nil, err
 	}
 
@@ -225,7 +235,7 @@ func (c *Client) SearchLocations(ctx context.Context, keyword string) ([]*pb.Loc
 				}
 			}
 		} else {
-			log.Printf("SearchLocations: failed to search nearby airports: %v", err)
+			log.Errorf(ctx, "SearchLocations: failed to search nearby airports: %v", err)
 		}
 	}
 
@@ -243,19 +253,19 @@ func (c *Client) SearchNearbyAirports(ctx context.Context, lat, lng float64) ([]
 	endpoint := fmt.Sprintf("/v1/reference-data/locations/airports?%s", data.Encode())
 	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
 	if err != nil {
-		log.Printf("SearchNearbyAirports: request failed: %v", err)
+		log.Errorf(ctx, "SearchNearbyAirports: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("SearchNearbyAirports: API returned status %s", resp.Status)
+		log.Errorf(ctx, "SearchNearbyAirports: API returned status %s", resp.Status)
 		return nil, fmt.Errorf("nearby airport search failed: %s", resp.Status)
 	}
 
 	var result LocationSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		log.Printf("SearchNearbyAirports: failed to decode response: %v", err)
+		log.Errorf(ctx, "SearchNearbyAirports: failed to decode response: %v", err)
 		return nil, err
 	}
 
@@ -273,4 +283,39 @@ func (c *Client) SearchNearbyAirports(ctx context.Context, lat, lng float64) ([]
 	}
 
 	return locations, nil
+}
+
+// MapError categorizes an error into a protobuf ErrorCode
+func (c *Client) MapError(err error) pb.ErrorCode {
+	if err == nil {
+		return pb.ErrorCode_ERROR_CODE_UNSPECIFIED
+	}
+
+	// Check for Amadeus API errors (if we had a custom error struct, we'd check that)
+	// For now, we'll parse the error string or check for common net/http errors
+	errMsg := err.Error()
+
+	if bytes.Contains([]byte(errMsg), []byte("404")) || bytes.Contains([]byte(errMsg), []byte("Not Found")) {
+		return pb.ErrorCode_ERROR_CODE_DATA_NOT_FOUND
+	}
+	if bytes.Contains([]byte(errMsg), []byte("429")) || bytes.Contains([]byte(errMsg), []byte("Too Many Requests")) {
+		return pb.ErrorCode_ERROR_CODE_API_LIMIT_REACHED
+	}
+	if bytes.Contains([]byte(errMsg), []byte("400")) || bytes.Contains([]byte(errMsg), []byte("Bad Request")) {
+		return pb.ErrorCode_ERROR_CODE_INVALID_INPUT
+	}
+	if bytes.Contains([]byte(errMsg), []byte("401")) || bytes.Contains([]byte(errMsg), []byte("Unauthorized")) {
+		return pb.ErrorCode_ERROR_CODE_AUTHENTICATION_FAILED
+	}
+	if bytes.Contains([]byte(errMsg), []byte("403")) || bytes.Contains([]byte(errMsg), []byte("Forbidden")) {
+		return pb.ErrorCode_ERROR_CODE_AUTHENTICATION_FAILED
+	}
+	if bytes.Contains([]byte(errMsg), []byte("500")) || bytes.Contains([]byte(errMsg), []byte("Internal Server Error")) {
+		return pb.ErrorCode_ERROR_CODE_INTERNAL_SERVER_ERROR
+	}
+	if bytes.Contains([]byte(errMsg), []byte("timeout")) || bytes.Contains([]byte(errMsg), []byte("connection refused")) {
+		return pb.ErrorCode_ERROR_CODE_CONNECTION_FAILED
+	}
+
+	return pb.ErrorCode_ERROR_CODE_SEARCH_FAILED
 }

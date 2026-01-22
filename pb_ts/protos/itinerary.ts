@@ -151,6 +151,75 @@ export function transmissionToJSON(object: Transmission): string {
   }
 }
 
+export enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0,
+  ERROR_CODE_SEARCH_FAILED = 1,
+  ERROR_CODE_DATA_NOT_FOUND = 2,
+  ERROR_CODE_API_LIMIT_REACHED = 3,
+  ERROR_CODE_INVALID_INPUT = 4,
+  ERROR_CODE_AUTHENTICATION_FAILED = 5,
+  ERROR_CODE_INTERNAL_SERVER_ERROR = 6,
+  ERROR_CODE_CONNECTION_FAILED = 7,
+  UNRECOGNIZED = -1,
+}
+
+export function errorCodeFromJSON(object: any): ErrorCode {
+  switch (object) {
+    case 0:
+    case "ERROR_CODE_UNSPECIFIED":
+      return ErrorCode.ERROR_CODE_UNSPECIFIED;
+    case 1:
+    case "ERROR_CODE_SEARCH_FAILED":
+      return ErrorCode.ERROR_CODE_SEARCH_FAILED;
+    case 2:
+    case "ERROR_CODE_DATA_NOT_FOUND":
+      return ErrorCode.ERROR_CODE_DATA_NOT_FOUND;
+    case 3:
+    case "ERROR_CODE_API_LIMIT_REACHED":
+      return ErrorCode.ERROR_CODE_API_LIMIT_REACHED;
+    case 4:
+    case "ERROR_CODE_INVALID_INPUT":
+      return ErrorCode.ERROR_CODE_INVALID_INPUT;
+    case 5:
+    case "ERROR_CODE_AUTHENTICATION_FAILED":
+      return ErrorCode.ERROR_CODE_AUTHENTICATION_FAILED;
+    case 6:
+    case "ERROR_CODE_INTERNAL_SERVER_ERROR":
+      return ErrorCode.ERROR_CODE_INTERNAL_SERVER_ERROR;
+    case 7:
+    case "ERROR_CODE_CONNECTION_FAILED":
+      return ErrorCode.ERROR_CODE_CONNECTION_FAILED;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return ErrorCode.UNRECOGNIZED;
+  }
+}
+
+export function errorCodeToJSON(object: ErrorCode): string {
+  switch (object) {
+    case ErrorCode.ERROR_CODE_UNSPECIFIED:
+      return "ERROR_CODE_UNSPECIFIED";
+    case ErrorCode.ERROR_CODE_SEARCH_FAILED:
+      return "ERROR_CODE_SEARCH_FAILED";
+    case ErrorCode.ERROR_CODE_DATA_NOT_FOUND:
+      return "ERROR_CODE_DATA_NOT_FOUND";
+    case ErrorCode.ERROR_CODE_API_LIMIT_REACHED:
+      return "ERROR_CODE_API_LIMIT_REACHED";
+    case ErrorCode.ERROR_CODE_INVALID_INPUT:
+      return "ERROR_CODE_INVALID_INPUT";
+    case ErrorCode.ERROR_CODE_AUTHENTICATION_FAILED:
+      return "ERROR_CODE_AUTHENTICATION_FAILED";
+    case ErrorCode.ERROR_CODE_INTERNAL_SERVER_ERROR:
+      return "ERROR_CODE_INTERNAL_SERVER_ERROR";
+    case ErrorCode.ERROR_CODE_CONNECTION_FAILED:
+      return "ERROR_CODE_CONNECTION_FAILED";
+    case ErrorCode.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 export interface AccommodationPreferences {
   roomType: string;
   area: string;
@@ -186,6 +255,11 @@ export interface Location {
   name: string;
 }
 
+export interface Error {
+  message: string;
+  code: ErrorCode;
+}
+
 export interface Accommodation {
   id: number;
   groupId: number;
@@ -200,6 +274,7 @@ export interface Accommodation {
   preferences: AccommodationPreferences | undefined;
   travelerCount: number;
   location: Location | undefined;
+  error: Error | undefined;
 }
 
 export interface Transport {
@@ -217,6 +292,7 @@ export interface Transport {
   flightPreferences: FlightPreferences | undefined;
   trainPreferences: TrainPreferences | undefined;
   carRentalPreferences: CarRentalPreferences | undefined;
+  error: Error | undefined;
   flight?: Flight | undefined;
   train?: Train | undefined;
   carRental?: CarRental | undefined;
@@ -790,6 +866,82 @@ export const Location: MessageFns<Location> = {
   },
 };
 
+function createBaseError(): Error {
+  return { message: "", code: 0 };
+}
+
+export const Error: MessageFns<Error> = {
+  encode(message: Error, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.message !== "") {
+      writer.uint32(10).string(message.message);
+    }
+    if (message.code !== 0) {
+      writer.uint32(16).int32(message.code);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Error {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseError();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.message = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.code = reader.int32() as any;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Error {
+    return {
+      message: isSet(object.message) ? globalThis.String(object.message) : "",
+      code: isSet(object.code) ? errorCodeFromJSON(object.code) : 0,
+    };
+  },
+
+  toJSON(message: Error): unknown {
+    const obj: any = {};
+    if (message.message !== "") {
+      obj.message = message.message;
+    }
+    if (message.code !== 0) {
+      obj.code = errorCodeToJSON(message.code);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Error>, I>>(base?: I): Error {
+    return Error.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Error>, I>>(object: I): Error {
+    const message = createBaseError();
+    message.message = object.message ?? "";
+    message.code = object.code ?? 0;
+    return message;
+  },
+};
+
 function createBaseAccommodation(): Accommodation {
   return {
     id: 0,
@@ -805,6 +957,7 @@ function createBaseAccommodation(): Accommodation {
     preferences: undefined,
     travelerCount: 0,
     location: undefined,
+    error: undefined,
   };
 }
 
@@ -850,6 +1003,9 @@ export const Accommodation: MessageFns<Accommodation> = {
     }
     if (message.location !== undefined) {
       Location.encode(message.location, writer.uint32(106).fork()).join();
+    }
+    if (message.error !== undefined) {
+      Error.encode(message.error, writer.uint32(114).fork()).join();
     }
     return writer;
   },
@@ -975,6 +1131,14 @@ export const Accommodation: MessageFns<Accommodation> = {
           message.location = Location.decode(reader, reader.uint32());
           continue;
         }
+        case 14: {
+          if (tag !== 114) {
+            break;
+          }
+
+          message.error = Error.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -999,6 +1163,7 @@ export const Accommodation: MessageFns<Accommodation> = {
       preferences: isSet(object.preferences) ? AccommodationPreferences.fromJSON(object.preferences) : undefined,
       travelerCount: isSet(object.travelerCount) ? globalThis.Number(object.travelerCount) : 0,
       location: isSet(object.location) ? Location.fromJSON(object.location) : undefined,
+      error: isSet(object.error) ? Error.fromJSON(object.error) : undefined,
     };
   },
 
@@ -1043,6 +1208,9 @@ export const Accommodation: MessageFns<Accommodation> = {
     if (message.location !== undefined) {
       obj.location = Location.toJSON(message.location);
     }
+    if (message.error !== undefined) {
+      obj.error = Error.toJSON(message.error);
+    }
     return obj;
   },
 
@@ -1068,6 +1236,7 @@ export const Accommodation: MessageFns<Accommodation> = {
     message.location = (object.location !== undefined && object.location !== null)
       ? Location.fromPartial(object.location)
       : undefined;
+    message.error = (object.error !== undefined && object.error !== null) ? Error.fromPartial(object.error) : undefined;
     return message;
   },
 };
@@ -1088,6 +1257,7 @@ function createBaseTransport(): Transport {
     flightPreferences: undefined,
     trainPreferences: undefined,
     carRentalPreferences: undefined,
+    error: undefined,
     flight: undefined,
     train: undefined,
     carRental: undefined,
@@ -1139,6 +1309,9 @@ export const Transport: MessageFns<Transport> = {
     }
     if (message.carRentalPreferences !== undefined) {
       CarRentalPreferences.encode(message.carRentalPreferences, writer.uint32(138).fork()).join();
+    }
+    if (message.error !== undefined) {
+      Error.encode(message.error, writer.uint32(146).fork()).join();
     }
     if (message.flight !== undefined) {
       Flight.encode(message.flight, writer.uint32(98).fork()).join();
@@ -1281,6 +1454,14 @@ export const Transport: MessageFns<Transport> = {
           message.carRentalPreferences = CarRentalPreferences.decode(reader, reader.uint32());
           continue;
         }
+        case 18: {
+          if (tag !== 146) {
+            break;
+          }
+
+          message.error = Error.decode(reader, reader.uint32());
+          continue;
+        }
         case 12: {
           if (tag !== 98) {
             break;
@@ -1336,6 +1517,7 @@ export const Transport: MessageFns<Transport> = {
       carRentalPreferences: isSet(object.carRentalPreferences)
         ? CarRentalPreferences.fromJSON(object.carRentalPreferences)
         : undefined,
+      error: isSet(object.error) ? Error.fromJSON(object.error) : undefined,
       flight: isSet(object.flight) ? Flight.fromJSON(object.flight) : undefined,
       train: isSet(object.train) ? Train.fromJSON(object.train) : undefined,
       carRental: isSet(object.carRental) ? CarRental.fromJSON(object.carRental) : undefined,
@@ -1386,6 +1568,9 @@ export const Transport: MessageFns<Transport> = {
     if (message.carRentalPreferences !== undefined) {
       obj.carRentalPreferences = CarRentalPreferences.toJSON(message.carRentalPreferences);
     }
+    if (message.error !== undefined) {
+      obj.error = Error.toJSON(message.error);
+    }
     if (message.flight !== undefined) {
       obj.flight = Flight.toJSON(message.flight);
     }
@@ -1427,6 +1612,7 @@ export const Transport: MessageFns<Transport> = {
     message.carRentalPreferences = (object.carRentalPreferences !== undefined && object.carRentalPreferences !== null)
       ? CarRentalPreferences.fromPartial(object.carRentalPreferences)
       : undefined;
+    message.error = (object.error !== undefined && object.error !== null) ? Error.fromPartial(object.error) : undefined;
     message.flight = (object.flight !== undefined && object.flight !== null)
       ? Flight.fromPartial(object.flight)
       : undefined;
