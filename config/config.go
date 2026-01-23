@@ -9,6 +9,7 @@ import (
 // Config aggregates all application configuration
 type Config struct {
 	AI      AIConfig      `yaml:"ai"`
+	Planner PlannerConfig `yaml:"planner"`
 	Amadeus AmadeusConfig `yaml:"amadeus"`
 	Tavily  TavilyConfig  `yaml:"tavily"`
 	Log     LogConfig     `yaml:"log"`
@@ -43,10 +44,20 @@ type ZaiConfig struct {
 type AmadeusConfig struct {
 	ClientID     string `yaml:"client_id" env:"AMADEUS_CLIENT_ID"`
 	ClientSecret string `yaml:"client_secret" env:"AMADEUS_CLIENT_SECRET"`
+	Limit        struct {
+		Flight int `yaml:"flight" env:"AMADEUS_LIMIT_FLIGHT" env-default:"10"`
+		Hotel  int `yaml:"hotel" env:"AMADEUS_LIMIT_HOTEL" env-default:"10"`
+	} `yaml:"limit"`
+	Timeout int `yaml:"timeout" env:"AMADEUS_TIMEOUT" env-default:"30"` // Seconds
 }
 
 type TavilyConfig struct {
-	APIKey string `yaml:"api_key" env:"TAVILY_API_KEY"`
+	APIKey  string `yaml:"api_key" env:"TAVILY_API_KEY"`
+	Timeout int    `yaml:"timeout" env:"TAVILY_TIMEOUT" env-default:"30"` // Seconds
+}
+
+type PlannerConfig struct {
+	Timeout int `yaml:"timeout" env:"PLANNER_TIMEOUT" env-default:"220"` // Seconds
 }
 
 // Load reads configuration from config.yaml and environment variables

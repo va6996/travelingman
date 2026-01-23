@@ -80,7 +80,7 @@ func TestTravelDesk_CheckAvailability(t *testing.T) {
 
 	// Initialize Amadeus Client pointing to mock server
 	// Passing nil for genkit and registry as we're testing TravelDesk logic directly calling Client methods
-	client, err := amadeus.NewClient("id", "secret", false, nil, nil)
+	client, err := amadeus.NewClient("id", "secret", false, nil, nil, 10, 10)
 	assert.NoError(t, err)
 	client.BaseURL = ts.URL
 
@@ -160,7 +160,7 @@ func TestTravelDesk_CheckAvailability_NoAvailability(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client, _ := amadeus.NewClient("id", "secret", false, nil, nil)
+	client, _ := amadeus.NewClient("id", "secret", false, nil, nil, 10, 10)
 	client.BaseURL = ts.URL
 	desk := NewTravelDesk(client)
 

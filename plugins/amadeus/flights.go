@@ -258,6 +258,32 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]
 	// If it's a round trip, logic might be handled differently, but for now we follow previous logic.
 	returnDate := ""
 
+	// Validate inputs
+	if origin == "" {
+		return nil, fmt.Errorf("origin location is required (CityCode or IataCode)")
+	}
+	if destination == "" {
+		return nil, fmt.Errorf("destination location is required (CityCode or IataCode)")
+	}
+	if departureDate == "" {
+		return nil, fmt.Errorf("departure date is required")
+	}
+
+	// Validate date is not in the past
+	if depTime, err := time.Parse("2006-01-02", departureDate); err == nil {
+		// Use "yesterday" as buffer to account for timezones
+		yesterday := time.Now().AddDate(0, 0, -1)
+		if depTime.Before(yesterday) {
+			// Instead of returning hard error, check if we can shift the date or if it's too old
+			// For now, strict validation is safer to avoid API errors
+			return nil, fmt.Errorf("departure date %s is in the past", departureDate)
+		}
+		// Also check for zero date/year 1
+		if depTime.Year() < 2020 {
+			return nil, fmt.Errorf("departure date %s is invalid", departureDate)
+		}
+	}
+
 	// Construct query parameters
 	endpoint := fmt.Sprintf("/v2/shopping/flight-offers?originLocationCode=%s&destinationLocationCode=%s&adults=%d",
 		origin, destination, adults)
@@ -292,6 +318,13 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]
 	// API doesn't seem to support arrivalBy filter directly in V2 GET.
 	// We will handle filtering in the upper layer or just ignore for now in the raw plugin call.
 
+	// Check cache
+	cacheKey := GenerateCacheKey("flights", endpoint)
+	if val, ok := c.Cache.Get(cacheKey); ok {
+		log.Debugf(ctx, "SearchFlights: Cache hit for %s", endpoint)
+		return val.([]*pb.Transport), nil
+	}
+
 	log.Debugf(ctx, "SearchFlights: Requesting %s", endpoint)
 
 	resp, err := c.doRequest(ctx, "GET", endpoint, nil)
@@ -302,6 +335,16 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		// Log detailed response if available for debugging
+		var errBody map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&errBody); err == nil {
+			if b, err := json.Marshal(errBody); err == nil {
+				// Use the error body in the returned error message so MapError can see it
+				log.Errorf(ctx, "SearchFlights: API error details: %s", string(b))
+				return nil, fmt.Errorf("search failed with status %s: %s", resp.Status, string(b))
+			}
+			log.Errorf(ctx, "SearchFlights: API error details: %v", errBody)
+		}
 		log.Errorf(ctx, "SearchFlights: API returned status %s", resp.Status)
 		return nil, fmt.Errorf("search failed: %s", resp.Status)
 	}
@@ -313,9 +356,20 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]
 	}
 
 	var transports []*pb.Transport
-	for _, offer := range searchResp.Data {
+	limit := c.Limits.Flight
+	if limit <= 0 {
+		limit = 10 // Default
+	}
+
+	for i, offer := range searchResp.Data {
+		if i >= limit {
+			break
+		}
 		transports = append(transports, offer.ToTransport())
 	}
+
+	// Set cache (15 minutes TTL)
+	c.Cache.Set(cacheKey, transports, 15*time.Minute)
 
 	return transports, nil
 }

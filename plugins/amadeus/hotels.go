@@ -261,6 +261,14 @@ func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adult
 		endpoint := fmt.Sprintf("/v3/shopping/hotel-offers?hotelIds=%s&adults=%d&checkInDate=%s&checkOutDate=%s",
 			ids, adults, checkIn, checkOut)
 
+		// Check cache
+		cacheKey := GenerateCacheKey("hotel_offers", endpoint)
+		if val, ok := c.Cache.Get(cacheKey); ok {
+			log.Debugf(ctx, "SearchHotelOffers: Cache hit for batch %d", (i/chunkSize)+1)
+			accommodations = append(accommodations, val.([]*pb.Accommodation)...)
+			continue
+		}
+
 		log.Debugf(ctx, "SearchHotelOffers: Requesting batch %d/%d: %s", (i/chunkSize)+1, (len(hotelIds)+chunkSize-1)/chunkSize, endpoint)
 
 		resp, err := c.doRequest(ctx, "GET", endpoint, nil)
@@ -272,8 +280,20 @@ func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adult
 		// 400 likely due to invalid parameters in this batch, or dates.
 		// If dates are invalid, all batches will fail. If IDs are invalid, maybe just this batch.
 		if resp.StatusCode != http.StatusOK {
-			log.Errorf(ctx, "SearchHotelOffers: API returned status %s for batch", resp.Status)
-			// Log body for more details if possible in future, but for now just continue
+			// Log detailed response if available for debugging
+			var errBody map[string]interface{}
+
+			if err := json.NewDecoder(resp.Body).Decode(&errBody); err == nil {
+				if b, err := json.Marshal(errBody); err == nil {
+					log.Errorf(ctx, "SearchHotelOffers: API error details: %s", string(b))
+				} else {
+					log.Errorf(ctx, "SearchHotelOffers: API error details: %v", errBody)
+				}
+			} else {
+				log.Errorf(ctx, "SearchHotelOffers: API returned status %s (failed to parse error body)", resp.Status)
+			}
+
+			// We continue here because other batches might succeed
 			resp.Body.Close()
 			continue
 		}
@@ -286,13 +306,24 @@ func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adult
 		}
 		resp.Body.Close()
 
+		var batchAccommodations []*pb.Accommodation
 		for _, data := range searchResp.Data {
-			accommodations = append(accommodations, data.ToAccommodations()...)
+			batchAccommodations = append(batchAccommodations, data.ToAccommodations()...)
 		}
+
+		// Set cache for this batch (30 minutes TTL)
+		c.Cache.Set(cacheKey, batchAccommodations, 30*time.Minute)
+		accommodations = append(accommodations, batchAccommodations...)
 	}
 
 	if len(accommodations) == 0 && len(hotelIds) > 0 {
 		return nil, fmt.Errorf("hotel offers search failed for all %d hotels (likely 400 Bad Request or no availability)", len(hotelIds))
+	}
+
+	// Apply limit
+	limit := c.Limits.Hotel
+	if limit > 0 && len(accommodations) > limit {
+		accommodations = accommodations[:limit]
 	}
 
 	return accommodations, nil

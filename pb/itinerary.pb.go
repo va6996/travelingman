@@ -713,6 +713,7 @@ type Accommodation struct {
 	TravelerCount    int32                     `protobuf:"varint,12,opt,name=traveler_count,json=travelerCount,proto3" json:"traveler_count,omitempty"`
 	Location         *Location                 `protobuf:"bytes,13,opt,name=location,proto3" json:"location,omitempty"`
 	Error            *Error                    `protobuf:"bytes,14,opt,name=error,proto3" json:"error,omitempty"`
+	Tags             []string                  `protobuf:"bytes,15,rep,name=tags,proto3" json:"tags,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -845,6 +846,13 @@ func (x *Accommodation) GetError() *Error {
 	return nil
 }
 
+func (x *Accommodation) GetTags() []string {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
 type Transport struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Id                   int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -862,6 +870,7 @@ type Transport struct {
 	TrainPreferences     *TrainPreferences      `protobuf:"bytes,16,opt,name=train_preferences,json=trainPreferences,proto3" json:"train_preferences,omitempty"`
 	CarRentalPreferences *CarRentalPreferences  `protobuf:"bytes,17,opt,name=car_rental_preferences,json=carRentalPreferences,proto3" json:"car_rental_preferences,omitempty"`
 	Error                *Error                 `protobuf:"bytes,18,opt,name=error,proto3" json:"error,omitempty"`
+	Tags                 []string               `protobuf:"bytes,19,rep,name=tags,proto3" json:"tags,omitempty"`
 	// Types that are valid to be assigned to Details:
 	//
 	//	*Transport_Flight
@@ -1003,6 +1012,13 @@ func (x *Transport) GetCarRentalPreferences() *CarRentalPreferences {
 func (x *Transport) GetError() *Error {
 	if x != nil {
 		return x.Error
+	}
+	return nil
+}
+
+func (x *Transport) GetTags() []string {
+	if x != nil {
+		return x.Tags
 	}
 	return nil
 }
@@ -1293,7 +1309,7 @@ const file_protos_itinerary_proto_rawDesc = "" +
 	"\x05Error\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12+\n" +
 	"\x04code\x18\x02 \x01(\x0e2\x17.travelingman.ErrorCodeR\x04code\x127\n" +
-	"\bseverity\x18\x03 \x01(\x0e2\x1b.travelingman.ErrorSeverityR\bseverity\"\xa9\x04\n" +
+	"\bseverity\x18\x03 \x01(\x0e2\x1b.travelingman.ErrorSeverityR\bseverity\"\xbd\x04\n" +
 	"\rAccommodation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\x03R\agroupId\x12\x12\n" +
@@ -1310,7 +1326,8 @@ const file_protos_itinerary_proto_rawDesc = "" +
 	"\vpreferences\x18\v \x01(\v2&.travelingman.AccommodationPreferencesR\vpreferences\x12%\n" +
 	"\x0etraveler_count\x18\f \x01(\x05R\rtravelerCount\x122\n" +
 	"\blocation\x18\r \x01(\v2\x16.travelingman.LocationR\blocation\x12)\n" +
-	"\x05error\x18\x0e \x01(\v2\x13.travelingman.ErrorR\x05error\"\xf9\x06\n" +
+	"\x05error\x18\x0e \x01(\v2\x13.travelingman.ErrorR\x05error\x12\x12\n" +
+	"\x04tags\x18\x0f \x03(\tR\x04tags\"\x8d\a\n" +
 	"\tTransport\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1d\n" +
 	"\n" +
@@ -1329,7 +1346,8 @@ const file_protos_itinerary_proto_rawDesc = "" +
 	"\x12flight_preferences\x18\x0f \x01(\v2\x1f.travelingman.FlightPreferencesR\x11flightPreferences\x12K\n" +
 	"\x11train_preferences\x18\x10 \x01(\v2\x1e.travelingman.TrainPreferencesR\x10trainPreferences\x12X\n" +
 	"\x16car_rental_preferences\x18\x11 \x01(\v2\".travelingman.CarRentalPreferencesR\x14carRentalPreferences\x12)\n" +
-	"\x05error\x18\x12 \x01(\v2\x13.travelingman.ErrorR\x05error\x12.\n" +
+	"\x05error\x18\x12 \x01(\v2\x13.travelingman.ErrorR\x05error\x12\x12\n" +
+	"\x04tags\x18\x13 \x03(\tR\x04tags\x12.\n" +
 	"\x06flight\x18\f \x01(\v2\x14.travelingman.FlightH\x00R\x06flight\x12+\n" +
 	"\x05train\x18\r \x01(\v2\x13.travelingman.TrainH\x00R\x05train\x128\n" +
 	"\n" +

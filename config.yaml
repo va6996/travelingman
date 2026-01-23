@@ -14,9 +14,20 @@ ai:
   zai:
     model: "glm-4.5"
 
+planner:
+  timeout: 220 # Seconds
+
 amadeus:
+  limit:
+    flight: 10
+    hotel: 10
+  timeout: 30 # Seconds
   # client_id: "YOUR_ID" # Can be set via AMADEUS_CLIENT_ID
   # client_secret: "YOUR_SECRET" # Can be set via AMADEUS_CLIENT_SECRET
+
+tavily:
+  timeout: 30 # Seconds
+  # api_key: "YOUR_KEY"
 
 log:
   level: "debug"

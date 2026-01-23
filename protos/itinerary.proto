@@ -103,6 +103,7 @@ message Accommodation {
     int32 traveler_count = 12;
     Location location = 13;
     Error error = 14;   
+    repeated string tags = 15;
 }
 
 message Transport {
@@ -121,6 +122,7 @@ message Transport {
     TrainPreferences train_preferences = 16;
     CarRentalPreferences car_rental_preferences = 17;
     Error error = 18;
+    repeated string tags = 19;
 
     oneof details {
         Flight flight = 12;

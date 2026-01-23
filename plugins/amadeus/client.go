@@ -22,11 +22,16 @@ const (
 
 // Client is the main Amadeus API client
 type Client struct {
-	ClientID        string
-	ClientSecret    string
-	BaseURL         string
-	HTTPClient      *http.Client
-	Token           *AuthToken
+	ClientID     string
+	ClientSecret string
+	BaseURL      string
+	HTTPClient   *http.Client
+	Token        *AuthToken
+	Cache        *SimpleCache
+	Limits       struct {
+		Flight int
+		Hotel  int
+	}
 	FlightTool      *FlightTool
 	HotelListTool   *HotelListTool
 	HotelOffersTool *HotelOffersTool
@@ -65,7 +70,7 @@ type AuthToken struct {
 
 // NewClient creates a new Amadeus client
 // Returns an error if the client cannot be initialized
-func NewClient(clientID, clientSecret string, isProduction bool, gk *genkit.Genkit, registry *tools.Registry) (*Client, error) {
+func NewClient(clientID, clientSecret string, isProduction bool, gk *genkit.Genkit, registry *tools.Registry, flightLimit, hotelLimit, timeout int) (*Client, error) {
 
 	baseURL := BaseURLTest
 	if isProduction {
@@ -76,8 +81,11 @@ func NewClient(clientID, clientSecret string, isProduction bool, gk *genkit.Genk
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		BaseURL:      baseURL,
-		HTTPClient:   &http.Client{Timeout: 30 * time.Second},
+		HTTPClient:   &http.Client{Timeout: time.Duration(timeout) * time.Second},
+		Cache:        NewSimpleCache(),
 	}
+	c.Limits.Flight = flightLimit
+	c.Limits.Hotel = hotelLimit
 
 	// Initialize tools
 	c.initTools(gk, registry)

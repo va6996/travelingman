@@ -220,6 +220,51 @@ export function errorCodeToJSON(object: ErrorCode): string {
   }
 }
 
+export enum ErrorSeverity {
+  ERROR_SEVERITY_UNSPECIFIED = 0,
+  ERROR_SEVERITY_INFO = 1,
+  ERROR_SEVERITY_WARNING = 2,
+  ERROR_SEVERITY_ERROR = 3,
+  UNRECOGNIZED = -1,
+}
+
+export function errorSeverityFromJSON(object: any): ErrorSeverity {
+  switch (object) {
+    case 0:
+    case "ERROR_SEVERITY_UNSPECIFIED":
+      return ErrorSeverity.ERROR_SEVERITY_UNSPECIFIED;
+    case 1:
+    case "ERROR_SEVERITY_INFO":
+      return ErrorSeverity.ERROR_SEVERITY_INFO;
+    case 2:
+    case "ERROR_SEVERITY_WARNING":
+      return ErrorSeverity.ERROR_SEVERITY_WARNING;
+    case 3:
+    case "ERROR_SEVERITY_ERROR":
+      return ErrorSeverity.ERROR_SEVERITY_ERROR;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return ErrorSeverity.UNRECOGNIZED;
+  }
+}
+
+export function errorSeverityToJSON(object: ErrorSeverity): string {
+  switch (object) {
+    case ErrorSeverity.ERROR_SEVERITY_UNSPECIFIED:
+      return "ERROR_SEVERITY_UNSPECIFIED";
+    case ErrorSeverity.ERROR_SEVERITY_INFO:
+      return "ERROR_SEVERITY_INFO";
+    case ErrorSeverity.ERROR_SEVERITY_WARNING:
+      return "ERROR_SEVERITY_WARNING";
+    case ErrorSeverity.ERROR_SEVERITY_ERROR:
+      return "ERROR_SEVERITY_ERROR";
+    case ErrorSeverity.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 export interface AccommodationPreferences {
   roomType: string;
   area: string;
@@ -258,6 +303,7 @@ export interface Location {
 export interface Error {
   message: string;
   code: ErrorCode;
+  severity: ErrorSeverity;
 }
 
 export interface Accommodation {
@@ -275,6 +321,7 @@ export interface Accommodation {
   travelerCount: number;
   location: Location | undefined;
   error: Error | undefined;
+  tags: string[];
 }
 
 export interface Transport {
@@ -293,6 +340,7 @@ export interface Transport {
   trainPreferences: TrainPreferences | undefined;
   carRentalPreferences: CarRentalPreferences | undefined;
   error: Error | undefined;
+  tags: string[];
   flight?: Flight | undefined;
   train?: Train | undefined;
   carRental?: CarRental | undefined;
@@ -867,7 +915,7 @@ export const Location: MessageFns<Location> = {
 };
 
 function createBaseError(): Error {
-  return { message: "", code: 0 };
+  return { message: "", code: 0, severity: 0 };
 }
 
 export const Error: MessageFns<Error> = {
@@ -877,6 +925,9 @@ export const Error: MessageFns<Error> = {
     }
     if (message.code !== 0) {
       writer.uint32(16).int32(message.code);
+    }
+    if (message.severity !== 0) {
+      writer.uint32(24).int32(message.severity);
     }
     return writer;
   },
@@ -904,6 +955,14 @@ export const Error: MessageFns<Error> = {
           message.code = reader.int32() as any;
           continue;
         }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.severity = reader.int32() as any;
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -917,6 +976,7 @@ export const Error: MessageFns<Error> = {
     return {
       message: isSet(object.message) ? globalThis.String(object.message) : "",
       code: isSet(object.code) ? errorCodeFromJSON(object.code) : 0,
+      severity: isSet(object.severity) ? errorSeverityFromJSON(object.severity) : 0,
     };
   },
 
@@ -928,6 +988,9 @@ export const Error: MessageFns<Error> = {
     if (message.code !== 0) {
       obj.code = errorCodeToJSON(message.code);
     }
+    if (message.severity !== 0) {
+      obj.severity = errorSeverityToJSON(message.severity);
+    }
     return obj;
   },
 
@@ -938,6 +1001,7 @@ export const Error: MessageFns<Error> = {
     const message = createBaseError();
     message.message = object.message ?? "";
     message.code = object.code ?? 0;
+    message.severity = object.severity ?? 0;
     return message;
   },
 };
@@ -958,6 +1022,7 @@ function createBaseAccommodation(): Accommodation {
     travelerCount: 0,
     location: undefined,
     error: undefined,
+    tags: [],
   };
 }
 
@@ -1006,6 +1071,9 @@ export const Accommodation: MessageFns<Accommodation> = {
     }
     if (message.error !== undefined) {
       Error.encode(message.error, writer.uint32(114).fork()).join();
+    }
+    for (const v of message.tags) {
+      writer.uint32(122).string(v!);
     }
     return writer;
   },
@@ -1139,6 +1207,14 @@ export const Accommodation: MessageFns<Accommodation> = {
           message.error = Error.decode(reader, reader.uint32());
           continue;
         }
+        case 15: {
+          if (tag !== 122) {
+            break;
+          }
+
+          message.tags.push(reader.string());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1164,6 +1240,7 @@ export const Accommodation: MessageFns<Accommodation> = {
       travelerCount: isSet(object.travelerCount) ? globalThis.Number(object.travelerCount) : 0,
       location: isSet(object.location) ? Location.fromJSON(object.location) : undefined,
       error: isSet(object.error) ? Error.fromJSON(object.error) : undefined,
+      tags: globalThis.Array.isArray(object?.tags) ? object.tags.map((e: any) => globalThis.String(e)) : [],
     };
   },
 
@@ -1211,6 +1288,9 @@ export const Accommodation: MessageFns<Accommodation> = {
     if (message.error !== undefined) {
       obj.error = Error.toJSON(message.error);
     }
+    if (message.tags?.length) {
+      obj.tags = message.tags;
+    }
     return obj;
   },
 
@@ -1237,6 +1317,7 @@ export const Accommodation: MessageFns<Accommodation> = {
       ? Location.fromPartial(object.location)
       : undefined;
     message.error = (object.error !== undefined && object.error !== null) ? Error.fromPartial(object.error) : undefined;
+    message.tags = object.tags?.map((e) => e) || [];
     return message;
   },
 };
@@ -1258,6 +1339,7 @@ function createBaseTransport(): Transport {
     trainPreferences: undefined,
     carRentalPreferences: undefined,
     error: undefined,
+    tags: [],
     flight: undefined,
     train: undefined,
     carRental: undefined,
@@ -1312,6 +1394,9 @@ export const Transport: MessageFns<Transport> = {
     }
     if (message.error !== undefined) {
       Error.encode(message.error, writer.uint32(146).fork()).join();
+    }
+    for (const v of message.tags) {
+      writer.uint32(154).string(v!);
     }
     if (message.flight !== undefined) {
       Flight.encode(message.flight, writer.uint32(98).fork()).join();
@@ -1462,6 +1547,14 @@ export const Transport: MessageFns<Transport> = {
           message.error = Error.decode(reader, reader.uint32());
           continue;
         }
+        case 19: {
+          if (tag !== 154) {
+            break;
+          }
+
+          message.tags.push(reader.string());
+          continue;
+        }
         case 12: {
           if (tag !== 98) {
             break;
@@ -1518,6 +1611,7 @@ export const Transport: MessageFns<Transport> = {
         ? CarRentalPreferences.fromJSON(object.carRentalPreferences)
         : undefined,
       error: isSet(object.error) ? Error.fromJSON(object.error) : undefined,
+      tags: globalThis.Array.isArray(object?.tags) ? object.tags.map((e: any) => globalThis.String(e)) : [],
       flight: isSet(object.flight) ? Flight.fromJSON(object.flight) : undefined,
       train: isSet(object.train) ? Train.fromJSON(object.train) : undefined,
       carRental: isSet(object.carRental) ? CarRental.fromJSON(object.carRental) : undefined,
@@ -1571,6 +1665,9 @@ export const Transport: MessageFns<Transport> = {
     if (message.error !== undefined) {
       obj.error = Error.toJSON(message.error);
     }
+    if (message.tags?.length) {
+      obj.tags = message.tags;
+    }
     if (message.flight !== undefined) {
       obj.flight = Flight.toJSON(message.flight);
     }
@@ -1613,6 +1710,7 @@ export const Transport: MessageFns<Transport> = {
       ? CarRentalPreferences.fromPartial(object.carRentalPreferences)
       : undefined;
     message.error = (object.error !== undefined && object.error !== null) ? Error.fromPartial(object.error) : undefined;
+    message.tags = object.tags?.map((e) => e) || [];
     message.flight = (object.flight !== undefined && object.flight !== null)
       ? Flight.fromPartial(object.flight)
       : undefined;

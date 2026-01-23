@@ -11,6 +11,63 @@ import { Accommodation, Transport } from "./itinerary";
 
 export const protobufPackage = "travelingman";
 
+export enum JourneyType {
+  JOURNEY_TYPE_UNSPECIFIED = 0,
+  JOURNEY_TYPE_ONE_WAY = 1,
+  JOURNEY_TYPE_RETURN = 2,
+  JOURNEY_TYPE_MULTI_CITY = 3,
+  JOURNEY_TYPE_OPEN_JAW = 4,
+  JOURNEY_TYPE_CIRCLE_TRIP = 5,
+  UNRECOGNIZED = -1,
+}
+
+export function journeyTypeFromJSON(object: any): JourneyType {
+  switch (object) {
+    case 0:
+    case "JOURNEY_TYPE_UNSPECIFIED":
+      return JourneyType.JOURNEY_TYPE_UNSPECIFIED;
+    case 1:
+    case "JOURNEY_TYPE_ONE_WAY":
+      return JourneyType.JOURNEY_TYPE_ONE_WAY;
+    case 2:
+    case "JOURNEY_TYPE_RETURN":
+      return JourneyType.JOURNEY_TYPE_RETURN;
+    case 3:
+    case "JOURNEY_TYPE_MULTI_CITY":
+      return JourneyType.JOURNEY_TYPE_MULTI_CITY;
+    case 4:
+    case "JOURNEY_TYPE_OPEN_JAW":
+      return JourneyType.JOURNEY_TYPE_OPEN_JAW;
+    case 5:
+    case "JOURNEY_TYPE_CIRCLE_TRIP":
+      return JourneyType.JOURNEY_TYPE_CIRCLE_TRIP;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return JourneyType.UNRECOGNIZED;
+  }
+}
+
+export function journeyTypeToJSON(object: JourneyType): string {
+  switch (object) {
+    case JourneyType.JOURNEY_TYPE_UNSPECIFIED:
+      return "JOURNEY_TYPE_UNSPECIFIED";
+    case JourneyType.JOURNEY_TYPE_ONE_WAY:
+      return "JOURNEY_TYPE_ONE_WAY";
+    case JourneyType.JOURNEY_TYPE_RETURN:
+      return "JOURNEY_TYPE_RETURN";
+    case JourneyType.JOURNEY_TYPE_MULTI_CITY:
+      return "JOURNEY_TYPE_MULTI_CITY";
+    case JourneyType.JOURNEY_TYPE_OPEN_JAW:
+      return "JOURNEY_TYPE_OPEN_JAW";
+    case JourneyType.JOURNEY_TYPE_CIRCLE_TRIP:
+      return "JOURNEY_TYPE_CIRCLE_TRIP";
+    case JourneyType.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 /**
  * Node represents a location/place in the itinerary graph
  * It maps to protobuf structures: TripDay, Place, Accommodation
@@ -36,6 +93,8 @@ export interface Node {
     | undefined;
   /** List of possible accommodations */
   stayOptions: Accommodation[];
+  /** Sub-graph for daily activities */
+  subGraph: Graph | undefined;
 }
 
 /**
@@ -77,6 +136,8 @@ export interface Itinerary {
   description: string;
   graph: Graph | undefined;
   travelers: number;
+  tags: string[];
+  journeyType: JourneyType;
 }
 
 function createBaseNode(): Node {
@@ -88,6 +149,7 @@ function createBaseNode(): Node {
     isInterCity: false,
     stay: undefined,
     stayOptions: [],
+    subGraph: undefined,
   };
 }
 
@@ -113,6 +175,9 @@ export const Node: MessageFns<Node> = {
     }
     for (const v of message.stayOptions) {
       Accommodation.encode(v!, writer.uint32(58).fork()).join();
+    }
+    if (message.subGraph !== undefined) {
+      Graph.encode(message.subGraph, writer.uint32(66).fork()).join();
     }
     return writer;
   },
@@ -180,6 +245,14 @@ export const Node: MessageFns<Node> = {
           message.stayOptions.push(Accommodation.decode(reader, reader.uint32()));
           continue;
         }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.subGraph = Graph.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -200,6 +273,7 @@ export const Node: MessageFns<Node> = {
       stayOptions: globalThis.Array.isArray(object?.stayOptions)
         ? object.stayOptions.map((e: any) => Accommodation.fromJSON(e))
         : [],
+      subGraph: isSet(object.subGraph) ? Graph.fromJSON(object.subGraph) : undefined,
     };
   },
 
@@ -226,6 +300,9 @@ export const Node: MessageFns<Node> = {
     if (message.stayOptions?.length) {
       obj.stayOptions = message.stayOptions.map((e) => Accommodation.toJSON(e));
     }
+    if (message.subGraph !== undefined) {
+      obj.subGraph = Graph.toJSON(message.subGraph);
+    }
     return obj;
   },
 
@@ -243,6 +320,9 @@ export const Node: MessageFns<Node> = {
       ? Accommodation.fromPartial(object.stay)
       : undefined;
     message.stayOptions = object.stayOptions?.map((e) => Accommodation.fromPartial(e)) || [];
+    message.subGraph = (object.subGraph !== undefined && object.subGraph !== null)
+      ? Graph.fromPartial(object.subGraph)
+      : undefined;
     return message;
   },
 };
@@ -480,6 +560,8 @@ function createBaseItinerary(): Itinerary {
     description: "",
     graph: undefined,
     travelers: 0,
+    tags: [],
+    journeyType: 0,
   };
 }
 
@@ -511,6 +593,12 @@ export const Itinerary: MessageFns<Itinerary> = {
     }
     if (message.travelers !== 0) {
       writer.uint32(72).int32(message.travelers);
+    }
+    for (const v of message.tags) {
+      writer.uint32(82).string(v!);
+    }
+    if (message.journeyType !== 0) {
+      writer.uint32(88).int32(message.journeyType);
     }
     return writer;
   },
@@ -594,6 +682,22 @@ export const Itinerary: MessageFns<Itinerary> = {
           message.travelers = reader.int32();
           continue;
         }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.tags.push(reader.string());
+          continue;
+        }
+        case 11: {
+          if (tag !== 88) {
+            break;
+          }
+
+          message.journeyType = reader.int32() as any;
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -614,6 +718,8 @@ export const Itinerary: MessageFns<Itinerary> = {
       description: isSet(object.description) ? globalThis.String(object.description) : "",
       graph: isSet(object.graph) ? Graph.fromJSON(object.graph) : undefined,
       travelers: isSet(object.travelers) ? globalThis.Number(object.travelers) : 0,
+      tags: globalThis.Array.isArray(object?.tags) ? object.tags.map((e: any) => globalThis.String(e)) : [],
+      journeyType: isSet(object.journeyType) ? journeyTypeFromJSON(object.journeyType) : 0,
     };
   },
 
@@ -646,6 +752,12 @@ export const Itinerary: MessageFns<Itinerary> = {
     if (message.travelers !== 0) {
       obj.travelers = Math.round(message.travelers);
     }
+    if (message.tags?.length) {
+      obj.tags = message.tags;
+    }
+    if (message.journeyType !== 0) {
+      obj.journeyType = journeyTypeToJSON(message.journeyType);
+    }
     return obj;
   },
 
@@ -663,6 +775,8 @@ export const Itinerary: MessageFns<Itinerary> = {
     message.description = object.description ?? "";
     message.graph = (object.graph !== undefined && object.graph !== null) ? Graph.fromPartial(object.graph) : undefined;
     message.travelers = object.travelers ?? 0;
+    message.tags = object.tags?.map((e) => e) || [];
+    message.journeyType = object.journeyType ?? 0;
     return message;
   },
 };

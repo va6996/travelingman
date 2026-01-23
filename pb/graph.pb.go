@@ -22,6 +22,64 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type JourneyType int32
+
+const (
+	JourneyType_JOURNEY_TYPE_UNSPECIFIED JourneyType = 0
+	JourneyType_JOURNEY_TYPE_ONE_WAY     JourneyType = 1
+	JourneyType_JOURNEY_TYPE_RETURN      JourneyType = 2
+	JourneyType_JOURNEY_TYPE_MULTI_CITY  JourneyType = 3
+	JourneyType_JOURNEY_TYPE_OPEN_JAW    JourneyType = 4
+	JourneyType_JOURNEY_TYPE_CIRCLE_TRIP JourneyType = 5
+)
+
+// Enum value maps for JourneyType.
+var (
+	JourneyType_name = map[int32]string{
+		0: "JOURNEY_TYPE_UNSPECIFIED",
+		1: "JOURNEY_TYPE_ONE_WAY",
+		2: "JOURNEY_TYPE_RETURN",
+		3: "JOURNEY_TYPE_MULTI_CITY",
+		4: "JOURNEY_TYPE_OPEN_JAW",
+		5: "JOURNEY_TYPE_CIRCLE_TRIP",
+	}
+	JourneyType_value = map[string]int32{
+		"JOURNEY_TYPE_UNSPECIFIED": 0,
+		"JOURNEY_TYPE_ONE_WAY":     1,
+		"JOURNEY_TYPE_RETURN":      2,
+		"JOURNEY_TYPE_MULTI_CITY":  3,
+		"JOURNEY_TYPE_OPEN_JAW":    4,
+		"JOURNEY_TYPE_CIRCLE_TRIP": 5,
+	}
+)
+
+func (x JourneyType) Enum() *JourneyType {
+	p := new(JourneyType)
+	*p = x
+	return p
+}
+
+func (x JourneyType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (JourneyType) Descriptor() protoreflect.EnumDescriptor {
+	return file_protos_graph_proto_enumTypes[0].Descriptor()
+}
+
+func (JourneyType) Type() protoreflect.EnumType {
+	return &file_protos_graph_proto_enumTypes[0]
+}
+
+func (x JourneyType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use JourneyType.Descriptor instead.
+func (JourneyType) EnumDescriptor() ([]byte, []int) {
+	return file_protos_graph_proto_rawDescGZIP(), []int{0}
+}
+
 // Node represents a location/place in the itinerary graph
 // It maps to protobuf structures: TripDay, Place, Accommodation
 type Node struct {
@@ -33,6 +91,7 @@ type Node struct {
 	IsInterCity   bool                   `protobuf:"varint,5,opt,name=is_inter_city,json=isInterCity,proto3" json:"is_inter_city,omitempty"`    // Whether this node represents an inter-city travel point
 	Stay          *Accommodation         `protobuf:"bytes,6,opt,name=stay,proto3" json:"stay,omitempty"`                                        // Hotel/accommodation info (from Accommodation)
 	StayOptions   []*Accommodation       `protobuf:"bytes,7,rep,name=stayOptions,proto3" json:"stayOptions,omitempty"`                          // List of possible accommodations
+	SubGraph      *Graph                 `protobuf:"bytes,8,opt,name=sub_graph,json=subGraph,proto3" json:"sub_graph,omitempty"`                // Sub-graph for daily activities
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -112,6 +171,13 @@ func (x *Node) GetStay() *Accommodation {
 func (x *Node) GetStayOptions() []*Accommodation {
 	if x != nil {
 		return x.StayOptions
+	}
+	return nil
+}
+
+func (x *Node) GetSubGraph() *Graph {
+	if x != nil {
+		return x.SubGraph
 	}
 	return nil
 }
@@ -266,6 +332,8 @@ type Itinerary struct {
 	Description   string                 `protobuf:"bytes,7,opt,name=description,proto3" json:"description,omitempty"`
 	Graph         *Graph                 `protobuf:"bytes,8,opt,name=graph,proto3" json:"graph,omitempty"`
 	Travelers     int32                  `protobuf:"varint,9,opt,name=travelers,proto3" json:"travelers,omitempty"`
+	Tags          []string               `protobuf:"bytes,10,rep,name=tags,proto3" json:"tags,omitempty"`
+	JourneyType   JourneyType            `protobuf:"varint,11,opt,name=journey_type,json=journeyType,proto3,enum=travelingman.JourneyType" json:"journey_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -363,11 +431,25 @@ func (x *Itinerary) GetTravelers() int32 {
 	return 0
 }
 
+func (x *Itinerary) GetTags() []string {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
+func (x *Itinerary) GetJourneyType() JourneyType {
+	if x != nil {
+		return x.JourneyType
+	}
+	return JourneyType_JOURNEY_TYPE_UNSPECIFIED
+}
+
 var File_protos_graph_proto protoreflect.FileDescriptor
 
 const file_protos_graph_proto_rawDesc = "" +
 	"\n" +
-	"\x12protos/graph.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16protos/itinerary.proto\"\xc8\x02\n" +
+	"\x12protos/graph.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16protos/itinerary.proto\"\xfa\x02\n" +
 	"\x04Node\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\blocation\x18\x02 \x01(\tR\blocation\x12A\n" +
@@ -375,7 +457,8 @@ const file_protos_graph_proto_rawDesc = "" +
 	"\fto_timestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vtoTimestamp\x12\"\n" +
 	"\ris_inter_city\x18\x05 \x01(\bR\visInterCity\x12/\n" +
 	"\x04stay\x18\x06 \x01(\v2\x1b.travelingman.AccommodationR\x04stay\x12=\n" +
-	"\vstayOptions\x18\a \x03(\v2\x1b.travelingman.AccommodationR\vstayOptions\"\xdb\x01\n" +
+	"\vstayOptions\x18\a \x03(\v2\x1b.travelingman.AccommodationR\vstayOptions\x120\n" +
+	"\tsub_graph\x18\b \x01(\v2\x13.travelingman.GraphR\bsubGraph\"\xdb\x01\n" +
 	"\x04Edge\x12\x17\n" +
 	"\afrom_id\x18\x01 \x01(\tR\x06fromId\x12\x13\n" +
 	"\x05to_id\x18\x02 \x01(\tR\x04toId\x12)\n" +
@@ -385,7 +468,7 @@ const file_protos_graph_proto_rawDesc = "" +
 	"\x05Graph\x12(\n" +
 	"\x05nodes\x18\x01 \x03(\v2\x12.travelingman.NodeR\x05nodes\x12(\n" +
 	"\x05edges\x18\x02 \x03(\v2\x12.travelingman.EdgeR\x05edges\x120\n" +
-	"\tsub_graph\x18\x03 \x01(\v2\x13.travelingman.GraphR\bsubGraph\"\xc8\x02\n" +
+	"\tsub_graph\x18\x03 \x01(\v2\x13.travelingman.GraphR\bsubGraph\"\x9a\x03\n" +
 	"\tItinerary\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\x03R\agroupId\x12\x1d\n" +
@@ -397,7 +480,17 @@ const file_protos_graph_proto_rawDesc = "" +
 	"\x05title\x18\x06 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\a \x01(\tR\vdescription\x12)\n" +
 	"\x05graph\x18\b \x01(\v2\x13.travelingman.GraphR\x05graph\x12\x1c\n" +
-	"\ttravelers\x18\t \x01(\x05R\ttravelersB#Z!github.com/va6996/travelingman/pbb\x06proto3"
+	"\ttravelers\x18\t \x01(\x05R\ttravelers\x12\x12\n" +
+	"\x04tags\x18\n" +
+	" \x03(\tR\x04tags\x12<\n" +
+	"\fjourney_type\x18\v \x01(\x0e2\x19.travelingman.JourneyTypeR\vjourneyType*\xb4\x01\n" +
+	"\vJourneyType\x12\x1c\n" +
+	"\x18JOURNEY_TYPE_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14JOURNEY_TYPE_ONE_WAY\x10\x01\x12\x17\n" +
+	"\x13JOURNEY_TYPE_RETURN\x10\x02\x12\x1b\n" +
+	"\x17JOURNEY_TYPE_MULTI_CITY\x10\x03\x12\x19\n" +
+	"\x15JOURNEY_TYPE_OPEN_JAW\x10\x04\x12\x1c\n" +
+	"\x18JOURNEY_TYPE_CIRCLE_TRIP\x10\x05B#Z!github.com/va6996/travelingman/pbb\x06proto3"
 
 var (
 	file_protos_graph_proto_rawDescOnce sync.Once
@@ -411,34 +504,38 @@ func file_protos_graph_proto_rawDescGZIP() []byte {
 	return file_protos_graph_proto_rawDescData
 }
 
+var file_protos_graph_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_protos_graph_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_protos_graph_proto_goTypes = []any{
-	(*Node)(nil),                  // 0: travelingman.Node
-	(*Edge)(nil),                  // 1: travelingman.Edge
-	(*Graph)(nil),                 // 2: travelingman.Graph
-	(*Itinerary)(nil),             // 3: travelingman.Itinerary
-	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
-	(*Accommodation)(nil),         // 5: travelingman.Accommodation
-	(*Transport)(nil),             // 6: travelingman.Transport
+	(JourneyType)(0),              // 0: travelingman.JourneyType
+	(*Node)(nil),                  // 1: travelingman.Node
+	(*Edge)(nil),                  // 2: travelingman.Edge
+	(*Graph)(nil),                 // 3: travelingman.Graph
+	(*Itinerary)(nil),             // 4: travelingman.Itinerary
+	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(*Accommodation)(nil),         // 6: travelingman.Accommodation
+	(*Transport)(nil),             // 7: travelingman.Transport
 }
 var file_protos_graph_proto_depIdxs = []int32{
-	4,  // 0: travelingman.Node.from_timestamp:type_name -> google.protobuf.Timestamp
-	4,  // 1: travelingman.Node.to_timestamp:type_name -> google.protobuf.Timestamp
-	5,  // 2: travelingman.Node.stay:type_name -> travelingman.Accommodation
-	5,  // 3: travelingman.Node.stayOptions:type_name -> travelingman.Accommodation
-	6,  // 4: travelingman.Edge.transport:type_name -> travelingman.Transport
-	6,  // 5: travelingman.Edge.transportOptions:type_name -> travelingman.Transport
-	0,  // 6: travelingman.Graph.nodes:type_name -> travelingman.Node
-	1,  // 7: travelingman.Graph.edges:type_name -> travelingman.Edge
-	2,  // 8: travelingman.Graph.sub_graph:type_name -> travelingman.Graph
-	4,  // 9: travelingman.Itinerary.start_time:type_name -> google.protobuf.Timestamp
-	4,  // 10: travelingman.Itinerary.end_time:type_name -> google.protobuf.Timestamp
-	2,  // 11: travelingman.Itinerary.graph:type_name -> travelingman.Graph
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	5,  // 0: travelingman.Node.from_timestamp:type_name -> google.protobuf.Timestamp
+	5,  // 1: travelingman.Node.to_timestamp:type_name -> google.protobuf.Timestamp
+	6,  // 2: travelingman.Node.stay:type_name -> travelingman.Accommodation
+	6,  // 3: travelingman.Node.stayOptions:type_name -> travelingman.Accommodation
+	3,  // 4: travelingman.Node.sub_graph:type_name -> travelingman.Graph
+	7,  // 5: travelingman.Edge.transport:type_name -> travelingman.Transport
+	7,  // 6: travelingman.Edge.transportOptions:type_name -> travelingman.Transport
+	1,  // 7: travelingman.Graph.nodes:type_name -> travelingman.Node
+	2,  // 8: travelingman.Graph.edges:type_name -> travelingman.Edge
+	3,  // 9: travelingman.Graph.sub_graph:type_name -> travelingman.Graph
+	5,  // 10: travelingman.Itinerary.start_time:type_name -> google.protobuf.Timestamp
+	5,  // 11: travelingman.Itinerary.end_time:type_name -> google.protobuf.Timestamp
+	3,  // 12: travelingman.Itinerary.graph:type_name -> travelingman.Graph
+	0,  // 13: travelingman.Itinerary.journey_type:type_name -> travelingman.JourneyType
+	14, // [14:14] is the sub-list for method output_type
+	14, // [14:14] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_protos_graph_proto_init() }
@@ -452,13 +549,14 @@ func file_protos_graph_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protos_graph_proto_rawDesc), len(file_protos_graph_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_protos_graph_proto_goTypes,
 		DependencyIndexes: file_protos_graph_proto_depIdxs,
+		EnumInfos:         file_protos_graph_proto_enumTypes,
 		MessageInfos:      file_protos_graph_proto_msgTypes,
 	}.Build()
 	File_protos_graph_proto = out.File

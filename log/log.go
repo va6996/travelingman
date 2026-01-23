@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	tmcontext "github.com/va6996/travelingman/context"
 )
 
 // Logger is the global logger instance
@@ -36,7 +37,22 @@ func (f *CustomFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	// Level
 	level := strings.ToUpper(entry.Level.String())
-	fmt.Fprintf(b, "[%s] ", level)
+	var colorCode string
+	switch entry.Level {
+	case logrus.InfoLevel:
+		colorCode = "\033[32m" // Green
+	case logrus.WarnLevel:
+		colorCode = "\033[33m" // Yellow
+	case logrus.ErrorLevel, logrus.FatalLevel, logrus.PanicLevel:
+		colorCode = "\033[31m" // Red
+	case logrus.DebugLevel, logrus.TraceLevel:
+		colorCode = "\033[36m" // Cyan
+	default:
+		colorCode = "\033[0m" // Reset
+	}
+	resetCode := "\033[0m"
+
+	fmt.Fprintf(b, "%s[%s]%s ", colorCode, level, resetCode)
 
 	// File and line
 	// We walk the stack to find the caller, skipping logrus internals and our log wrapper
@@ -114,20 +130,8 @@ func requestIDFromContext(ctx context.Context) string {
 	if ctx == nil {
 		return ""
 	}
-	// Try to get from our custom context package
-	if requestID, ok := ctx.Value(contextKey(0)).(string); ok && requestID != "" {
-		return requestID
-	}
-	return ""
+	return tmcontext.RequestIDFromContext(ctx)
 }
-
-// contextKey is a custom type for context keys
-type contextKey int
-
-const (
-	// RequestIDKey matches the key used in context/request_id.go
-	RequestIDKey contextKey = iota
-)
 
 // Helper to add request ID as a field to the log entry
 func withRequestIDField(ctx context.Context) *logrus.Entry {

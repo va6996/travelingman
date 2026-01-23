@@ -17,6 +17,7 @@ message Node {
     bool is_inter_city = 5;                           // Whether this node represents an inter-city travel point
     Accommodation stay = 6;                           // Hotel/accommodation info (from Accommodation)
     repeated Accommodation stayOptions = 7;           // List of possible accommodations
+    Graph sub_graph = 8;                              // Sub-graph for daily activities
 }
 
 // Edge represents transportation between two locations
@@ -36,6 +37,15 @@ message Graph {
     Graph sub_graph = 3;                              // For intra-city details (contains Places)
 }
 
+enum JourneyType {
+    JOURNEY_TYPE_UNSPECIFIED = 0;
+    JOURNEY_TYPE_ONE_WAY = 1;
+    JOURNEY_TYPE_RETURN = 2;
+    JOURNEY_TYPE_MULTI_CITY = 3;
+    JOURNEY_TYPE_OPEN_JAW = 4;
+    JOURNEY_TYPE_CIRCLE_TRIP = 5;
+}
+
 message Itinerary {
     int64 id = 1;
     int64 group_id = 2;
@@ -46,4 +56,6 @@ message Itinerary {
     string description = 7;
     Graph graph = 8;
     int32 travelers = 9;
+    repeated string tags = 10;
+    JourneyType journey_type = 11;
 }

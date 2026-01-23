@@ -7,6 +7,7 @@ import (
 	"github.com/va6996/travelingman/log"
 	"github.com/va6996/travelingman/pb"
 	"github.com/va6996/travelingman/plugins/amadeus"
+	"github.com/va6996/travelingman/plugins/core"
 )
 
 // TravelDesk is responsible for checking availability and booking
@@ -24,6 +25,13 @@ func NewTravelDesk(client *amadeus.Client) *TravelDesk {
 // CheckAvailability validates the itinerary against real availability
 func (td *TravelDesk) CheckAvailability(ctx context.Context, itinerary *pb.Itinerary) (*pb.Itinerary, error) {
 	log.Infof(ctx, "TravelDesk: Starting availability check for: %s", itinerary.Title)
+
+	// Validate Itinerary first
+	if err := core.ValidateItinerary(ctx, itinerary); err != nil {
+		log.Errorf(ctx, "TravelDesk: Initial validation failed: %v", err)
+		return nil, err
+	}
+
 	td.checkRecursive(ctx, itinerary)
 	log.Infof(ctx, "TravelDesk: Finished check.")
 
@@ -46,7 +54,7 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 					transports, err := td.amadeus.SearchFlights(ctx, t)
 
 					if err != nil {
-						errMsg := fmt.Sprintf("Flight search failed: %v", err)
+						errMsg := fmt.Sprintf("Flight search failed: %s", err)
 						log.Errorf(ctx, "TravelDesk: ISSUE: %s", errMsg)
 						t.Error = &pb.Error{
 							Message:  errMsg,
@@ -81,7 +89,7 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 			// A. Search hotels by city to            // Use preferences
 			listResp, err := td.amadeus.SearchHotelsByCity(ctx, acc) // acc.Address holds CityCode
 			if err != nil {
-				errMsg := fmt.Sprintf("Hotel city search failed for %s: %v", acc.Address, err)
+				errMsg := fmt.Sprintf("Hotel city search failed for %s: %s", acc.Address, err)
 				log.Errorf(ctx, "TravelDesk: ISSUE: %s", errMsg)
 				acc.Error = &pb.Error{
 					Message:  errMsg,
@@ -122,7 +130,7 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 			accommodations, err := td.amadeus.SearchHotelOffers(ctx, hotelIds, adults, checkIn, checkOut)
 			if err != nil {
 				// SearchHotelOffers might error if none available or API error
-				errMsg := fmt.Sprintf("Hotel offers search failed: %v", err)
+				errMsg := fmt.Sprintf("Hotel offers search failed: %s", err)
 				log.Infof(ctx, "TravelDesk: %s", errMsg)
 				acc.Error = &pb.Error{
 					Message:  errMsg,

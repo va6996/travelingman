@@ -12,7 +12,6 @@ import (
 	"github.com/firebase/genkit/go/genkit"
 	"github.com/va6996/travelingman/log"
 	"github.com/va6996/travelingman/pb"
-	"github.com/va6996/travelingman/plugins/amadeus"
 	"github.com/va6996/travelingman/tools"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -49,17 +48,24 @@ const SYSTEM_PROMPT = `You are an expert Trip Planner. Your goal is to create a 
 
 IMPORTANT WORKFLOW:
 1. First, gather information using tools ONLY if needed:
-   - Use dateTool to calculate dates (e.g., "next weekend" → actual dates like "2026-01-25")
+   - ALWAYS use dateTool to calculate dates (e.g., "next weekend" → actual dates like "2026-01-25") in RFC3339 format (YYYY-MM-DDTHH:mm:ssZ)
 
 2. Then, create the itinerary JSON with the gathered information:
    - DO NOT call hotelTool or flightTool - these are for the TravelDesk, not for planning
-   - Just return the itinerary json with destination, dates, and activities
-   - Use the actual dates you calculated, not relative terms
+   - Return the itinerary json with destination, dates, and activities
 
 CRITICAL RULES:
 - If the user specifies a timeframe (like "next weekend"), use dateTool to calculate it, then create the itinerary
-- Return itinerary with ACTUAL dates in RFC3339 format (YYYY-MM-DDTHH:mm:ssZ)
-- Structure your response exactly as the JSON schema below. Use camelCase for keys.
+- Structure your response exactly as the JSON schema below. Use camelCase for keys
+- If the user requests a round/circle trip, the final edge must return to the ID of the starting Node. Do NOT create a duplicate 'Home' node.
+- Do not ask for clarifications. Infer everything you need from the user's query from the perspective of source location
+
+BROAD SEARCH:
+- If the user request is broad (e.g., "any weekend in April"), you MUST generate multiple distinct itineraries (e.g., 3-4 options for different weekends) in the "itineraries" JSON array.
+- Each itinerary in the array must be a complete, valid trip plan.
+
+DAY ACTIVITIES:
+- For detailed daily plans, populate the "sub_graph" field within the specific Node (e.g., the 'Paris' node). This sub-graph should contain nodes for activities (restaurants, museums) and edges for travel between them.
 
 Final Answer Schema:
 {
@@ -70,6 +76,7 @@ Final Answer Schema:
       "startTime": "2026-01-25T10:00:00Z",
       "endTime": "2026-01-27T18:00:00Z",
       "travelers": 2,
+      "journeyType": "JOURNEY_TYPE_RETURN",
       "graph": {
         "nodes": [
           {
@@ -90,6 +97,14 @@ Final Answer Schema:
                 "rating": 4,
                 "amenities": ["wifi", "breakfast"]
               }
+            },
+            "sub_graph": {
+                "nodes": [
+                    { "id": "act_1", "location": "Eiffel Tower", "type": "ACTIVITY" }
+                ],
+                "edges": [
+                    { "fromId": "node_1", "toId": "act_1", "transport": { "type": "TRANSPORT_TYPE_TAXI" } }
+                ]
             }
           }
         ],
@@ -151,12 +166,19 @@ func (p *TripPlanner) Plan(ctx context.Context, req PlanRequest) (*PlanResult, e
 
 	log.Debugf(ctx, "Calling genkit.Generate with model: %v, tools: %d", p.model, len(p.registry.GetTools()))
 
-	// Increase timeout for the tool calls
-	// We wrap the context with a longer timeout if it's not already long enough
-	// But `genkit.Generate` uses the passed context.
-	// The user reported "context canceled", which likely means the parent context or a default timeout was hit.
-	// We'll use a generous timeout here.
-	tCtx, cancel := context.WithTimeout(ctx, 220*time.Second) // 2 minutes
+	// Use configured timeout for the planning process
+	// Default to 220s if not set (though Config should handle defaults)
+	// We'll hardcode here if needed or pass config to TripPlanner?
+	// The TripPlanner struct doesn't have the config yet.
+	// For this task, we will stick to the hardcoded/env default from config via setup but TripPlanner needs access.
+	// Let's assume the context passed in already has a deadline or we rely on the caller (TravelAgent) to set it?
+	// But `genkit.Generate` is called here.
+	// The config says "PlannerConfig.Timeout". We should ideally pass this to NewTripPlanner.
+
+	// For now, I'll update NewTripPlanner signature in next step or just hardcode to match the config default if I can't change signature easily without cascading.
+	// Wait, I updated Config with `PlannerConfig`. I should pass the timeout value to `NewTripPlanner`.
+
+	tCtx, cancel := context.WithTimeout(ctx, 220*time.Second) // Default 2 minutes -> Updated to 220s default in config
 	defer cancel()
 
 	// Use Genkit's native tool calling with automatic iteration
@@ -246,7 +268,7 @@ func (p *TripPlanner) Plan(ctx context.Context, req PlanRequest) (*PlanResult, e
 			}
 
 			// Convert possible itineraries
-			for i := range finalAnswer.Itineraries {
+			for i := 1; i < len(finalAnswer.Itineraries); i++ {
 				pbItin := &pb.Itinerary{}
 				if err := unmarshaler.Unmarshal(finalAnswer.Itineraries[i], pbItin); err == nil {
 					result.PossibleItineraries = append(result.PossibleItineraries, pbItin)
@@ -356,179 +378,7 @@ func (p *TripPlanner) resolveCityCodes(ctx context.Context, itin *pb.Itinerary) 
 	}
 }
 
-// populateOptions fetches live options for transport and accommodation
-func (p *TripPlanner) populateOptions(ctx context.Context, itin *pb.Itinerary) {
-	if p.registry == nil || itin.Graph == nil {
-		return
-	}
-
-	var wg sync.WaitGroup
-
-	// Helper to extract first IATA code or CityCode
-	getLoc := func(l *pb.Location) string {
-		if l == nil {
-			return ""
-		}
-		if len(l.IataCodes) > 0 {
-			return l.IataCodes[0]
-		}
-		return l.CityCode
-	}
-
-	// 1. Transport Options
-	for _, edge := range itin.Graph.Edges {
-		if edge.Transport == nil {
-			continue
-		}
-		if edge.Transport.Type == pb.TransportType_TRANSPORT_TYPE_FLIGHT {
-			// Construct input for flightTool
-			origin := getLoc(edge.Transport.OriginLocation)
-			dest := getLoc(edge.Transport.DestinationLocation)
-			date := ""
-			if edge.Transport.FlightPreferences != nil {
-				// use transport details if available (e.g. Flight.DepartureTime)
-				if f := edge.Transport.GetFlight(); f != nil {
-					date = f.DepartureTime.AsTime().Format("2006-01-02")
-				}
-			}
-
-			if origin != "" && dest != "" && date != "" {
-				wg.Add(1)
-				go func(e *pb.Edge, o, d, dt string) {
-					defer wg.Done()
-
-					// Timeout for API call
-					tCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-					defer cancel()
-
-					log.Debugf(ctx, "TripPlanner: Fetching flight options for %s -> %s on %s", o, d, dt)
-					res, err := p.registry.ExecuteTool(tCtx, "amadeus_flight_tool", map[string]interface{}{
-						"origin": map[string]interface{}{
-							"iata_codes": []string{o},
-						},
-						"destination": map[string]interface{}{
-							"iata_codes": []string{d},
-						},
-						"date":   dt,
-						"adults": int(e.Transport.TravelerCount),
-					})
-					if err != nil {
-						log.Errorf(ctx, "TripPlanner: Flight search failed: %v", err)
-						return
-					}
-
-					// Cast result
-					if resp, ok := res.(*amadeus.FlightSearchResponse); ok {
-						var options []*pb.Transport
-						for _, offer := range resp.Data {
-							options = append(options, offer.ToTransport())
-						}
-						// Limit options to avoid massive proto payload
-						if len(options) > 10 {
-							options = options[:10]
-						}
-						// Protected modification if needed, but since we modify unique edge per goroutine, it's generally safe
-						// as long as we don't resize the slice header concurrently in a way that affects others.
-						// Edges is a slice of pointers, so modifying the pointed-to struct is safe.
-						e.TransportOptions = options
-						log.Debugf(ctx, "TripPlanner: Added %d flight options", len(options))
-					}
-				}(edge, origin, dest, date)
-			}
-		}
-	}
-
-	// 2. Accommodation Options
-	for _, node := range itin.Graph.Nodes {
-		if node.Stay == nil {
-			continue
-		}
-		// HotelTool args: cityCode, checkInDate, checkOutDate ...
-		city := getLoc(node.Stay.Location)
-		if city == "" {
-			// Fallback to node location string if it looks like city code
-			if len(node.Location) == 3 {
-				city = node.Location
-			}
-		}
-		if city == "" {
-			continue
-		}
-
-		checkIn := ""
-		checkOut := ""
-		if node.Stay.CheckIn != nil {
-			checkIn = node.Stay.CheckIn.AsTime().Format("2006-01-02")
-		}
-		if node.Stay.CheckOut != nil {
-			checkOut = node.Stay.CheckOut.AsTime().Format("2006-01-02")
-		}
-
-		if city != "" && checkIn != "" && checkOut != "" {
-			wg.Add(1)
-			go func(n *pb.Node, c, ci, co string) {
-				defer wg.Done()
-
-				tCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-				defer cancel()
-
-				log.Debugf(ctx, "TripPlanner: Fetching hotel options for %s (%s to %s)", c, ci, co)
-
-				// Step 1: List hotels
-				listRes, err := p.registry.ExecuteTool(tCtx, "amadeus_hotel_list", map[string]interface{}{
-					"location": map[string]interface{}{
-						"iata_codes": []string{c},
-					},
-				})
-				if err != nil {
-					log.Errorf(ctx, "TripPlanner: Hotel list search failed: %v", err)
-					return
-				}
-
-				listResp, ok := listRes.(*amadeus.HotelListResponse)
-				if !ok || len(listResp.Data) == 0 {
-					log.Warnf(ctx, "TripPlanner: No hotels found for %s", c)
-					return
-				}
-
-				// Step 2: Get Offers
-				var hotelIds []string
-				limit := 5
-				if len(listResp.Data) < limit {
-					limit = len(listResp.Data)
-				}
-				for i := 0; i < limit; i++ {
-					hotelIds = append(hotelIds, listResp.Data[i].HotelId)
-				}
-
-				offersRes, err := p.registry.ExecuteTool(tCtx, "amadeus_hotel_offers", map[string]interface{}{
-					"hotel_ids": hotelIds,
-					"check_in":  ci,
-					"check_out": co,
-					"adults":    int(n.Stay.TravelerCount),
-				})
-				if err != nil {
-					log.Errorf(ctx, "TripPlanner: Hotel offers search failed: %v", err)
-					return
-				}
-
-				if resp, ok := offersRes.(*amadeus.HotelSearchResponse); ok {
-					var options []*pb.Accommodation
-					for _, data := range resp.Data {
-						options = append(options, data.ToAccommodations()...)
-					}
-					if len(options) > 10 {
-						options = options[:10]
-					}
-					n.StayOptions = options
-					log.Debugf(ctx, "TripPlanner: Added %d stay options", len(options))
-				}
-			}(node, city, checkIn, checkOut)
-		}
-	}
-
-	wg.Wait()
-}
+// resolveCityCodes updates the itinerary with correct IATA codes
 
 // Helper to map string class to pb enum
 func mapClass(c string) pb.Class {

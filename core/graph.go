@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/va6996/travelingman/pb"
 )
 
@@ -52,4 +54,77 @@ func GetEdgesToNode(g *pb.Graph, nodeID string) []*pb.Edge {
 		}
 	}
 	return edges
+}
+
+// ValidateNodes checks if all nodes have valid IDs and no duplicates.
+func ValidateNodes(g *pb.Graph) error {
+	if g == nil {
+		return nil
+	}
+	nodeIDs := make(map[string]bool)
+	for _, n := range g.Nodes {
+		if n.Id == "" {
+			return fmt.Errorf("found node with missing ID")
+		}
+		if nodeIDs[n.Id] {
+			return fmt.Errorf("duplicate Node ID found: %s", n.Id)
+		}
+		nodeIDs[n.Id] = true
+	}
+	return nil
+}
+
+// HasCycle detects if there is a cycle in the directed graph.
+func HasCycle(g *pb.Graph) bool {
+	if g == nil || len(g.Edges) == 0 {
+		return false
+	}
+
+	// Adjacency list
+	adj := make(map[string][]string)
+	for _, e := range g.Edges {
+		adj[e.FromId] = append(adj[e.FromId], e.ToId)
+	}
+
+	visited := make(map[string]bool)
+	recStack := make(map[string]bool)
+
+	var isCyclic func(string) bool
+	isCyclic = func(node string) bool {
+		visited[node] = true
+		recStack[node] = true
+
+		for _, neighbor := range adj[node] {
+			if !visited[neighbor] {
+				if isCyclic(neighbor) {
+					return true
+				}
+			} else if recStack[neighbor] {
+				return true
+			}
+		}
+
+		recStack[node] = false
+		return false
+	}
+
+	// Check all starting points (nodes and any IDs used in edges)
+	allIDs := make(map[string]bool)
+	for _, n := range g.Nodes {
+		allIDs[n.Id] = true
+	}
+	for _, e := range g.Edges {
+		allIDs[e.FromId] = true
+		allIDs[e.ToId] = true
+	}
+
+	for id := range allIDs {
+		if !visited[id] {
+			if isCyclic(id) {
+				return true
+			}
+		}
+	}
+
+	return false
 }

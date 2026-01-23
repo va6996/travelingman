@@ -67,7 +67,7 @@ func TestTravelAgent_OrchestrateRequest(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client, _ := amadeus.NewClient("id", "secret", false, nil, nil)
+	client, _ := amadeus.NewClient("id", "secret", false, nil, nil, 10, 10)
 	client.BaseURL = ts.URL
 	desk := NewTravelDesk(client)
 
@@ -159,7 +159,7 @@ func TestTravelAgent_OrchestrateRequest_RetryOnFailure(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client, _ := amadeus.NewClient("id", "secret", false, nil, nil)
+	client, _ := amadeus.NewClient("id", "secret", false, nil, nil, 10, 10)
 	client.BaseURL = ts.URL
 	desk := NewTravelDesk(client)
 	agent := NewTravelAgent(mockPlanner, desk)

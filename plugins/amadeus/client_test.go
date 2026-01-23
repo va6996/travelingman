@@ -91,7 +91,7 @@ func TestClient_Authenticate(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil)
+	client, err := NewClient("id", "secret", false, nil, nil, 10, 10)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestSearchFlights(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil)
+	client, err := NewClient("id", "secret", false, nil, nil, 10, 10)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
@@ -123,7 +123,8 @@ func TestSearchFlights(t *testing.T) {
 		},
 		Details: &pb.Transport_Flight{
 			Flight: &pb.Flight{
-				DepartureTime: timestamppb.New(time.Date(2025, 10, 10, 0, 0, 0, 0, time.UTC)),
+				// Use a future date
+				DepartureTime: timestamppb.New(time.Now().AddDate(0, 1, 0)), // 1 month from now
 			},
 		},
 	})
@@ -136,7 +137,7 @@ func TestBookFlight(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil)
+	client, err := NewClient("id", "secret", false, nil, nil, 10, 10)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
@@ -165,7 +166,7 @@ func TestSearchHotelOffers(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil)
+	client, err := NewClient("id", "secret", false, nil, nil, 10, 10)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
@@ -180,7 +181,7 @@ func TestSearchLocations(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil)
+	client, err := NewClient("id", "secret", false, nil, nil, 10, 10)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}

@@ -89,27 +89,36 @@ func Setup(ctx context.Context, cfg *config.Config) (*App, error) {
 	// 2. Init Tools Registry
 	registry := tools.NewRegistry()
 
-	// Amadeus
-	if cfg.Amadeus.ClientID == "" || cfg.Amadeus.ClientSecret == "" {
-		return nil, fmt.Errorf("AMADEUS_CLIENT_ID and AMADEUS_CLIENT_SECRET must be set")
-	}
-
-	// Initializing Amadeus client registers its tools automatically
-	amadeusClient, err := amadeus.NewClient(cfg.Amadeus.ClientID, cfg.Amadeus.ClientSecret, false, gk, registry)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize Amadeus client: %w", err)
-	}
-
 	// Core Tools
 	core.NewClient(gk, registry)
 
 	// Nager Holiday API
 	nager.NewClient(gk, registry)
 
+	// Amadeus
+	if cfg.Amadeus.ClientID == "" || cfg.Amadeus.ClientSecret == "" {
+		return nil, fmt.Errorf("AMADEUS_CLIENT_ID and AMADEUS_CLIENT_SECRET must be set")
+	}
+
+	// Initializing Amadeus client registers its tools automatically
+	amadeusClient, err := amadeus.NewClient(
+		cfg.Amadeus.ClientID,
+		cfg.Amadeus.ClientSecret,
+		false,
+		gk,
+		registry,
+		cfg.Amadeus.Limit.Flight,
+		cfg.Amadeus.Limit.Hotel,
+		cfg.Amadeus.Timeout,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize Amadeus client: %w", err)
+	}
+
 	// Tavily Search API (optional - if API key is provided)
 	if cfg.Tavily.APIKey != "" {
 		log.Info(context.Background(), "Initializing Tavily client...")
-		tavily.NewClient(cfg.Tavily.APIKey, gk, registry)
+		tavily.NewClient(cfg.Tavily.APIKey, gk, registry, cfg.Tavily.Timeout)
 	} else {
 		log.Info(ctx, "Tavily API key not provided, Tavily tools will not be available")
 	}

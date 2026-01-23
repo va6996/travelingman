@@ -19,6 +19,12 @@ export interface User {
   createdAt: Date | undefined;
   passports: Passport[];
   driversLicenses: DriversLicense[];
+  dateOfBirth:
+    | Date
+    | undefined;
+  /** MALE, FEMALE */
+  gender: string;
+  phone: string;
 }
 
 export interface Passport {
@@ -27,6 +33,10 @@ export interface Passport {
   number: string;
   issuingCountry: string;
   expiryDate: Date | undefined;
+  issuanceDate: Date | undefined;
+  nationality: string;
+  birthPlace: string;
+  issuanceLocation: string;
 }
 
 export interface DriversLicense {
@@ -48,7 +58,18 @@ export interface TravelGroup {
 }
 
 function createBaseUser(): User {
-  return { id: 0, email: "", passwordHash: "", fullName: "", createdAt: undefined, passports: [], driversLicenses: [] };
+  return {
+    id: 0,
+    email: "",
+    passwordHash: "",
+    fullName: "",
+    createdAt: undefined,
+    passports: [],
+    driversLicenses: [],
+    dateOfBirth: undefined,
+    gender: "",
+    phone: "",
+  };
 }
 
 export const User: MessageFns<User> = {
@@ -73,6 +94,15 @@ export const User: MessageFns<User> = {
     }
     for (const v of message.driversLicenses) {
       DriversLicense.encode(v!, writer.uint32(58).fork()).join();
+    }
+    if (message.dateOfBirth !== undefined) {
+      Timestamp.encode(toTimestamp(message.dateOfBirth), writer.uint32(66).fork()).join();
+    }
+    if (message.gender !== "") {
+      writer.uint32(74).string(message.gender);
+    }
+    if (message.phone !== "") {
+      writer.uint32(82).string(message.phone);
     }
     return writer;
   },
@@ -140,6 +170,30 @@ export const User: MessageFns<User> = {
           message.driversLicenses.push(DriversLicense.decode(reader, reader.uint32()));
           continue;
         }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.dateOfBirth = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.gender = reader.string();
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.phone = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -162,6 +216,9 @@ export const User: MessageFns<User> = {
       driversLicenses: globalThis.Array.isArray(object?.driversLicenses)
         ? object.driversLicenses.map((e: any) => DriversLicense.fromJSON(e))
         : [],
+      dateOfBirth: isSet(object.dateOfBirth) ? fromJsonTimestamp(object.dateOfBirth) : undefined,
+      gender: isSet(object.gender) ? globalThis.String(object.gender) : "",
+      phone: isSet(object.phone) ? globalThis.String(object.phone) : "",
     };
   },
 
@@ -188,6 +245,15 @@ export const User: MessageFns<User> = {
     if (message.driversLicenses?.length) {
       obj.driversLicenses = message.driversLicenses.map((e) => DriversLicense.toJSON(e));
     }
+    if (message.dateOfBirth !== undefined) {
+      obj.dateOfBirth = message.dateOfBirth.toISOString();
+    }
+    if (message.gender !== "") {
+      obj.gender = message.gender;
+    }
+    if (message.phone !== "") {
+      obj.phone = message.phone;
+    }
     return obj;
   },
 
@@ -203,12 +269,25 @@ export const User: MessageFns<User> = {
     message.createdAt = object.createdAt ?? undefined;
     message.passports = object.passports?.map((e) => Passport.fromPartial(e)) || [];
     message.driversLicenses = object.driversLicenses?.map((e) => DriversLicense.fromPartial(e)) || [];
+    message.dateOfBirth = object.dateOfBirth ?? undefined;
+    message.gender = object.gender ?? "";
+    message.phone = object.phone ?? "";
     return message;
   },
 };
 
 function createBasePassport(): Passport {
-  return { id: 0, userId: 0, number: "", issuingCountry: "", expiryDate: undefined };
+  return {
+    id: 0,
+    userId: 0,
+    number: "",
+    issuingCountry: "",
+    expiryDate: undefined,
+    issuanceDate: undefined,
+    nationality: "",
+    birthPlace: "",
+    issuanceLocation: "",
+  };
 }
 
 export const Passport: MessageFns<Passport> = {
@@ -227,6 +306,18 @@ export const Passport: MessageFns<Passport> = {
     }
     if (message.expiryDate !== undefined) {
       Timestamp.encode(toTimestamp(message.expiryDate), writer.uint32(42).fork()).join();
+    }
+    if (message.issuanceDate !== undefined) {
+      Timestamp.encode(toTimestamp(message.issuanceDate), writer.uint32(50).fork()).join();
+    }
+    if (message.nationality !== "") {
+      writer.uint32(58).string(message.nationality);
+    }
+    if (message.birthPlace !== "") {
+      writer.uint32(66).string(message.birthPlace);
+    }
+    if (message.issuanceLocation !== "") {
+      writer.uint32(74).string(message.issuanceLocation);
     }
     return writer;
   },
@@ -278,6 +369,38 @@ export const Passport: MessageFns<Passport> = {
           message.expiryDate = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
           continue;
         }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.issuanceDate = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.nationality = reader.string();
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.birthPlace = reader.string();
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.issuanceLocation = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -294,6 +417,10 @@ export const Passport: MessageFns<Passport> = {
       number: isSet(object.number) ? globalThis.String(object.number) : "",
       issuingCountry: isSet(object.issuingCountry) ? globalThis.String(object.issuingCountry) : "",
       expiryDate: isSet(object.expiryDate) ? fromJsonTimestamp(object.expiryDate) : undefined,
+      issuanceDate: isSet(object.issuanceDate) ? fromJsonTimestamp(object.issuanceDate) : undefined,
+      nationality: isSet(object.nationality) ? globalThis.String(object.nationality) : "",
+      birthPlace: isSet(object.birthPlace) ? globalThis.String(object.birthPlace) : "",
+      issuanceLocation: isSet(object.issuanceLocation) ? globalThis.String(object.issuanceLocation) : "",
     };
   },
 
@@ -314,6 +441,18 @@ export const Passport: MessageFns<Passport> = {
     if (message.expiryDate !== undefined) {
       obj.expiryDate = message.expiryDate.toISOString();
     }
+    if (message.issuanceDate !== undefined) {
+      obj.issuanceDate = message.issuanceDate.toISOString();
+    }
+    if (message.nationality !== "") {
+      obj.nationality = message.nationality;
+    }
+    if (message.birthPlace !== "") {
+      obj.birthPlace = message.birthPlace;
+    }
+    if (message.issuanceLocation !== "") {
+      obj.issuanceLocation = message.issuanceLocation;
+    }
     return obj;
   },
 
@@ -327,6 +466,10 @@ export const Passport: MessageFns<Passport> = {
     message.number = object.number ?? "";
     message.issuingCountry = object.issuingCountry ?? "";
     message.expiryDate = object.expiryDate ?? undefined;
+    message.issuanceDate = object.issuanceDate ?? undefined;
+    message.nationality = object.nationality ?? "";
+    message.birthPlace = object.birthPlace ?? "";
+    message.issuanceLocation = object.issuanceLocation ?? "";
     return message;
   },
 };
