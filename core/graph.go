@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/va6996/travelingman/pb"
 )
@@ -71,6 +72,50 @@ func ValidateNodes(g *pb.Graph) error {
 		}
 		nodeIDs[n.Id] = true
 	}
+	return nil
+}
+
+// ValidateGraph performs comprehensive validation of the graph structure.
+func ValidateGraph(g *pb.Graph) error {
+	if g == nil {
+		return fmt.Errorf("graph is nil")
+	}
+
+	// Validate nodes first
+	if err := ValidateNodes(g); err != nil {
+		return fmt.Errorf("node validation failed: %w", err)
+	}
+
+	// Create node ID map for edge validation
+	nodeIDs := make(map[string]bool)
+	for _, n := range g.Nodes {
+		nodeIDs[n.Id] = true
+	}
+
+	// Validate edges and collect all errors
+	var errors []string
+	for i, edge := range g.Edges {
+		if edge.FromId == "" {
+			errors = append(errors, fmt.Sprintf("edge %d: FromId is empty", i))
+		}
+		if edge.ToId == "" {
+			errors = append(errors, fmt.Sprintf("edge %d: ToId is empty", i))
+		}
+		if !nodeIDs[edge.FromId] {
+			errors = append(errors, fmt.Sprintf("edge %d: FromId '%s' not found in nodes", i, edge.FromId))
+		}
+		if !nodeIDs[edge.ToId] {
+			errors = append(errors, fmt.Sprintf("edge %d: ToId '%s' not found in nodes", i, edge.ToId))
+		}
+		if edge.DurationSeconds < 0 {
+			errors = append(errors, fmt.Sprintf("edge %d: negative duration %d", i, edge.DurationSeconds))
+		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("graph validation failed with %d errors:\n- %s", len(errors), strings.Join(errors, "\n- "))
+	}
+
 	return nil
 }
 

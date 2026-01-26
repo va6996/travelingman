@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/va6996/travelingman/log"
+	"github.com/va6996/travelingman/orm"
 	"github.com/va6996/travelingman/pb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -234,7 +236,7 @@ func (c *Client) SearchHotelsByCity(ctx context.Context, acc *pb.Accommodation) 
 }
 
 // SearchHotelOffers searches for hotel offers and returns them as pb.Accommodation structs
-func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adults int, checkIn, checkOut string) ([]*pb.Accommodation, error) {
+func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adults int, checkIn, checkOut, currency string) ([]*pb.Accommodation, error) {
 	// Amadeus API often has limits on the number of IDs (e.g. 50-100).
 	// We chunk them to be safe (e.g., 20).
 	const chunkSize = 20
@@ -261,8 +263,26 @@ func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adult
 		endpoint := fmt.Sprintf("/v3/shopping/hotel-offers?hotelIds=%s&adults=%d&checkInDate=%s&checkOutDate=%s",
 			ids, adults, checkIn, checkOut)
 
+		if currency != "" {
+			endpoint += fmt.Sprintf("&currency=%s", currency)
+		}
+
 		// Check cache
 		cacheKey := GenerateCacheKey("hotel_offers", endpoint)
+
+		// Try DB Cache first
+		if c.DB != nil {
+			if entry, err := orm.GetCacheEntry(c.DB, cacheKey); err == nil {
+				log.Debugf(ctx, "SearchHotelOffers: DB Cache hit for batch %d", (i/chunkSize)+1)
+				// Unmarshal
+				var cachedBatch []*pb.Accommodation
+				if err := json.Unmarshal(entry.Value, &cachedBatch); err == nil {
+					accommodations = append(accommodations, cachedBatch...)
+					continue
+				}
+			}
+		}
+
 		if val, ok := c.Cache.Get(cacheKey); ok {
 			log.Debugf(ctx, "SearchHotelOffers: Cache hit for batch %d", (i/chunkSize)+1)
 			accommodations = append(accommodations, val.([]*pb.Accommodation)...)
@@ -313,6 +333,14 @@ func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adult
 
 		// Set cache for this batch (30 minutes TTL)
 		c.Cache.Set(cacheKey, batchAccommodations, 30*time.Minute)
+
+		// Persist to DB if available
+		if c.DB != nil {
+			if b, err := json.Marshal(batchAccommodations); err == nil {
+				orm.SetCacheEntry(c.DB, cacheKey, b, 60*time.Minute)
+			}
+		}
+
 		accommodations = append(accommodations, batchAccommodations...)
 	}
 
@@ -389,8 +417,14 @@ func (d HotelOfferData) ToAccommodations() []*pb.Accommodation {
 				},
 				// Rating not directly in offer, maybe in HotelInfo but struct definition doesn't show it (it was in request params)
 			},
-			PriceTotal: offer.Price.Total,
-			Status:     "AVAILABLE",
+			Status: "AVAILABLE",
+		}
+
+		if price, err := strconv.ParseFloat(offer.Price.Total, 64); err == nil {
+			acc.Cost = &pb.Cost{
+				Value:    price,
+				Currency: offer.Price.Currency,
+			}
 		}
 
 		if t, err := time.Parse("2006-01-02", offer.CheckInDate); err == nil {

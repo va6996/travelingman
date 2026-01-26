@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/firebase/genkit/go/ai"
@@ -48,17 +47,27 @@ const SYSTEM_PROMPT = `You are an expert Trip Planner. Your goal is to create a 
 
 IMPORTANT WORKFLOW:
 1. First, gather information using tools ONLY if needed:
-   - ALWAYS use dateTool to calculate dates (e.g., "next weekend" → actual dates like "2026-01-25") in RFC3339 format (YYYY-MM-DDTHH:mm:ssZ)
+   - ALWAYS use dateTool to calculate dates. usage:
+     - The tool returns a JSON list of ISO strings: ["2026-01-25", "2026-01-28"]
+     - For ONE-WAY trips, use the first date.
+     - For RETURN/ROUND trips, use the first date as start and second as end.
+     - For EXTENDED/MULTI-CITY trips, request multiple dates.
 
 2. Then, create the itinerary JSON with the gathered information:
    - DO NOT call hotelTool or flightTool - these are for the TravelDesk, not for planning
    - Return the itinerary json with destination, dates, and activities
+
+CURRENCY HANDLING:
+- The system will automatically infer the currency based on the origin country (e.g. US -> USD, UK -> GBP).
+- YOU MUST use this inferred currency for ALL cost calculations and bookings (including hotels in other countries). Do not switch currencies.
+- Ensure all prices are in the same currency (e.g. if flying from US, hotel price must be in USD).
 
 CRITICAL RULES:
 - If the user specifies a timeframe (like "next weekend"), use dateTool to calculate it, then create the itinerary
 - Structure your response exactly as the JSON schema below. Use camelCase for keys
 - If the user requests a round/circle trip, the final edge must return to the ID of the starting Node. Do NOT create a duplicate 'Home' node.
 - Do not ask for clarifications. Infer everything you need from the user's query from the perspective of source location
+- Source Location Node: You MUST include the starting node (e.g., 'start_loc') in the 'nodes' array.
 
 BROAD SEARCH:
 - If the user request is broad (e.g., "any weekend in April"), you MUST generate multiple distinct itineraries (e.g., 3-4 options for different weekends) in the "itineraries" JSON array.
@@ -79,6 +88,11 @@ Final Answer Schema:
       "journeyType": "JOURNEY_TYPE_RETURN",
       "graph": {
         "nodes": [
+          {
+            "id": "start_loc",
+            "location": "JFK",
+            "isInterCity": true
+          },
           {
             "id": "node_1",
             "location": "PAR",
@@ -123,6 +137,23 @@ Final Answer Schema:
               },
               "originLocation": { "iataCodes": ["JFK"] },
               "destinationLocation": { "iataCodes": ["CDG"] }
+            }
+            }
+          },
+          {
+            "fromId": "node_1",
+            "toId": "start_loc",
+            "durationSeconds": 28800,
+            "transport": {
+              "type": "TRANSPORT_TYPE_FLIGHT",
+              "travelerCount": 2,
+              "flightPreferences": { "travelClass": "CLASS_ECONOMY" },
+              "flight": {
+                "departureTime": "2026-01-27T11:00:00Z",
+                "arrivalTime": "2026-01-27T19:00:00Z"
+              },
+              "originLocation": { "iataCodes": ["CDG"] },
+              "destinationLocation": { "iataCodes": ["JFK"] }
             }
           }
         ]
@@ -294,85 +325,95 @@ func (p *TripPlanner) Plan(ctx context.Context, req PlanRequest) (*PlanResult, e
 	}, nil
 }
 
-// resolveCityCodes updates the itinerary with correct IATA codes
+// resolveCityCodes updates the itinerary with correct IATA codes and City names
 func (p *TripPlanner) resolveCityCodes(ctx context.Context, itin *pb.Itinerary) {
 	if p.registry == nil {
 		return
 	}
 
-	type resolutionResult struct {
-		index int
-		code  string
-	}
-
-	// Use a channel to collect results from goroutines
-	results := make(chan resolutionResult, len(itin.Graph.Nodes))
-	var wg sync.WaitGroup
-
-	// Heuristic: if CityCode looks like a name (> 3 chars or lowercase), try to resolve it
 	for i := range itin.Graph.Nodes {
 		node := itin.Graph.Nodes[i]
 		if node.Stay == nil || node.Stay.Location == nil {
 			continue
 		}
 
-		cityCode := node.Stay.Location.CityCode
-		// Basic check: if it looks like a city name rather than a code
-		if len(cityCode) > 3 || (len(cityCode) == 3 && cityCode != strings.ToUpper(cityCode)) {
-			wg.Add(1)
-			go func(idx int, kw string) {
-				defer wg.Done()
-				log.Debugf(ctx, "TripPlanner: Resolving city code for '%s'", kw)
+		loc := node.Stay.Location
+		needsResolution := false
+		keyword := ""
 
-				// Create a derived context with timeout for individual lookups to avoid hanging
-				tCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-				defer cancel()
-
-				res, err := p.registry.ExecuteTool(tCtx, "amadeus_location_tool", map[string]interface{}{
-					"keyword": kw,
-				})
-				if err != nil {
-					log.Errorf(ctx, "TripPlanner: Location search failed for %s: %v", kw, err)
-					return
-				}
-
-				// Map result - tool returns []*pb.Location directly now?
-				// Let's check tool definition. Yes, returns []*pb.Location.
-				// But ExecuteTool returns interface{}, so we need to cast or marshal/unmarshal.
-				// Since we are inside the same process using Genkit local runner, it might return the struct.
-				// However, to be safe and consistent with previous patterns:
-
-				if locations, ok := res.([]*pb.Location); ok && len(locations) > 0 {
-					if len(locations[0].IataCodes) > 0 {
-						log.Debugf(ctx, "TripPlanner: Resolved '%s' to '%s'", kw, locations[0].IataCodes[0])
-						results <- resolutionResult{index: idx, code: locations[0].IataCodes[0]}
-					}
-				} else {
-					// Fallback using JSON roundtrip if it's map[string]interface{}
-					b, _ := json.Marshal(res)
-					var locs []*pb.Location
-					if err := json.Unmarshal(b, &locs); err == nil && len(locs) > 0 && len(locs[0].IataCodes) > 0 {
-						log.Debugf(ctx, "TripPlanner: Resolved '%s' to '%s'", kw, locs[0].IataCodes[0])
-						results <- resolutionResult{index: idx, code: locs[0].IataCodes[0]}
-					}
-				}
-			}(i, cityCode)
+		// If we have a code but no city name, resolve it
+		if loc.City == "" && loc.CityCode != "" {
+			needsResolution = true
+			keyword = loc.CityCode
+		} else if loc.City == "" && len(loc.IataCodes) > 0 {
+			needsResolution = true
+			keyword = loc.IataCodes[0]
+		} else if len(loc.CityCode) > 3 || (len(loc.CityCode) == 3 && loc.CityCode != strings.ToUpper(loc.CityCode)) {
+			// Suspicious code (looks like a name), resolve it
+			needsResolution = true
+			keyword = loc.CityCode
 		}
-	}
 
-	// Closer goroutine
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
+		if needsResolution && keyword != "" {
+			log.Debugf(ctx, "TripPlanner: Resolving location details for '%s'", keyword)
 
-	// Apply results
-	for res := range results {
-		if itin.Graph.Nodes[res.index].Stay != nil && itin.Graph.Nodes[res.index].Stay.Location != nil {
-			itin.Graph.Nodes[res.index].Stay.Location.CityCode = res.code
-			// Also update the IataCodes list if empty
-			if len(itin.Graph.Nodes[res.index].Stay.Location.IataCodes) == 0 {
-				itin.Graph.Nodes[res.index].Stay.Location.IataCodes = []string{res.code}
+			// Simple synchronous call
+			tCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			res, err := p.registry.ExecuteTool(tCtx, "amadeus_location_tool", map[string]interface{}{
+				"keyword": keyword,
+			})
+			cancel() // cancel immediately after done
+
+			if err != nil {
+				log.Errorf(ctx, "TripPlanner: Location search failed for %s: %v", keyword, err)
+				continue
+			}
+
+			// Parse result
+			var bestMatch *pb.Location
+			if locations, ok := res.([]*pb.Location); ok && len(locations) > 0 {
+				for _, l := range locations {
+					if l.City != "" {
+						bestMatch = l
+						break
+					}
+				}
+				if bestMatch == nil && len(locations) > 0 {
+					bestMatch = locations[0]
+				}
+			} else {
+				// Fallback JSON roundtrip
+				b, _ := json.Marshal(res)
+				var locs []*pb.Location
+				if err := json.Unmarshal(b, &locs); err == nil && len(locs) > 0 {
+					for _, l := range locs {
+						if l.City != "" {
+							bestMatch = l
+							break
+						}
+					}
+					if bestMatch == nil && len(locs) > 0 {
+						bestMatch = locs[0]
+					}
+				}
+			}
+
+			// Apply result directly
+			if bestMatch != nil {
+				log.Debugf(ctx, "TripPlanner: Resolved '%s' to City: '%s', Code: '%s'", keyword, bestMatch.City, bestMatch.CityCode)
+
+				if node.Stay.Location.City == "" {
+					node.Stay.Location.City = bestMatch.City
+				}
+				if node.Stay.Location.Country == "" {
+					node.Stay.Location.Country = bestMatch.Country
+				}
+				if node.Stay.Location.CityCode == "" || len(node.Stay.Location.CityCode) > 3 {
+					node.Stay.Location.CityCode = bestMatch.CityCode
+				}
+				if len(node.Stay.Location.IataCodes) == 0 {
+					node.Stay.Location.IataCodes = bestMatch.IataCodes
+				}
 			}
 		}
 	}

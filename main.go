@@ -2,17 +2,64 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"connectrpc.com/connect"
 	"github.com/va6996/travelingman/bootstrap"
 	"github.com/va6996/travelingman/config"
 	logcontext "github.com/va6996/travelingman/context"
 	"github.com/va6996/travelingman/log"
+	pb "github.com/va6996/travelingman/pb"
+	"github.com/va6996/travelingman/pb/pbconnect"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
+
+type TravelServer struct {
+	app *bootstrap.App
+}
+
+func (s *TravelServer) PlanTrip(ctx context.Context, req *connect.Request[pb.PlanTripRequest]) (*connect.Response[pb.PlanTripResponse], error) {
+	query := req.Msg.Query
+	if query == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("query is required"))
+	}
+
+	// Generate request ID for tracking
+	// Connect might already have one, but let's keep our context logic
+	requestID := logcontext.NewRequestID()
+	ctx = logcontext.WithRequestID(ctx, requestID)
+
+	log.Infof(ctx, "Received planning request: %s", query)
+
+	res, itineraries, err := s.app.TravelAgent.OrchestrateRequest(ctx, query, "")
+	if err != nil {
+		log.Errorf(ctx, "Error processing request: %v", err)
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	response := &pb.PlanTripResponse{}
+
+	if len(itineraries) > 0 {
+		response.Itineraries = itineraries
+	} else if res != "" {
+		// Wrap text result (likely error or explanation) in an Itinerary with Error
+		response.Itineraries = []*pb.Itinerary{
+			{
+				Error: &pb.Error{
+					Message:  res,
+					Severity: pb.ErrorSeverity_ERROR_SEVERITY_ERROR,
+				},
+			},
+		}
+	}
+
+	return connect.NewResponse(response), nil
+}
 
 func main() {
 	// Initialize logging
@@ -50,13 +97,31 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/plan", func(w http.ResponseWriter, r *http.Request) {
-		handlePlanTrip(w, r, app)
-	})
 
+	// Create Connect handler
+	traveler := &TravelServer{app: app}
+	path, handler := pbconnect.NewTravelServiceHandler(traveler)
+	mux.Handle(path, handler)
+
+	// Simple CORS middleware
+	corsHandler := func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Allow all origins for now (dev mode)
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Connect-Protocol-Version")
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			h.ServeHTTP(w, r)
+		})
+	}
+
+	// Use h2c for HTTP/2 without TLS (common for dev and internal services)
 	srv := &http.Server{
 		Addr:    ":" + port,
-		Handler: mux,
+		Handler: h2c.NewHandler(corsHandler(mux), &http2.Server{}),
 	}
 
 	go func() {
@@ -73,54 +138,4 @@ func main() {
 
 func envPort() string {
 	return os.Getenv("PORT")
-}
-
-type PlanTripRequest struct {
-	Query string `json:"query"`
-}
-
-type PlanTripResponse struct {
-	Result string `json:"result,omitempty"`
-	Error  string `json:"error,omitempty"`
-}
-
-func handlePlanTrip(w http.ResponseWriter, r *http.Request, app *bootstrap.App) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Generate request ID for tracking
-	requestID := logcontext.NewRequestID()
-
-	// Add request ID to context
-	ctx := logcontext.WithRequestID(r.Context(), requestID)
-
-	var req PlanTripRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	if req.Query == "" {
-		http.Error(w, "Query is required", http.StatusBadRequest)
-		return
-	}
-
-	log.Infof(ctx, "Received planning request: %s", req.Query)
-
-	res, err := app.TravelAgent.OrchestrateRequest(ctx, req.Query, "")
-
-	resp := PlanTripResponse{}
-	if err != nil {
-		log.Errorf(ctx, "Error processing request: %v", err)
-		resp.Error = err.Error()
-		w.WriteHeader(http.StatusInternalServerError)
-	} else {
-		resp.Result = res
-		w.WriteHeader(http.StatusOK)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
 }

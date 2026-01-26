@@ -705,7 +705,7 @@ type Accommodation struct {
 	Address          string                    `protobuf:"bytes,4,opt,name=address,proto3" json:"address,omitempty"`
 	CheckIn          *timestamppb.Timestamp    `protobuf:"bytes,5,opt,name=check_in,json=checkIn,proto3" json:"check_in,omitempty"`
 	CheckOut         *timestamppb.Timestamp    `protobuf:"bytes,6,opt,name=check_out,json=checkOut,proto3" json:"check_out,omitempty"`
-	PriceTotal       string                    `protobuf:"bytes,7,opt,name=price_total,json=priceTotal,proto3" json:"price_total,omitempty"`
+	Cost             *Cost                     `protobuf:"bytes,7,opt,name=cost,proto3" json:"cost,omitempty"`
 	BookingReference string                    `protobuf:"bytes,8,opt,name=booking_reference,json=bookingReference,proto3" json:"booking_reference,omitempty"`
 	Status           string                    `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"`
 	UserIds          []int64                   `protobuf:"varint,10,rep,packed,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
@@ -790,11 +790,11 @@ func (x *Accommodation) GetCheckOut() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *Accommodation) GetPriceTotal() string {
+func (x *Accommodation) GetCost() *Cost {
 	if x != nil {
-		return x.PriceTotal
+		return x.Cost
 	}
-	return ""
+	return nil
 }
 
 func (x *Accommodation) GetBookingReference() string {
@@ -865,7 +865,7 @@ type Transport struct {
 	OriginLocation       *Location              `protobuf:"bytes,8,opt,name=origin_location,json=originLocation,proto3" json:"origin_location,omitempty"`
 	DestinationLocation  *Location              `protobuf:"bytes,9,opt,name=destination_location,json=destinationLocation,proto3" json:"destination_location,omitempty"`
 	UserIds              []int64                `protobuf:"varint,10,rep,packed,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
-	PriceTotal           float32                `protobuf:"fixed32,11,opt,name=price_total,json=priceTotal,proto3" json:"price_total,omitempty"`
+	Cost                 *Cost                  `protobuf:"bytes,11,opt,name=cost,proto3" json:"cost,omitempty"`
 	FlightPreferences    *FlightPreferences     `protobuf:"bytes,15,opt,name=flight_preferences,json=flightPreferences,proto3" json:"flight_preferences,omitempty"`
 	TrainPreferences     *TrainPreferences      `protobuf:"bytes,16,opt,name=train_preferences,json=trainPreferences,proto3" json:"train_preferences,omitempty"`
 	CarRentalPreferences *CarRentalPreferences  `protobuf:"bytes,17,opt,name=car_rental_preferences,json=carRentalPreferences,proto3" json:"car_rental_preferences,omitempty"`
@@ -981,11 +981,11 @@ func (x *Transport) GetUserIds() []int64 {
 	return nil
 }
 
-func (x *Transport) GetPriceTotal() float32 {
+func (x *Transport) GetCost() *Cost {
 	if x != nil {
-		return x.PriceTotal
+		return x.Cost
 	}
-	return 0
+	return nil
 }
 
 func (x *Transport) GetFlightPreferences() *FlightPreferences {
@@ -1279,7 +1279,7 @@ var File_protos_itinerary_proto protoreflect.FileDescriptor
 
 const file_protos_itinerary_proto_rawDesc = "" +
 	"\n" +
-	"\x16protos/itinerary.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\"\x81\x01\n" +
+	"\x16protos/itinerary.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x13protos/common.proto\"\x81\x01\n" +
 	"\x18AccommodationPreferences\x12\x1b\n" +
 	"\troom_type\x18\x01 \x01(\tR\broomType\x12\x12\n" +
 	"\x04area\x18\x02 \x01(\tR\x04area\x12\x16\n" +
@@ -1309,16 +1309,15 @@ const file_protos_itinerary_proto_rawDesc = "" +
 	"\x05Error\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12+\n" +
 	"\x04code\x18\x02 \x01(\x0e2\x17.travelingman.ErrorCodeR\x04code\x127\n" +
-	"\bseverity\x18\x03 \x01(\x0e2\x1b.travelingman.ErrorSeverityR\bseverity\"\xbd\x04\n" +
+	"\bseverity\x18\x03 \x01(\x0e2\x1b.travelingman.ErrorSeverityR\bseverity\"\xc4\x04\n" +
 	"\rAccommodation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\x03R\agroupId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x18\n" +
 	"\aaddress\x18\x04 \x01(\tR\aaddress\x125\n" +
 	"\bcheck_in\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\acheckIn\x127\n" +
-	"\tcheck_out\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\bcheckOut\x12\x1f\n" +
-	"\vprice_total\x18\a \x01(\tR\n" +
-	"priceTotal\x12+\n" +
+	"\tcheck_out\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\bcheckOut\x12&\n" +
+	"\x04cost\x18\a \x01(\v2\x12.travelingman.CostR\x04cost\x12+\n" +
 	"\x11booking_reference\x18\b \x01(\tR\x10bookingReference\x12\x16\n" +
 	"\x06status\x18\t \x01(\tR\x06status\x12\x19\n" +
 	"\buser_ids\x18\n" +
@@ -1327,7 +1326,7 @@ const file_protos_itinerary_proto_rawDesc = "" +
 	"\x0etraveler_count\x18\f \x01(\x05R\rtravelerCount\x122\n" +
 	"\blocation\x18\r \x01(\v2\x16.travelingman.LocationR\blocation\x12)\n" +
 	"\x05error\x18\x0e \x01(\v2\x13.travelingman.ErrorR\x05error\x12\x12\n" +
-	"\x04tags\x18\x0f \x03(\tR\x04tags\"\x8d\a\n" +
+	"\x04tags\x18\x0f \x03(\tR\x04tags\"\x94\a\n" +
 	"\tTransport\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1d\n" +
 	"\n" +
@@ -1340,9 +1339,8 @@ const file_protos_itinerary_proto_rawDesc = "" +
 	"\x0forigin_location\x18\b \x01(\v2\x16.travelingman.LocationR\x0eoriginLocation\x12I\n" +
 	"\x14destination_location\x18\t \x01(\v2\x16.travelingman.LocationR\x13destinationLocation\x12\x19\n" +
 	"\buser_ids\x18\n" +
-	" \x03(\x03R\auserIds\x12\x1f\n" +
-	"\vprice_total\x18\v \x01(\x02R\n" +
-	"priceTotal\x12N\n" +
+	" \x03(\x03R\auserIds\x12&\n" +
+	"\x04cost\x18\v \x01(\v2\x12.travelingman.CostR\x04cost\x12N\n" +
 	"\x12flight_preferences\x18\x0f \x01(\v2\x1f.travelingman.FlightPreferencesR\x11flightPreferences\x12K\n" +
 	"\x11train_preferences\x18\x10 \x01(\v2\x1e.travelingman.TrainPreferencesR\x10trainPreferences\x12X\n" +
 	"\x16car_rental_preferences\x18\x11 \x01(\v2\".travelingman.CarRentalPreferencesR\x14carRentalPreferences\x12)\n" +
@@ -1431,6 +1429,7 @@ var file_protos_itinerary_proto_goTypes = []any{
 	(*Train)(nil),                    // 14: travelingman.Train
 	(*CarRental)(nil),                // 15: travelingman.CarRental
 	(*timestamppb.Timestamp)(nil),    // 16: google.protobuf.Timestamp
+	(*Cost)(nil),                     // 17: travelingman.Cost
 }
 var file_protos_itinerary_proto_depIdxs = []int32{
 	1,  // 0: travelingman.FlightPreferences.travel_class:type_name -> travelingman.Class
@@ -1440,30 +1439,32 @@ var file_protos_itinerary_proto_depIdxs = []int32{
 	4,  // 4: travelingman.Error.severity:type_name -> travelingman.ErrorSeverity
 	16, // 5: travelingman.Accommodation.check_in:type_name -> google.protobuf.Timestamp
 	16, // 6: travelingman.Accommodation.check_out:type_name -> google.protobuf.Timestamp
-	5,  // 7: travelingman.Accommodation.preferences:type_name -> travelingman.AccommodationPreferences
-	9,  // 8: travelingman.Accommodation.location:type_name -> travelingman.Location
-	10, // 9: travelingman.Accommodation.error:type_name -> travelingman.Error
-	0,  // 10: travelingman.Transport.type:type_name -> travelingman.TransportType
-	9,  // 11: travelingman.Transport.origin_location:type_name -> travelingman.Location
-	9,  // 12: travelingman.Transport.destination_location:type_name -> travelingman.Location
-	6,  // 13: travelingman.Transport.flight_preferences:type_name -> travelingman.FlightPreferences
-	7,  // 14: travelingman.Transport.train_preferences:type_name -> travelingman.TrainPreferences
-	8,  // 15: travelingman.Transport.car_rental_preferences:type_name -> travelingman.CarRentalPreferences
-	10, // 16: travelingman.Transport.error:type_name -> travelingman.Error
-	13, // 17: travelingman.Transport.flight:type_name -> travelingman.Flight
-	14, // 18: travelingman.Transport.train:type_name -> travelingman.Train
-	15, // 19: travelingman.Transport.car_rental:type_name -> travelingman.CarRental
-	16, // 20: travelingman.Flight.departure_time:type_name -> google.protobuf.Timestamp
-	16, // 21: travelingman.Flight.arrival_time:type_name -> google.protobuf.Timestamp
-	16, // 22: travelingman.Train.departure_time:type_name -> google.protobuf.Timestamp
-	16, // 23: travelingman.Train.arrival_time:type_name -> google.protobuf.Timestamp
-	16, // 24: travelingman.CarRental.pickup_time:type_name -> google.protobuf.Timestamp
-	16, // 25: travelingman.CarRental.dropoff_time:type_name -> google.protobuf.Timestamp
-	26, // [26:26] is the sub-list for method output_type
-	26, // [26:26] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	17, // 7: travelingman.Accommodation.cost:type_name -> travelingman.Cost
+	5,  // 8: travelingman.Accommodation.preferences:type_name -> travelingman.AccommodationPreferences
+	9,  // 9: travelingman.Accommodation.location:type_name -> travelingman.Location
+	10, // 10: travelingman.Accommodation.error:type_name -> travelingman.Error
+	0,  // 11: travelingman.Transport.type:type_name -> travelingman.TransportType
+	9,  // 12: travelingman.Transport.origin_location:type_name -> travelingman.Location
+	9,  // 13: travelingman.Transport.destination_location:type_name -> travelingman.Location
+	17, // 14: travelingman.Transport.cost:type_name -> travelingman.Cost
+	6,  // 15: travelingman.Transport.flight_preferences:type_name -> travelingman.FlightPreferences
+	7,  // 16: travelingman.Transport.train_preferences:type_name -> travelingman.TrainPreferences
+	8,  // 17: travelingman.Transport.car_rental_preferences:type_name -> travelingman.CarRentalPreferences
+	10, // 18: travelingman.Transport.error:type_name -> travelingman.Error
+	13, // 19: travelingman.Transport.flight:type_name -> travelingman.Flight
+	14, // 20: travelingman.Transport.train:type_name -> travelingman.Train
+	15, // 21: travelingman.Transport.car_rental:type_name -> travelingman.CarRental
+	16, // 22: travelingman.Flight.departure_time:type_name -> google.protobuf.Timestamp
+	16, // 23: travelingman.Flight.arrival_time:type_name -> google.protobuf.Timestamp
+	16, // 24: travelingman.Train.departure_time:type_name -> google.protobuf.Timestamp
+	16, // 25: travelingman.Train.arrival_time:type_name -> google.protobuf.Timestamp
+	16, // 26: travelingman.CarRental.pickup_time:type_name -> google.protobuf.Timestamp
+	16, // 27: travelingman.CarRental.dropoff_time:type_name -> google.protobuf.Timestamp
+	28, // [28:28] is the sub-list for method output_type
+	28, // [28:28] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_protos_itinerary_proto_init() }
@@ -1471,6 +1472,7 @@ func file_protos_itinerary_proto_init() {
 	if File_protos_itinerary_proto != nil {
 		return
 	}
+	file_protos_common_proto_init()
 	file_protos_itinerary_proto_msgTypes[7].OneofWrappers = []any{
 		(*Transport_Flight)(nil),
 		(*Transport_Train)(nil),

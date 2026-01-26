@@ -334,6 +334,7 @@ type Itinerary struct {
 	Travelers     int32                  `protobuf:"varint,9,opt,name=travelers,proto3" json:"travelers,omitempty"`
 	Tags          []string               `protobuf:"bytes,10,rep,name=tags,proto3" json:"tags,omitempty"`
 	JourneyType   JourneyType            `protobuf:"varint,11,opt,name=journey_type,json=journeyType,proto3,enum=travelingman.JourneyType" json:"journey_type,omitempty"`
+	Error         *Error                 `protobuf:"bytes,12,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -445,6 +446,13 @@ func (x *Itinerary) GetJourneyType() JourneyType {
 	return JourneyType_JOURNEY_TYPE_UNSPECIFIED
 }
 
+func (x *Itinerary) GetError() *Error {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
 var File_protos_graph_proto protoreflect.FileDescriptor
 
 const file_protos_graph_proto_rawDesc = "" +
@@ -468,7 +476,7 @@ const file_protos_graph_proto_rawDesc = "" +
 	"\x05Graph\x12(\n" +
 	"\x05nodes\x18\x01 \x03(\v2\x12.travelingman.NodeR\x05nodes\x12(\n" +
 	"\x05edges\x18\x02 \x03(\v2\x12.travelingman.EdgeR\x05edges\x120\n" +
-	"\tsub_graph\x18\x03 \x01(\v2\x13.travelingman.GraphR\bsubGraph\"\x9a\x03\n" +
+	"\tsub_graph\x18\x03 \x01(\v2\x13.travelingman.GraphR\bsubGraph\"\xc5\x03\n" +
 	"\tItinerary\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\x03R\agroupId\x12\x1d\n" +
@@ -483,7 +491,8 @@ const file_protos_graph_proto_rawDesc = "" +
 	"\ttravelers\x18\t \x01(\x05R\ttravelers\x12\x12\n" +
 	"\x04tags\x18\n" +
 	" \x03(\tR\x04tags\x12<\n" +
-	"\fjourney_type\x18\v \x01(\x0e2\x19.travelingman.JourneyTypeR\vjourneyType*\xb4\x01\n" +
+	"\fjourney_type\x18\v \x01(\x0e2\x19.travelingman.JourneyTypeR\vjourneyType\x12)\n" +
+	"\x05error\x18\f \x01(\v2\x13.travelingman.ErrorR\x05error*\xb4\x01\n" +
 	"\vJourneyType\x12\x1c\n" +
 	"\x18JOURNEY_TYPE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14JOURNEY_TYPE_ONE_WAY\x10\x01\x12\x17\n" +
@@ -515,6 +524,7 @@ var file_protos_graph_proto_goTypes = []any{
 	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
 	(*Accommodation)(nil),         // 6: travelingman.Accommodation
 	(*Transport)(nil),             // 7: travelingman.Transport
+	(*Error)(nil),                 // 8: travelingman.Error
 }
 var file_protos_graph_proto_depIdxs = []int32{
 	5,  // 0: travelingman.Node.from_timestamp:type_name -> google.protobuf.Timestamp
@@ -531,11 +541,12 @@ var file_protos_graph_proto_depIdxs = []int32{
 	5,  // 11: travelingman.Itinerary.end_time:type_name -> google.protobuf.Timestamp
 	3,  // 12: travelingman.Itinerary.graph:type_name -> travelingman.Graph
 	0,  // 13: travelingman.Itinerary.journey_type:type_name -> travelingman.JourneyType
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	8,  // 14: travelingman.Itinerary.error:type_name -> travelingman.Error
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_protos_graph_proto_init() }

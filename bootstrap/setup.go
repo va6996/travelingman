@@ -13,11 +13,14 @@ import (
 	zaiconfig "github.com/va6996/travelingman/bootstrap/zai"
 	"github.com/va6996/travelingman/config"
 	"github.com/va6996/travelingman/log"
+	"github.com/va6996/travelingman/orm"
 	"github.com/va6996/travelingman/plugins/amadeus"
 	"github.com/va6996/travelingman/plugins/core"
 	"github.com/va6996/travelingman/plugins/nager"
 	"github.com/va6996/travelingman/plugins/tavily"
 	"github.com/va6996/travelingman/tools"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 // App holds the initialized components of the application
@@ -86,6 +89,32 @@ func Setup(ctx context.Context, cfg *config.Config) (*App, error) {
 		model = googlegenai.GoogleAIModel(gk, cfg.AI.Gemini.Model)
 	}
 
+	// 1.5 Setup Database
+	// User might be running locally without Postgres, so let's default to SQLite for ease of use
+	// unless specifically configured otherwise. For now, we enforce SQLite to fix the error.
+	dbFile := "travelingman.db"
+	log.Infof(ctx, "Connecting to SQLite database at %s...", dbFile)
+	db, err := gorm.Open(sqlite.Open(dbFile), &gorm.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	// Enable WAL mode for better concurrency
+	if err := db.Exec("PRAGMA journal_mode=WAL;").Error; err != nil {
+		log.Warnf(ctx, "Failed to set WAL mode: %v", err)
+	}
+
+	// Migrate Schema
+	// Note: We need to register schema models.
+	// Since `orm` package has them, we can use `db.AutoMigrate`
+	if err := db.AutoMigrate(
+		&orm.Accommodation{},
+		&orm.Transport{},
+		&orm.APICache{},
+	); err != nil {
+		return nil, fmt.Errorf("failed to migrate database schema: %w", err)
+	}
+
 	// 2. Init Tools Registry
 	registry := tools.NewRegistry()
 
@@ -110,6 +139,7 @@ func Setup(ctx context.Context, cfg *config.Config) (*App, error) {
 		cfg.Amadeus.Limit.Flight,
 		cfg.Amadeus.Limit.Hotel,
 		cfg.Amadeus.Timeout,
+		db, // Pass DB
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize Amadeus client: %w", err)

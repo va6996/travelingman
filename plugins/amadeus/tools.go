@@ -32,6 +32,7 @@ type FlightInput struct {
 	Destination *DestinationLocation `json:"destination"`
 	Date        string               `json:"date"`
 	Adults      int                  `json:"adults"`
+	Currency    string               `json:"currency,omitempty"`
 }
 
 type HotelListInput struct {
@@ -45,6 +46,7 @@ type HotelOffersInput struct {
 	Adults   int      `json:"adults"`
 	CheckIn  string   `json:"check_in"`
 	CheckOut string   `json:"check_out"`
+	Currency string   `json:"currency,omitempty"`
 }
 
 type LocationInput struct {
@@ -115,7 +117,10 @@ func (t *FlightTool) Execute(ctx context.Context, input *FlightInput) ([]*pb.Tra
 		return nil, fmt.Errorf("origin, destination (Location objects), and date are required")
 	}
 
-	resp, err := t.Client.SearchFlights(ctx, &pb.Transport{
+	// Use input currency if provided
+	currency := input.Currency
+
+	transport := &pb.Transport{
 		Type:                pb.TransportType_TRANSPORT_TYPE_FLIGHT,
 		TravelerCount:       int32(adults),
 		OriginLocation:      toPBOrigin(input.Origin),
@@ -125,7 +130,13 @@ func (t *FlightTool) Execute(ctx context.Context, input *FlightInput) ([]*pb.Tra
 				DepartureTime: timestamppb.New(parseDate(input.Date)),
 			},
 		},
-	})
+	}
+
+	if currency != "" {
+		transport.Cost = &pb.Cost{Currency: currency}
+	}
+
+	resp, err := t.Client.SearchFlights(ctx, transport)
 
 	if err != nil {
 		log.Errorf(ctx, "FlightTool failed: %v", err)
@@ -271,7 +282,7 @@ func (t *HotelOffersTool) Execute(ctx context.Context, input *HotelOffersInput) 
 		adults = 1
 	}
 
-	resp, err := t.Client.SearchHotelOffers(ctx, input.HotelIDs, adults, input.CheckIn, input.CheckOut)
+	resp, err := t.Client.SearchHotelOffers(ctx, input.HotelIDs, adults, input.CheckIn, input.CheckOut, input.Currency)
 	if err != nil {
 		log.Errorf(ctx, "HotelOffersTool failed: %v", err)
 		return nil, err

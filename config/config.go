@@ -8,11 +8,12 @@ import (
 
 // Config aggregates all application configuration
 type Config struct {
-	AI      AIConfig      `yaml:"ai"`
-	Planner PlannerConfig `yaml:"planner"`
-	Amadeus AmadeusConfig `yaml:"amadeus"`
-	Tavily  TavilyConfig  `yaml:"tavily"`
-	Log     LogConfig     `yaml:"log"`
+	AI      AIConfig       `yaml:"ai"`
+	Planner PlannerConfig  `yaml:"planner"`
+	Amadeus AmadeusConfig  `yaml:"amadeus"`
+	Tavily  TavilyConfig   `yaml:"tavily"`
+	Log     LogConfig      `yaml:"log"`
+	DB      DatabaseConfig `yaml:"database"`
 }
 
 type LogConfig struct {
@@ -58,6 +59,15 @@ type TavilyConfig struct {
 
 type PlannerConfig struct {
 	Timeout int `yaml:"timeout" env:"PLANNER_TIMEOUT" env-default:"220"` // Seconds
+}
+
+type DatabaseConfig struct {
+	Host     string `yaml:"host" env:"DB_HOST" env-default:"localhost"`
+	Port     int    `yaml:"port" env:"DB_PORT" env-default:"5432"`
+	User     string `yaml:"user" env:"DB_USER" env-default:"postgres"`
+	Password string `yaml:"password" env:"DB_PASSWORD"`
+	DBName   string `yaml:"dbname" env:"DB_NAME" env-default:"travelingman"`
+	SSLMode  string `yaml:"sslmode" env:"DB_SSLMODE" env-default:"disable"`
 }
 
 // Load reads configuration from config.yaml and environment variables

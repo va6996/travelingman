@@ -7,14 +7,16 @@ import (
 
 // Client manages the core set of tools
 type Client struct {
-	DateTool    *DateTool
-	AskUserTool *AskUserTool
+	DateTool     *DateTool
+	AskUserTool  *AskUserTool
+	CurrencyTool *CurrencyTool
 }
 
 // NewClient initializes the core plugin and registers its tools
 func NewClient(gk *genkit.Genkit, registry *tools.Registry) *Client {
 	return &Client{
-		DateTool:    NewDateTool(gk, registry),
-		AskUserTool: NewAskUserTool(gk, registry),
+		DateTool:     NewDateTool(gk, registry),
+		AskUserTool:  NewAskUserTool(gk, registry),
+		CurrencyTool: NewCurrencyTool(gk, registry),
 	}
 }

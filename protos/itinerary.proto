@@ -5,6 +5,7 @@ package travelingman;
 option go_package = "github.com/va6996/travelingman/pb";
 
 import "google/protobuf/timestamp.proto";
+import "protos/common.proto";
 
 
 enum TransportType {
@@ -95,7 +96,7 @@ message Accommodation {
     string address = 4;
     google.protobuf.Timestamp check_in = 5;
     google.protobuf.Timestamp check_out = 6;
-    string price_total = 7;
+    Cost cost = 7;
     string booking_reference = 8;
     string status = 9;
     repeated int64 user_ids = 10;
@@ -104,6 +105,7 @@ message Accommodation {
     Location location = 13;
     Error error = 14;   
     repeated string tags = 15;
+    
 }
 
 message Transport {
@@ -117,7 +119,7 @@ message Transport {
     Location origin_location = 8;
     Location destination_location = 9;
     repeated int64 user_ids = 10;
-    float price_total = 11;
+    Cost cost = 11;
     FlightPreferences flight_preferences = 15;
     TrainPreferences train_preferences = 16;
     CarRentalPreferences car_rental_preferences = 17;

@@ -1,0 +1,59 @@
+/* Recoleta Regular */
+@font-face {
+  font-family: 'Recoleta';
+  src: url('/fonts/Recoleta Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Recoleta Medium */
+@font-face {
+  font-family: 'Recoleta';
+  src: url('/fonts/Recoleta Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Recoleta Bold */
+@font-face {
+  font-family: 'Recoleta';
+  src: url('/fonts/Recoleta Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+body {
+  font-family: 'Recoleta', serif;
+  background-color: #3d5446;
+  color: #ffffff;
+}
+
+:root {
+  --bg-primary: #3d5446;
+  --bg-card: #111827;
+  --text-primary: #ffffff;
+  --text-secondary: #a0aec0;
+  /* gray.400 */
+  --accent-green: #48bb78;
+  /* green.400 */
+  --accent-green-dark: #38a169;
+  /* green.500 */
+  --font-heading: 'Recoleta', serif;
+  --input-bg: rgba(255, 255, 255, 0.16);
+  /* Approximation of whiteAlpha.300 */
+  --input-border: rgba(255, 255, 255, 0.08);
+  /* whiteAlpha.200 */
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Recoleta', serif;
+}

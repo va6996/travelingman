@@ -4,3 +4,8 @@ package travelingman;
 
 option go_package = "github.com/va6996/travelingman/pb";
 
+
+message Cost {
+    double value = 1;
+    string currency = 2; // ISO 4217, e.g. USD, EUR
+}

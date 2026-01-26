@@ -13,6 +13,7 @@ import (
 	"github.com/va6996/travelingman/log"
 	"github.com/va6996/travelingman/pb"
 	"github.com/va6996/travelingman/tools"
+	"gorm.io/gorm"
 )
 
 const (
@@ -28,6 +29,7 @@ type Client struct {
 	HTTPClient   *http.Client
 	Token        *AuthToken
 	Cache        *SimpleCache
+	DB           *gorm.DB
 	Limits       struct {
 		Flight int
 		Hotel  int
@@ -70,7 +72,7 @@ type AuthToken struct {
 
 // NewClient creates a new Amadeus client
 // Returns an error if the client cannot be initialized
-func NewClient(clientID, clientSecret string, isProduction bool, gk *genkit.Genkit, registry *tools.Registry, flightLimit, hotelLimit, timeout int) (*Client, error) {
+func NewClient(clientID, clientSecret string, isProduction bool, gk *genkit.Genkit, registry *tools.Registry, flightLimit, hotelLimit, timeout int, db *gorm.DB) (*Client, error) {
 
 	baseURL := BaseURLTest
 	if isProduction {
@@ -83,6 +85,7 @@ func NewClient(clientID, clientSecret string, isProduction bool, gk *genkit.Genk
 		BaseURL:      baseURL,
 		HTTPClient:   &http.Client{Timeout: time.Duration(timeout) * time.Second},
 		Cache:        NewSimpleCache(),
+		DB:           db,
 	}
 	c.Limits.Flight = flightLimit
 	c.Limits.Hotel = hotelLimit

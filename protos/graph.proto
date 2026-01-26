@@ -58,4 +58,5 @@ message Itinerary {
     int32 travelers = 9;
     repeated string tags = 10;
     JourneyType journey_type = 11;
+    Error error = 12;
 }

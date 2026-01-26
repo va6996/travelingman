@@ -91,7 +91,7 @@ func TestClient_Authenticate(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil, 10, 10)
+	client, err := NewClient("id", "secret", false, nil, nil, 10, 10, 10, nil)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestSearchFlights(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil, 10, 10)
+	client, err := NewClient("id", "secret", false, nil, nil, 10, 10, 10, nil)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestBookFlight(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil, 10, 10)
+	client, err := NewClient("id", "secret", false, nil, nil, 10, 10, 10, nil)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
@@ -166,13 +166,13 @@ func TestSearchHotelOffers(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil, 10, 10)
+	client, err := NewClient("id", "secret", false, nil, nil, 10, 10, 10, nil)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
 	client.BaseURL = ts.URL
 
-	resp, err := client.SearchHotelOffers(context.Background(), []string{"H1"}, 1, "2025-10-10", "2025-10-11")
+	resp, err := client.SearchHotelOffers(context.Background(), []string{"H1"}, 1, "2025-10-10", "2025-10-11", "")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp)
 }
@@ -181,7 +181,7 @@ func TestSearchLocations(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil, 10, 10)
+	client, err := NewClient("id", "secret", false, nil, nil, 10, 10, 10, nil)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}

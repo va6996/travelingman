@@ -30,7 +30,7 @@ func NewTravelAgent(p Planner, d Assistant) *TravelAgent {
 }
 
 // OrchestrateRequest handles the end-to-end planning process
-func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string, history string) (string, error) {
+func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string, history string) (string, []*pb.Itinerary, error) {
 	currentHistory := history
 	maxIterations := 5
 
@@ -46,18 +46,18 @@ func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string,
 
 		planRes, err := ta.planner.Plan(ctx, planReq)
 		if err != nil {
-			return "", fmt.Errorf("planner error: %w", err)
+			return "", nil, fmt.Errorf("planner error: %w", err)
 		}
 
 		// If Planner needs user clarification, return immediately
 		if planRes.NeedsClarification {
 			log.Infof(ctx, "TripPlanner requests clarification: %q", planRes.Question)
-			return planRes.Question, nil
+			return planRes.Question, nil, nil
 		}
 
 		if planRes.Itinerary == nil {
 			log.Errorf(ctx, "ERROR: TripPlanner returned nil itinerary.")
-			return "", fmt.Errorf("planner returned no itinerary and no question")
+			return "", nil, fmt.Errorf("planner returned no itinerary and no question")
 		}
 		log.Debugf(ctx, "TripPlanner proposed itinerary: %q. Proceeding to verification.", planRes.Itinerary.Title)
 
@@ -158,10 +158,11 @@ func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string,
 			}
 		}
 
-		return finalResponse, nil
+		// Return the successful itineraries
+		return finalResponse, successfulItineraries, nil
 	}
 
-	return "I'm having trouble finding a plan that works with current availability. Can we try adjusting your criteria?", nil
+	return "I'm having trouble finding a plan that works with current availability. Can we try adjusting your criteria?", nil, nil
 }
 
 type itineraryItem struct {
@@ -187,7 +188,7 @@ func (ta *TravelAgent) formatItinerary(it *pb.Itinerary, indentLevel int) string
 			items = append(items, itineraryItem{
 				Time:    start.Format("Jan 02 15:04"),
 				EndTime: end.Format("Jan 02 15:04"),
-				Details: fmt.Sprintf("Stay at %s (%s). Ref: %s. Price: %s %s", acc.Name, acc.Address, acc.BookingReference, acc.PriceTotal, formatTags(acc.Tags)),
+				Details: fmt.Sprintf("Stay at %s (%s). Ref: %s. Price: %.2f %s %s", acc.Name, acc.Address, acc.BookingReference, acc.GetCost().GetValue(), acc.GetCost().GetCurrency(), formatTags(acc.Tags)),
 				SortKey: start.Format(time.RFC3339),
 			})
 		}
@@ -293,8 +294,8 @@ func (ta *TravelAgent) scoreAndTag(itineraries []*pb.Itinerary) {
 				var minDuration int64 = math.MaxInt64
 
 				for _, t := range edge.TransportOptions {
-					if float64(t.PriceTotal) < minPrice {
-						minPrice = float64(t.PriceTotal)
+					if t.GetCost().GetValue() < minPrice {
+						minPrice = t.GetCost().GetValue()
 					}
 
 					// Calculate duration
@@ -322,7 +323,7 @@ func (ta *TravelAgent) scoreAndTag(itineraries []*pb.Itinerary) {
 					t.Tags = []string{} // Reset tags
 
 					// Tagging
-					if float64(t.PriceTotal) == minPrice {
+					if t.GetCost().GetValue() == minPrice {
 						t.Tags = append(t.Tags, "Cheapest")
 					}
 
@@ -340,7 +341,7 @@ func (ta *TravelAgent) scoreAndTag(itineraries []*pb.Itinerary) {
 
 					// Scoring (Lower is better)
 					// Base score = Price
-					score := float64(t.PriceTotal)
+					score := t.GetCost().GetValue()
 
 					// Adjust for duration (value of time?)
 					// Let's say we value 1 hour at $20
@@ -380,7 +381,7 @@ func (ta *TravelAgent) scoreAndTag(itineraries []*pb.Itinerary) {
 				edge.Transport = edge.TransportOptions[0]
 
 				// Add to itinerary total score
-				totalScore += float64(edge.Transport.PriceTotal)
+				totalScore += edge.Transport.GetCost().GetValue()
 			}
 		}
 
@@ -394,7 +395,7 @@ func (ta *TravelAgent) scoreAndTag(itineraries []*pb.Itinerary) {
 				var minPrice float64 = math.MaxFloat64
 
 				for _, s := range node.StayOptions {
-					p := parsePrice(s.PriceTotal)
+					p := s.GetCost().GetValue()
 					if p < minPrice {
 						minPrice = p
 					}
@@ -409,7 +410,7 @@ func (ta *TravelAgent) scoreAndTag(itineraries []*pb.Itinerary) {
 
 				for _, s := range node.StayOptions {
 					s.Tags = []string{}
-					p := parsePrice(s.PriceTotal)
+					p := s.GetCost().GetValue()
 
 					if p == minPrice {
 						s.Tags = append(s.Tags, "Cheapest")
@@ -481,12 +482,12 @@ func calculateItineraryScore(it *pb.Itinerary) float64 {
 	}
 	for _, e := range it.Graph.Edges {
 		if e.Transport != nil {
-			total += float64(e.Transport.PriceTotal)
+			total += e.Transport.GetCost().GetValue()
 		}
 	}
 	for _, n := range it.Graph.Nodes {
 		if n.Stay != nil {
-			total += parsePrice(n.Stay.PriceTotal)
+			total += n.Stay.GetCost().GetValue()
 		}
 	}
 	return total

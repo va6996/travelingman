@@ -16,7 +16,8 @@ type Accommodation struct {
 	Address          string
 	CheckIn          time.Time
 	CheckOut         time.Time
-	PriceTotal       string
+	CostValue        float64
+	CostCurrency     string
 	BookingReference string
 	Status           string
 }
@@ -26,13 +27,16 @@ func (a *Accommodation) ToPB() *pb.Accommodation {
 		return nil
 	}
 	return &pb.Accommodation{
-		Id:               int64(a.ID),
-		GroupId:          int64(a.GroupID),
-		Name:             a.Name,
-		Address:          a.Address,
-		CheckIn:          timestamppb.New(a.CheckIn),
-		CheckOut:         timestamppb.New(a.CheckOut),
-		PriceTotal:       a.PriceTotal,
+		Id:       int64(a.ID),
+		GroupId:  int64(a.GroupID),
+		Name:     a.Name,
+		Address:  a.Address,
+		CheckIn:  timestamppb.New(a.CheckIn),
+		CheckOut: timestamppb.New(a.CheckOut),
+		Cost: &pb.Cost{
+			Value:    a.CostValue,
+			Currency: a.CostCurrency,
+		},
 		BookingReference: a.BookingReference,
 		Status:           a.Status,
 	}
@@ -49,7 +53,8 @@ func AccommodationFromPB(p *pb.Accommodation) *Accommodation {
 		Address:          p.Address,
 		CheckIn:          p.CheckIn.AsTime(),
 		CheckOut:         p.CheckOut.AsTime(),
-		PriceTotal:       p.PriceTotal,
+		CostValue:        p.GetCost().GetValue(),
+		CostCurrency:     p.GetCost().GetCurrency(),
 		BookingReference: p.BookingReference,
 		Status:           p.Status,
 	}

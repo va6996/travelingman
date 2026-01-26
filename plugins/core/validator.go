@@ -51,27 +51,8 @@ func ValidateItinerary(ctx context.Context, itinerary *pb.Itinerary) error {
 
 	// 3. Graph Logic
 	if itinerary.Graph != nil {
-		if err := tmcore.ValidateNodes(itinerary.Graph); err != nil {
-			errors = append(errors, err.Error())
-		}
-
-		nodeIDs := make(map[string]bool)
-		for _, n := range itinerary.Graph.Nodes {
-			nodeIDs[n.Id] = true
-		}
-		// Allow "start_loc" as implicit start
-		nodeIDs["start_loc"] = true
-
-		for i, edge := range itinerary.Graph.Edges {
-			if !nodeIDs[edge.FromId] {
-				errors = append(errors, fmt.Sprintf("Edge %d: FromId '%s' not found in nodes", i, edge.FromId))
-			}
-			if !nodeIDs[edge.ToId] {
-				errors = append(errors, fmt.Sprintf("Edge %d: ToId '%s' not found in nodes", i, edge.ToId))
-			}
-			if edge.DurationSeconds < 0 {
-				errors = append(errors, fmt.Sprintf("Edge %d: Negative duration", i))
-			}
+		if err := tmcore.ValidateGraph(itinerary.Graph); err != nil {
+			errors = append(errors, fmt.Sprintf("Graph validation failed: %v", err))
 		}
 	} else {
 		errors = append(errors, "Graph is missing")

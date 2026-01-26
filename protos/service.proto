@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package travelingman;
+
+option go_package = "github.com/va6996/travelingman/pb";
+
+import "protos/graph.proto";
+
+message PlanTripRequest {
+    string query = 1;
+}
+
+message PlanTripResponse {
+    repeated Itinerary itineraries = 1;
+}
+
+service TravelService {
+    rpc PlanTrip(PlanTripRequest) returns (PlanTripResponse);
+}

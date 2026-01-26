@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/va6996/travelingman/log"
+	"github.com/va6996/travelingman/orm"
 	"github.com/va6996/travelingman/pb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -296,6 +297,10 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]
 		endpoint += fmt.Sprintf("&returnDate=%s", returnDate)
 	}
 
+	if transport.Cost != nil && transport.Cost.Currency != "" {
+		endpoint += fmt.Sprintf("&currencyCode=%s", transport.Cost.Currency)
+	}
+
 	// Handle Preferences
 	if transport.FlightPreferences != nil {
 		classStr := ""
@@ -320,6 +325,20 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]
 
 	// Check cache
 	cacheKey := GenerateCacheKey("flights", endpoint)
+
+	// Try DB Cache first if available
+	if c.DB != nil {
+		if entry, err := orm.GetCacheEntry(c.DB, cacheKey); err == nil {
+			log.Debugf(ctx, "SearchFlights: DB Cache hit for %s", endpoint)
+			// Unmarshal
+			var cachedTransports []*pb.Transport
+			if err := json.Unmarshal(entry.Value, &cachedTransports); err == nil {
+				return cachedTransports, nil
+			}
+		}
+	}
+
+	// Fallback to memory cache
 	if val, ok := c.Cache.Get(cacheKey); ok {
 		log.Debugf(ctx, "SearchFlights: Cache hit for %s", endpoint)
 		return val.([]*pb.Transport), nil
@@ -370,6 +389,14 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]
 
 	// Set cache (15 minutes TTL)
 	c.Cache.Set(cacheKey, transports, 15*time.Minute)
+
+	// Persist to DB if available
+	if c.DB != nil {
+		if b, err := json.Marshal(transports); err == nil {
+			// Save with longer TTL for DB if desired, or same
+			orm.SetCacheEntry(c.DB, cacheKey, b, 60*time.Minute)
+		}
+	}
 
 	return transports, nil
 }
@@ -499,8 +526,11 @@ func (o FlightOffer) ToTransport() *pb.Transport {
 	}
 
 	// Price
-	if price, err := strconv.ParseFloat(o.Price.Total, 32); err == nil {
-		t.PriceTotal = float32(price)
+	if price, err := strconv.ParseFloat(o.Price.Total, 64); err == nil {
+		t.Cost = &pb.Cost{
+			Value:    price,
+			Currency: o.Price.Currency,
+		}
 	}
 
 	// Details from first segment of first itinerary (simplification)

@@ -1,0 +1,196 @@
+.app-container {
+    min-height: 100vh;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    position: relative;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll from blur blob */
+}
+
+/* Background Blob */
+.main-container::before {
+    content: "";
+    position: absolute;
+    top: -10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 600px;
+    background-color: var(--accent-green-dark);
+    filter: blur(150px);
+    opacity: 0.1;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.main-container {
+    /* Chakra Container maxW="container.md" is usually ~768px */
+    max-width: 768px;
+    margin: 0 auto;
+    padding: 2.5rem 1rem;
+    /* py={10} */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.header-section {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    /* spacing={8} */
+    margin-bottom: 2.5rem;
+    /* mb={10} */
+    transition: all 0.5s;
+    z-index: 1;
+}
+
+.header-section.centered {
+    padding-top: 20vh;
+}
+
+.header-section.top {
+    padding-top: 0;
+}
+
+.app-title {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    /* tight */
+    margin-bottom: 1rem;
+    /* mb={4} */
+    text-align: center;
+}
+
+/* Size utility for title based on state */
+.app-title.large {
+    font-size: 3rem;
+    /* 3xl approx */
+}
+
+.app-title.small {
+    font-size: 1.875rem;
+    /* xl approx */
+}
+
+.app-subtitle {
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.app-subtitle.large {
+    font-size: 1.25rem;
+    /* xl */
+}
+
+.app-subtitle.small {
+    font-size: 1rem;
+    /* md */
+}
+
+.input-area {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.query-input {
+    /* Using Chakra's Textarea styles repliaction */
+    width: 100%;
+    min-height: 100px;
+    padding: 1rem;
+    font-size: 1.25rem;
+    /* xl */
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--input-border);
+    border-radius: 1rem;
+    /* 2xl */
+    resize: none;
+    box-shadow: var(--shadow-lg);
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.query-input::placeholder {
+    color: rgba(255, 255, 255, 0.48);
+    /* whiteAlpha.600 */
+    font-size: 1.125rem;
+    /* lg */
+}
+
+.query-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-green);
+    border-color: var(--accent-green);
+}
+
+.plan-button {
+    width: 100%;
+    height: 50px;
+    font-size: 1.125rem;
+    /* lg */
+    font-weight: 500;
+    border-radius: 0.75rem;
+    /* xl */
+    background-color: var(--accent-green-dark);
+    color: white;
+    border: none;
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 1rem;
+}
+
+.plan-button:hover:not(:disabled) {
+    background-color: var(--accent-green);
+}
+
+.plan-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.loading-container {
+    padding: 5rem 0;
+    /* py={20} */
+    display: flex;
+    justify-content: center;
+}
+
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    /* spacing={4} */
+}
+
+.loading-text {
+    color: var(--text-secondary);
+}
+
+.results-area {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    /* spacing={8} */
+    z-index: 1;
+}
+
+.meerkat-mascot {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.meerkat-mascot img {
+    height: auto;
+    width: 300px;
+    object-fit: contain;
+}
