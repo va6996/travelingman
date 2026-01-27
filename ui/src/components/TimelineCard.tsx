@@ -6,19 +6,14 @@ import {
     HStack,
     Collapse,
     useDisclosure,
-    Card,
-    CardBody,
-    CardHeader,
     Icon,
     BoxProps
 } from '@chakra-ui/react'
-import { IconType } from 'react-icons'
 import { MdKeyboardArrowDown, MdKeyboardArrowUp } from 'react-icons/md'
 
 interface TimelineCardProps {
-    icon: IconType
     themeColor: string // e.g. "purple", "blue"
-    title: string
+    title: React.ReactNode
     subtitle: React.ReactNode
     price?: string
     rightContent?: React.ReactNode
@@ -29,7 +24,6 @@ interface TimelineCardProps {
 }
 
 export const TimelineCard = ({
-    icon,
     themeColor,
     title,
     subtitle,
@@ -42,37 +36,28 @@ export const TimelineCard = ({
 }: TimelineCardProps) => {
     const { isOpen, onToggle } = useDisclosure({ defaultIsOpen: isExpandedDefault })
 
+    const style = {
+        '--theme-color': `var(--chakra-colors-${themeColor}-500)`,
+        '--theme-color-900': `var(--chakra-colors-${themeColor}-900)`
+    } as React.CSSProperties
+
     return (
-        <Card
-            variant="filled"
-            bg="#111827"
-            border="1px solid"
-            borderColor="whiteAlpha.100"
-            shadow="lg"
-            width="full"
-            borderRadius="2xl"
-            overflow="hidden"
-            _hover={{ borderColor: `${themeColor}.500`, shadow: `0 0 0 1px var(--chakra-colors-${themeColor}-500)` }}
-            transition="all 0.2s"
-            mb={4}
+        <Box
+            className="timeline-card"
+            style={style}
         >
-            <CardHeader pb={2}>
+            <Box p={4} pb={2}>
                 <HStack justify="space-between" align="start">
-                    <HStack align="start" spacing={3}>
-                        <Box p={2} bg={`${themeColor}.900`} borderRadius="xl" color={`${themeColor}.200`}>
-                            <Icon as={icon} boxSize={6} />
-                        </Box>
-                        <VStack align="start" spacing={1}>
-                            <Text fontWeight="bold" fontSize="xl" color="whiteAlpha.900" lineHeight="shorter">
-                                {title}
-                            </Text>
-                            {subtitle && (
-                                <Box fontSize="lg" color="whiteAlpha.700">
-                                    {subtitle}
-                                </Box>
-                            )}
-                        </VStack>
-                    </HStack>
+                    <VStack align="start" spacing={1}>
+                        <Text fontWeight="bold" fontSize="xl" color="whiteAlpha.900" lineHeight="shorter">
+                            {title}
+                        </Text>
+                        {subtitle && (
+                            <Box fontSize="lg" color="whiteAlpha.700">
+                                {subtitle}
+                            </Box>
+                        )}
+                    </VStack>
                     <VStack align="end" spacing={0}>
                         {price && (
                             <Text fontWeight="bold" color="yellow.200" fontSize="lg">
@@ -82,58 +67,61 @@ export const TimelineCard = ({
                         {rightContent}
                     </VStack>
                 </HStack>
-            </CardHeader>
 
-            <CardBody pt={2}>
-                {tags.length > 0 && (
-                    <HStack spacing={2} mb={3} flexWrap="wrap">
-                        {tags.map(tag => (
-                            <Badge
-                                key={tag}
-                                colorScheme={themeColor}
-                                variant="subtle"
-                                fontSize="xs"
-                                borderRadius="md"
-                                px={2}
-                                py={0.5}
-                                bg={`${themeColor}.900`}
-                                color={`${themeColor}.200`}
+                {(tags.length > 0 || !hideToggle) && (
+                    <HStack justify="space-between" align="center" mt={3} pb={hideToggle && tags.length > 0 ? 2 : 0}>
+                        {tags.length > 0 ? (
+                            <HStack spacing={2} flexWrap="wrap">
+                                {tags.map(tag => (
+                                    <Badge
+                                        key={tag}
+                                        colorScheme={themeColor}
+                                        variant="subtle"
+                                        fontSize="xs"
+                                        borderRadius="md"
+                                        px={2}
+                                        py={0.5}
+                                        bg={`${themeColor}.900`}
+                                        color={`${themeColor}.200`}
+                                    >
+                                        {tag}
+                                    </Badge>
+                                ))}
+                            </HStack>
+                        ) : (
+                            <Box />
+                        )}
+
+                        {!hideToggle && (
+                            <Box
+                                as="button"
+                                onClick={onToggle}
+                                bg="whiteAlpha.200"
+                                _hover={{ bg: "whiteAlpha.300" }}
+                                p={2}
+                                borderRadius="lg"
+                                display="flex"
+                                alignItems="center"
+                                justifyContent="center"
+                                color="whiteAlpha.800"
+                                fontSize="sm"
+                                transition="all 0.2s"
+                                aria-label={isOpen ? "Collapse" : "Expand"}
+                                flexShrink={0}
                             >
-                                {tag}
-                            </Badge>
-                        ))}
+                                <Icon as={isOpen ? MdKeyboardArrowUp : MdKeyboardArrowDown} boxSize={5} />
+                            </Box>
+                        )}
                     </HStack>
                 )}
+            </Box>
 
-                {!hideToggle && (
-                    <HStack justify="flex-end" w="full" mt={-2} mb={2}>
-                        <Box
-                            as="button"
-                            onClick={onToggle}
-                            bg="whiteAlpha.200"
-                            _hover={{ bg: "whiteAlpha.300" }}
-                            p={2}
-                            borderRadius="lg"
-                            display="flex"
-                            alignItems="center"
-                            justifyContent="center"
-                            color="whiteAlpha.800"
-                            fontSize="sm"
-                            transition="all 0.2s"
-                            aria-label={isOpen ? "Collapse" : "Expand"}
-                        >
-                            <Icon as={isOpen ? MdKeyboardArrowUp : MdKeyboardArrowDown} boxSize={5} />
-                        </Box>
-                    </HStack>
-                )}
-
-                <Collapse in={isOpen} animateOpacity>
-                    <Box mt={3} p={0} bg="transparent" borderRadius="md" fontSize="sm">
-                        {children}
-                    </Box>
-                </Collapse>
-            </CardBody>
-        </Card>
+            <Collapse in={isOpen} animateOpacity>
+                <Box className="timeline-card-options" p={4} pt={3}>
+                    {children}
+                </Box>
+            </Collapse>
+        </Box>
     )
 }
 
@@ -145,17 +133,16 @@ interface OptionCardProps extends BoxProps {
 }
 
 export const OptionCard = ({ isSelected, themeColor, onSelect, children, ...props }: OptionCardProps) => {
+    const style = {
+        '--theme-color': `var(--chakra-colors-${themeColor}-500)`,
+        '--theme-color-900': `var(--chakra-colors-${themeColor}-900)`
+    } as React.CSSProperties
+
     return (
         <Box
-            p={3}
-            borderWidth="1px"
-            borderRadius="xl"
-            borderColor={isSelected ? `${themeColor}.500` : "whiteAlpha.100"}
-            bg={isSelected ? `${themeColor}.900` : "whiteAlpha.50"}
-            cursor="pointer"
+            className={`option-card ${isSelected ? 'selected' : ''}`}
+            style={style}
             onClick={onSelect}
-            _hover={{ bg: "whiteAlpha.100" }}
-            transition="all 0.2s"
             {...props}
         >
             {children}

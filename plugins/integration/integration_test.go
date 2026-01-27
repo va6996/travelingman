@@ -7,10 +7,13 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/va6996/travelingman/pb"
 	"github.com/va6996/travelingman/plugins/amadeus"
 	"github.com/va6996/travelingman/plugins/gemini"
 	"github.com/va6996/travelingman/plugins/googlemaps"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // TestAllPlugins runs integration tests for all plugins
@@ -38,7 +41,11 @@ func TestAmadeusIntegration(t *testing.T) {
 	isProduction := os.Getenv("AMADEUS_PRODUCTION") == "true"
 
 	// Pass nil for genkit and registry as we are testing the client in isolation
-	client, err := amadeus.NewClient(clientID, clientSecret, isProduction, nil, nil)
+	client, err := amadeus.NewClient(amadeus.Config{
+		ClientID: clientID, ClientSecret: clientSecret, IsProduction: isProduction,
+		FlightLimit: 10, HotelLimit: 10, Timeout: 30,
+		CacheTTL: amadeus.CacheTTLConfig{Location: 24, Flight: 24, Hotel: 24},
+	}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to initialize Amadeus client: %v", err)
 	}
@@ -79,7 +86,12 @@ func TestAmadeusIntegration(t *testing.T) {
 	// Test Hotel Search
 	t.Run("HotelSearch", func(t *testing.T) {
 		// Note: This requires a valid hotel ID
-		hotelResp, err := client.SearchHotelOffers([]string{"BGMNYCCT"}, 1, "2024-12-01", "2024-12-05")
+		acc := &pb.Accommodation{
+			TravelerCount: 1,
+			CheckIn:       timestamppb.New(time.Date(2024, 12, 1, 0, 0, 0, 0, time.UTC)),
+			CheckOut:      timestamppb.New(time.Date(2024, 12, 5, 0, 0, 0, 0, time.UTC)),
+		}
+		hotelResp, err := client.SearchHotelOffers([]string{"BGMNYCCT"}, acc)
 		if err != nil {
 			t.Logf("⚠️  Hotel search failed (may need valid hotel ID or API access): %v", err)
 			return

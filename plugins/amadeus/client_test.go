@@ -91,7 +91,11 @@ func TestClient_Authenticate(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil, 10, 10, 10, nil)
+	client, err := NewClient(Config{
+		ClientID: "id", ClientSecret: "secret", IsProduction: false,
+		FlightLimit: 10, HotelLimit: 10, Timeout: 10,
+		CacheTTL: CacheTTLConfig{Location: 24, Flight: 24, Hotel: 24},
+	}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
@@ -106,7 +110,11 @@ func TestSearchFlights(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil, 10, 10, 10, nil)
+	client, err := NewClient(Config{
+		ClientID: "id", ClientSecret: "secret", IsProduction: false,
+		FlightLimit: 10, HotelLimit: 10, Timeout: 10,
+		CacheTTL: CacheTTLConfig{Location: 24, Flight: 24, Hotel: 24},
+	}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
@@ -137,7 +145,11 @@ func TestBookFlight(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil, 10, 10, 10, nil)
+	client, err := NewClient(Config{
+		ClientID: "id", ClientSecret: "secret", IsProduction: false,
+		FlightLimit: 10, HotelLimit: 10, Timeout: 10,
+		CacheTTL: CacheTTLConfig{Location: 24, Flight: 24, Hotel: 24},
+	}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
@@ -166,13 +178,22 @@ func TestSearchHotelOffers(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil, 10, 10, 10, nil)
+	client, err := NewClient(Config{
+		ClientID: "id", ClientSecret: "secret", IsProduction: false,
+		FlightLimit: 10, HotelLimit: 10, Timeout: 10,
+		CacheTTL: CacheTTLConfig{Location: 24, Flight: 24, Hotel: 24},
+	}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
 	client.BaseURL = ts.URL
 
-	resp, err := client.SearchHotelOffers(context.Background(), []string{"H1"}, 1, "2025-10-10", "2025-10-11", "")
+	acc := &pb.Accommodation{
+		TravelerCount: 1,
+		CheckIn:       timestamppb.New(time.Date(2025, 10, 10, 0, 0, 0, 0, time.UTC)),
+		CheckOut:      timestamppb.New(time.Date(2025, 10, 11, 0, 0, 0, 0, time.UTC)),
+	}
+	resp, err := client.SearchHotelOffers(context.Background(), []string{"H1"}, acc)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp)
 }
@@ -181,7 +202,11 @@ func TestSearchLocations(t *testing.T) {
 	ts := mockAmadeusServer()
 	defer ts.Close()
 
-	client, err := NewClient("id", "secret", false, nil, nil, 10, 10, 10, nil)
+	client, err := NewClient(Config{
+		ClientID: "id", ClientSecret: "secret", IsProduction: false,
+		FlightLimit: 10, HotelLimit: 10, Timeout: 10,
+		CacheTTL: CacheTTLConfig{Location: 24, Flight: 24, Hotel: 24},
+	}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}

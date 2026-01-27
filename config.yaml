@@ -22,6 +22,10 @@ amadeus:
     flight: 10
     hotel: 10
   timeout: 30 # Seconds
+  cache_ttl:
+    location: 240 # Hours
+    flight: 240 # Hours
+    hotel: 240 # Hours
   # client_id: "YOUR_ID" # Can be set via AMADEUS_CLIENT_ID
   # client_secret: "YOUR_SECRET" # Can be set via AMADEUS_CLIENT_SECRET
 

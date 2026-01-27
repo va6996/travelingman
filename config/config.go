@@ -49,7 +49,12 @@ type AmadeusConfig struct {
 		Flight int `yaml:"flight" env:"AMADEUS_LIMIT_FLIGHT" env-default:"10"`
 		Hotel  int `yaml:"hotel" env:"AMADEUS_LIMIT_HOTEL" env-default:"10"`
 	} `yaml:"limit"`
-	Timeout int `yaml:"timeout" env:"AMADEUS_TIMEOUT" env-default:"30"` // Seconds
+	Timeout  int `yaml:"timeout" env:"AMADEUS_TIMEOUT" env-default:"30"` // Seconds
+	CacheTTL struct {
+		Location int `yaml:"location" env:"AMADEUS_CACHE_TTL_LOCATION" env-default:"24"` // Hours
+		Flight   int `yaml:"flight" env:"AMADEUS_CACHE_TTL_FLIGHT" env-default:"1"`      // Hours
+		Hotel    int `yaml:"hotel" env:"AMADEUS_CACHE_TTL_HOTEL" env-default:"1"`        // Hours
+	} `yaml:"cache_ttl"`
 }
 
 type TavilyConfig struct {

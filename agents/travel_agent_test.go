@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -61,13 +62,25 @@ func TestTravelAgent_OrchestrateRequest(t *testing.T) {
 					ID: "offer1", Price: amadeus.HotelPrice{Total: "150.00"}, Guests: amadeus.HotelGuests{Adults: 1},
 				}},
 			}}})
+		case "/v1/reference-data/locations":
+			json.NewEncoder(w).Encode(amadeus.LocationSearchResponse{
+				Data: []amadeus.LocationData{{
+					SubType: "CITY", Name: "TEST", JobCode: "TST",
+					Address: amadeus.Address{CityName: "TEST", CityCode: "TST", CountryName: "TEST", CountryCode: "TS"},
+					GeoCode: amadeus.GeoCode{Latitude: 0, Longitude: 0},
+				}},
+			})
 		default:
 			w.WriteHeader(http.StatusOK)
 		}
 	}))
 	defer ts.Close()
 
-	client, _ := amadeus.NewClient("id", "secret", false, nil, nil, 10, 10, 30, nil)
+	client, _ := amadeus.NewClient(amadeus.Config{
+		ClientID: "id", ClientSecret: "secret", IsProduction: false,
+		FlightLimit: 10, HotelLimit: 10, Timeout: 30,
+		CacheTTL: amadeus.CacheTTLConfig{Location: 24, Flight: 24, Hotel: 24},
+	}, nil, nil, nil)
 	client.BaseURL = ts.URL
 	desk := NewTravelDesk(client)
 
@@ -78,14 +91,25 @@ func TestTravelAgent_OrchestrateRequest(t *testing.T) {
 
 	// Mock Plan Result
 	itin := &pb.Itinerary{
-		Title: "Test Itinerary",
+		Title:       "Test Itinerary",
+		StartTime:   timestamppb.New(time.Now().Add(24 * time.Hour)),
+		EndTime:     timestamppb.New(time.Now().Add(48 * time.Hour)),
+		Travelers:   1,
+		JourneyType: pb.JourneyType_JOURNEY_TYPE_ONE_WAY,
 		Graph: &pb.Graph{
+			Nodes: []*pb.Node{
+				{Id: "n1", Location: "LHR"},
+				{Id: "n2", Location: "JFK"},
+			},
 			Edges: []*pb.Edge{{
+				FromId: "n1",
+				ToId:   "n2",
 				Transport: &pb.Transport{
 					Type:                pb.TransportType_TRANSPORT_TYPE_FLIGHT,
 					OriginLocation:      &pb.Location{IataCodes: []string{"LHR"}},
 					DestinationLocation: &pb.Location{IataCodes: []string{"JFK"}},
-					Details:             &pb.Transport_Flight{Flight: &pb.Flight{DepartureTime: timestamppb.Now()}},
+					TravelerCount:       1,
+					Details:             &pb.Transport_Flight{Flight: &pb.Flight{DepartureTime: timestamppb.New(time.Now().Add(24 * time.Hour))}},
 				},
 			}},
 		},
@@ -101,7 +125,7 @@ func TestTravelAgent_OrchestrateRequest(t *testing.T) {
 	})).Return(planRes, nil).Once()
 
 	// Execute
-	response, err := agent.OrchestrateRequest(context.Background(), query, "")
+	response, _, err := agent.OrchestrateRequest(context.Background(), query, "")
 
 	// Verify
 	assert.NoError(t, err)
@@ -123,7 +147,7 @@ func TestTravelAgent_OrchestrateRequest_Clarification(t *testing.T) {
 		Question:           "Where to?",
 	}, nil).Once()
 
-	response, err := agent.OrchestrateRequest(context.Background(), "Trip", "")
+	response, _, err := agent.OrchestrateRequest(context.Background(), "Trip", "")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "Where to?", response)
@@ -159,21 +183,36 @@ func TestTravelAgent_OrchestrateRequest_RetryOnFailure(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client, _ := amadeus.NewClient("id", "secret", false, nil, nil, 10, 10, 30, nil)
+	client, _ := amadeus.NewClient(amadeus.Config{
+		ClientID: "id", ClientSecret: "secret", IsProduction: false,
+		FlightLimit: 10, HotelLimit: 10, Timeout: 30,
+		CacheTTL: amadeus.CacheTTLConfig{Location: 24, Flight: 24, Hotel: 24},
+	}, nil, nil, nil)
 	client.BaseURL = ts.URL
 	desk := NewTravelDesk(client)
 	agent := NewTravelAgent(mockPlanner, desk)
 
 	// 1. Bad Plan
 	badItin := &pb.Itinerary{
-		Title: "Bad Plan",
+		Title:       "Bad Plan",
+		StartTime:   timestamppb.New(time.Now().Add(24 * time.Hour)),
+		EndTime:     timestamppb.New(time.Now().Add(48 * time.Hour)),
+		Travelers:   1,
+		JourneyType: pb.JourneyType_JOURNEY_TYPE_ONE_WAY,
 		Graph: &pb.Graph{
+			Nodes: []*pb.Node{
+				{Id: "n1", Location: "FAIL"},
+				{Id: "n2", Location: "JFK"},
+			},
 			Edges: []*pb.Edge{{
+				FromId: "n1",
+				ToId:   "n2",
 				Transport: &pb.Transport{
 					Type:                pb.TransportType_TRANSPORT_TYPE_FLIGHT,
 					OriginLocation:      &pb.Location{IataCodes: []string{"FAIL"}},
 					DestinationLocation: &pb.Location{IataCodes: []string{"JFK"}},
-					Details:             &pb.Transport_Flight{Flight: &pb.Flight{DepartureTime: timestamppb.Now()}},
+					TravelerCount:       1,
+					Details:             &pb.Transport_Flight{Flight: &pb.Flight{DepartureTime: timestamppb.New(time.Now().Add(24 * time.Hour))}},
 				},
 			}},
 		},
@@ -181,14 +220,25 @@ func TestTravelAgent_OrchestrateRequest_RetryOnFailure(t *testing.T) {
 
 	// 2. Good Plan
 	goodItin := &pb.Itinerary{
-		Title: "Good Plan",
+		Title:       "Good Plan",
+		StartTime:   timestamppb.New(time.Now().Add(24 * time.Hour)),
+		EndTime:     timestamppb.New(time.Now().Add(48 * time.Hour)),
+		Travelers:   1,
+		JourneyType: pb.JourneyType_JOURNEY_TYPE_ONE_WAY,
 		Graph: &pb.Graph{
+			Nodes: []*pb.Node{
+				{Id: "n1", Location: "LHR"},
+				{Id: "n2", Location: "JFK"},
+			},
 			Edges: []*pb.Edge{{
+				FromId: "n1",
+				ToId:   "n2",
 				Transport: &pb.Transport{
 					Type:                pb.TransportType_TRANSPORT_TYPE_FLIGHT,
 					OriginLocation:      &pb.Location{IataCodes: []string{"LHR"}},
 					DestinationLocation: &pb.Location{IataCodes: []string{"JFK"}},
-					Details:             &pb.Transport_Flight{Flight: &pb.Flight{DepartureTime: timestamppb.Now()}},
+					TravelerCount:       1,
+					Details:             &pb.Transport_Flight{Flight: &pb.Flight{DepartureTime: timestamppb.New(time.Now().Add(24 * time.Hour))}},
 				},
 			}},
 		},
@@ -205,7 +255,7 @@ func TestTravelAgent_OrchestrateRequest_RetryOnFailure(t *testing.T) {
 		return strings.Contains(req.History, "The proposed plans had issues")
 	})).Return(&PlanResult{Itinerary: goodItin, Reasoning: "Attempt 2"}, nil).Once()
 
-	response, err := agent.OrchestrateRequest(context.Background(), "Plan trip", "")
+	response, _, err := agent.OrchestrateRequest(context.Background(), "Plan trip", "")
 
 	assert.NoError(t, err)
 	assert.Contains(t, response, "Good Plan")

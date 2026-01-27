@@ -375,7 +375,7 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]
 	}
 
 	var transports []*pb.Transport
-	limit := c.Limits.Flight
+	limit := c.Config.FlightLimit
 	if limit <= 0 {
 		limit = 10 // Default
 	}
@@ -387,8 +387,9 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]
 		transports = append(transports, offer.ToTransport())
 	}
 
-	// Set cache (15 minutes TTL)
-	c.Cache.Set(cacheKey, transports, 15*time.Minute)
+	// Set cache
+	ttl := time.Duration(c.Config.CacheTTL.Flight) * time.Hour
+	c.Cache.Set(cacheKey, transports, ttl)
 
 	// Persist to DB if available
 	if c.DB != nil {

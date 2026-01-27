@@ -3,6 +3,7 @@ package agents
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/va6996/travelingman/log"
 	"github.com/va6996/travelingman/pb"
@@ -26,6 +27,9 @@ func NewTravelDesk(client *amadeus.Client) *TravelDesk {
 func (td *TravelDesk) CheckAvailability(ctx context.Context, itinerary *pb.Itinerary) (*pb.Itinerary, error) {
 	log.Infof(ctx, "TravelDesk: Starting availability check for: %s", itinerary.Title)
 
+	// Enrich graph first (resolve codes, set currencies)
+	td.EnrichGraph(ctx, itinerary)
+
 	// Validate Itinerary first
 	if err := core.ValidateItinerary(ctx, itinerary); err != nil {
 		log.Errorf(ctx, "TravelDesk: Initial validation failed: %v", err)
@@ -38,46 +42,154 @@ func (td *TravelDesk) CheckAvailability(ctx context.Context, itinerary *pb.Itine
 	return itinerary, nil
 }
 
-func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerary) {
+// EnrichGraph resolves missing city codes, names and ensures global currency
+func (td *TravelDesk) EnrichGraph(ctx context.Context, itinerary *pb.Itinerary) {
 	if itinerary.Graph == nil {
 		return
 	}
 
-	// 0. Determine Global Currency
-	// Try to find a currency from the first pricing element or default to something sensible
 	globalCurrency := "USD"
-	foundCurrency := false
 
-	// Check edges for existing currency
+	// Apply global currency to all nodes and edges where missing
 	for _, edge := range itinerary.Graph.Edges {
-		if edge.Transport != nil && edge.Transport.Cost != nil && edge.Transport.Cost.Currency != "" {
-			globalCurrency = edge.Transport.Cost.Currency
-			foundCurrency = true
-			break
-		}
-	}
-	// If not found, check nodes
-	if !foundCurrency {
-		for _, node := range itinerary.Graph.Nodes {
-			if node.Stay != nil && node.Stay.Cost != nil && node.Stay.Cost.Currency != "" {
-				globalCurrency = node.Stay.Cost.Currency
-				foundCurrency = true
-				break
+		if edge.Transport != nil {
+			if edge.Transport.Cost == nil {
+				edge.Transport.Cost = &pb.Cost{}
+			}
+			if edge.Transport.Cost.Currency == "" {
+				edge.Transport.Cost.Currency = globalCurrency
 			}
 		}
 	}
-	// If still not found, infer from Start Location of first transport
-	if !foundCurrency && len(itinerary.Graph.Edges) > 0 {
-		edge := itinerary.Graph.Edges[0]
-		if edge.Transport != nil && edge.Transport.OriginLocation != nil {
-			globalCurrency = core.GetCurrencyForCountry(edge.Transport.OriginLocation.Country)
-			if globalCurrency == "" {
-				globalCurrency = "USD" // Fallback
+	for _, node := range itinerary.Graph.Nodes {
+		if node.Stay != nil {
+			if node.Stay.Cost == nil {
+				node.Stay.Cost = &pb.Cost{}
+			}
+			if node.Stay.Cost.Currency == "" {
+				node.Stay.Cost.Currency = globalCurrency
 			}
 		}
 	}
 
-	log.Infof(ctx, "TravelDesk: Enforcing global currency: %s", globalCurrency)
+	// Enrich location information
+	for _, node := range itinerary.Graph.Nodes {
+		if node.Stay == nil || node.Stay.Location == nil {
+			continue
+		}
+
+		if err := td.enrichLocation(ctx, node.Stay.Location); err != nil {
+			log.Errorf(ctx, "TravelDesk: Location enrichment failed for %s: %v", node.Stay.Location, err)
+		}
+	}
+
+	// Enrich transport information
+	for _, edge := range itinerary.Graph.Edges {
+		if edge.Transport == nil || edge.Transport.OriginLocation == nil {
+			continue
+		}
+
+		if err := td.enrichLocation(ctx, edge.Transport.OriginLocation); err != nil {
+			log.Errorf(ctx, "TravelDesk: Location enrichment failed for %s: %v", edge.Transport.OriginLocation, err)
+		}
+
+		if edge.Transport.DestinationLocation != nil {
+			if err := td.enrichLocation(ctx, edge.Transport.DestinationLocation); err != nil {
+				log.Errorf(ctx, "TravelDesk: Location enrichment failed for %s: %v", edge.Transport.DestinationLocation, err)
+			}
+		}
+	}
+}
+
+func (td *TravelDesk) enrichLocation(ctx context.Context, loc *pb.Location) error {
+	keywords := []string{}
+
+	// Prioritize IATA code, then City Code, then City Name
+	if len(loc.IataCodes) > 0 {
+		keywords = append(keywords, loc.IataCodes[0])
+	}
+	if loc.CityCode != "" {
+		keywords = append(keywords, loc.CityCode)
+	}
+	if loc.City != "" {
+		keywords = append(keywords, loc.City)
+	}
+
+	for _, keyword := range keywords {
+		if keyword == "" {
+			continue
+		}
+
+		location, err := td.amadeus.SearchLocations(ctx, keyword)
+		if err != nil {
+			log.Warnf(ctx, "TravelDesk: Location search failed for '%s': %v. Trying next fallback.", keyword, err)
+			continue
+		}
+
+		if len(location) > 0 {
+			// Found a match, populate and return
+			bestMatch := location[0]
+			maxScore := -1
+
+			for _, l := range location {
+				score := 0
+
+				// Check IATA codes
+				for _, code := range loc.IataCodes {
+					for _, candidateCode := range l.IataCodes {
+						if code == candidateCode {
+							score += 5
+							break
+						}
+					}
+				}
+
+				// Check City Code
+				if loc.CityCode != "" && l.CityCode == loc.CityCode {
+					score += 4
+				}
+
+				// Check City Name
+				if loc.City != "" {
+					if strings.EqualFold(l.City, loc.City) {
+						score += 3
+					} else if strings.Contains(strings.ToLower(l.City), strings.ToLower(loc.City)) {
+						score += 1
+					}
+				}
+
+				// Check Country
+				if loc.Country != "" && strings.EqualFold(l.Country, loc.Country) {
+					score += 2
+				}
+
+				// Prefer results with City populated
+				if l.City != "" {
+					score += 1
+				}
+
+				if score > maxScore {
+					maxScore = score
+					bestMatch = l
+				}
+			}
+
+			loc.City = bestMatch.City
+			loc.Country = bestMatch.Country
+			loc.CityCode = bestMatch.CityCode
+			loc.IataCodes = bestMatch.IataCodes
+			return nil
+		}
+	}
+
+	log.Warnf(ctx, "TravelDesk: Could not enrich location for %v", loc)
+	return nil // Not strictly an error, just failed to enrich
+}
+
+func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerary) {
+	if itinerary.Graph == nil {
+		return
+	}
 
 	// 1. Check Flights (Edges)
 	for _, edge := range itinerary.Graph.Edges {
@@ -85,12 +197,6 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 			if t.Type == pb.TransportType_TRANSPORT_TYPE_FLIGHT {
 				if flight := t.GetFlight(); flight != nil {
 					log.Debugf(ctx, "TravelDesk: Checking flights on %s", flight.DepartureTime.AsTime().Format("2006-01-02"))
-
-					// Enforce global currency
-					if t.Cost == nil {
-						t.Cost = &pb.Cost{}
-					}
-					t.Cost.Currency = globalCurrency
 
 					// SearchFlights handles location extraction internally
 					transports, err := td.amadeus.SearchFlights(ctx, t)
@@ -211,7 +317,7 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 
 			// B. Pick top hotels to check for offers
 			var hotelIds []string
-			limit := td.amadeus.Limits.Hotel
+			limit := td.amadeus.Config.HotelLimit
 
 			count := 0
 			for _, hotel := range listResp.Data {
@@ -223,8 +329,6 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 			}
 
 			// C. Search offers for these hotels
-			checkIn := acc.CheckIn.AsTime().Format("2006-01-02")
-			checkOut := acc.CheckOut.AsTime().Format("2006-01-02")
 
 			// Use traveler count from accommodation
 			adults := int(acc.TravelerCount)
@@ -236,10 +340,9 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 			if acc.Cost == nil {
 				acc.Cost = &pb.Cost{}
 			}
-			acc.Cost.Currency = globalCurrency
 
 			log.Debugf(ctx, "TravelDesk: Checking offers for %d hotels for %d adults...", len(hotelIds), adults)
-			accommodations, err := td.amadeus.SearchHotelOffers(ctx, hotelIds, adults, checkIn, checkOut, globalCurrency)
+			accommodations, err := td.amadeus.SearchHotelOffers(ctx, hotelIds, acc)
 			if err != nil {
 				// SearchHotelOffers might error if none available or API error
 				errMsg := fmt.Sprintf("Hotel offers search failed: %s", err)

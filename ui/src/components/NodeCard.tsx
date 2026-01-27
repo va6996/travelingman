@@ -3,9 +3,10 @@ import {
     VStack,
     HStack,
     Box,
-    Icon
+    Icon,
+    Badge
 } from '@chakra-ui/react'
-import { MdHotel, MdSwapHoriz } from 'react-icons/md'
+import { MdSwapHoriz } from 'react-icons/md'
 import { Accommodation } from '../gen/protos/itinerary_pb'
 import { TimelineCard, OptionCard } from './TimelineCard'
 
@@ -26,11 +27,11 @@ export const NodeCard = ({ stay, options, selectedOptionIndex, onSelectOption, l
     if (!currentStay) {
         return (
             <TimelineCard
-                icon={MdHotel}
                 themeColor="gray"
                 title={locationName || "Location / Waypoint"}
                 subtitle="No accommodation booked"
                 tags={[]}
+                hideToggle={true}
             >
                 <Text color="gray.500" fontSize="md">No details available.</Text>
             </TimelineCard>
@@ -42,9 +43,8 @@ export const NodeCard = ({ stay, options, selectedOptionIndex, onSelectOption, l
 
     return (
         <TimelineCard
-            icon={MdHotel}
             themeColor="green"
-            title={currentStay.name || "Accommodation"}
+            title={capitalizeFirstLetter(currentStay.name || "Accommodation")}
             subtitle={
                 <VStack align="start" spacing={0}>
                     <Text>{currentStay.location?.city ? `${currentStay.location.city}, ${currentStay.location.country || ''}` : (currentStay.address || "Location details unavailable")}</Text>
@@ -60,22 +60,18 @@ export const NodeCard = ({ stay, options, selectedOptionIndex, onSelectOption, l
             hideToggle={options.length <= 1}
             rightContent={
                 <>
-                    {checkIn && <Text fontSize="sm" color="gray.500">In: {checkIn.toLocaleDateString()}</Text>}
-                    {checkOut && <Text fontSize="sm" color="gray.500">Out: {checkOut.toLocaleDateString()}</Text>}
+                    {checkIn && <Text fontSize="sm" color="gray.500">Check In: {checkIn.toLocaleDateString()}</Text>}
+                    {checkOut && <Text fontSize="sm" color="gray.500">Check Out: {checkOut.toLocaleDateString()}</Text>}
+                    {currentStay.travelerCount && <Text fontSize="sm" color="gray.500">Guests: {currentStay.travelerCount}</Text>}
                 </>
             }
         >
             <VStack align="stretch" spacing={4}>
-                <HStack spacing={4} color="gray.400" fontSize="xs">
-                    <Text><strong>REF:</strong> {currentStay.bookingReference || "N/A"}</Text>
-                    <Text><strong>GUESTS:</strong> {currentStay.travelerCount}</Text>
-                </HStack>
-
                 {options.length > 1 && (
                     <Box>
                         <HStack mb={2}>
                             <Icon as={MdSwapHoriz} color="gray.400" />
-                            <Text fontWeight="semibold" color="gray.300" fontSize="xs">AVAILABLE OPTIONS</Text>
+                            <Text fontWeight="semibold" color="gray.300" fontSize="s">Available Options</Text>
                         </HStack>
                         <VStack align="stretch" spacing={2}>
                             {options.map((opt, idx) => {
@@ -89,15 +85,15 @@ export const NodeCard = ({ stay, options, selectedOptionIndex, onSelectOption, l
                                     >
                                         <HStack justify="space-between">
                                             <VStack align="start" spacing={0}>
-                                                <Text fontWeight="bold" fontSize="md" color="white">{opt.name}</Text>
+                                                <Text fontWeight="bold" fontSize="md" color="white">{capitalizeFirstLetter(opt.name)}</Text>
                                                 <Text fontSize="sm" color="gray.500">{opt.tags.join(", ")}</Text>
                                             </VStack>
-                                            <HStack>
+                                            <VStack>
+                                                {isSelected && <Badge colorScheme="green" variant="solid">Selected</Badge>}
                                                 <Text fontWeight="bold" color="yellow.200" fontSize="sm">
                                                     {opt.cost?.value} {opt.cost?.currency}
                                                 </Text>
-                                                {isSelected && <Icon as={MdHotel} color="green.400" />}
-                                            </HStack>
+                                            </VStack>
                                         </HStack>
                                     </OptionCard>
                                 )
@@ -110,3 +106,8 @@ export const NodeCard = ({ stay, options, selectedOptionIndex, onSelectOption, l
     )
 }
 
+
+function capitalizeFirstLetter(val: string) {
+    val = val.toLowerCase()
+    return val.replace(/\b\w/g, l => l.toUpperCase());
+}

@@ -1,17 +1,5 @@
 package agents
 
-import (
-	"context"
-	"testing"
-
-	"github.com/firebase/genkit/go/ai"
-	"github.com/firebase/genkit/go/genkit"
-	"github.com/stretchr/testify/assert"
-	"github.com/va6996/travelingman/pb"
-	"github.com/va6996/travelingman/tools"
-	"google.golang.org/protobuf/types/known/timestamppb"
-)
-
 /*
 // MockLLMClient
 type MockLLMClient struct {

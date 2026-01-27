@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
-import { VStack, Box, Text, Heading, Divider, Tabs, TabList, TabPanels, Tab, TabPanel } from '@chakra-ui/react'
+import { VStack, Box, Text, Heading, Divider, Tabs, TabList, TabPanels, Tab, TabPanel, Icon } from '@chakra-ui/react'
+import { MdHotel, MdFlight, MdDirectionsCar, MdTrain, MdDirectionsWalk } from 'react-icons/md'
 import { Itinerary, Node, Edge } from '../gen/protos/graph_pb'
+import { TransportType } from '../gen/protos/itinerary_pb'
 import { NodeCard } from './NodeCard'
 import { EdgeCard } from './EdgeCard'
 
@@ -108,22 +110,45 @@ const SingleItineraryTimeline = ({ itinerary }: { itinerary: Itinerary }) => {
 
                 const selectedIdx = selectedOptions[id] || 0
 
+                // Get icon for timeline dot
+                const getTimelineIcon = () => {
+                    if (isNode) {
+                        return MdHotel
+                    } else {
+                        const edge = item.data as Edge
+                        const transportType = edge.transport?.type
+                        switch (transportType) {
+                            case TransportType.FLIGHT: return MdFlight
+                            case TransportType.CAR: return MdDirectionsCar
+                            case TransportType.TRAIN: return MdTrain
+                            case TransportType.WALKING: return MdDirectionsWalk
+                            default: return MdFlight
+                        }
+                    }
+                }
+
+                const TimelineIcon = getTimelineIcon()
+
                 return (
                     <Box key={idx} pl={10} position="relative" mb={6}>
-                        {/* Dot */}
+                        {/* Icon Dot */}
                         <Box
                             position="absolute"
-                            left="13px"
-                            top="28px"
-                            width="16px"
-                            height="16px"
+                            left="9px"
+                            top="24px"
+                            width="24px"
+                            height="24px"
                             borderRadius="full"
-                            bg={isNode ? "green.400" : "#1a202c"}
-                            border={isNode ? "none" : "2px solid"}
-                            borderColor={isNode ? "none" : "green.500"}
+                            bg="green.900"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
                             zIndex={1}
-                            shadow={isNode ? "0 0 10px rgba(72, 187, 120, 0.6)" : "none"}
-                        />
+                            border="2px solid"
+                            borderColor="green.500"
+                        >
+                            <Icon as={TimelineIcon} boxSize={4} color="green.200" />
+                        </Box>
 
                         {isNode ? (
                             <NodeCard

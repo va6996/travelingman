@@ -23,21 +23,32 @@ const (
 
 // Client is the main Amadeus API client
 type Client struct {
-	ClientID     string
-	ClientSecret string
-	BaseURL      string
-	HTTPClient   *http.Client
-	Token        *AuthToken
-	Cache        *SimpleCache
-	DB           *gorm.DB
-	Limits       struct {
-		Flight int
-		Hotel  int
-	}
+	Config          Config
+	BaseURL         string
+	HTTPClient      *http.Client
+	Token           *AuthToken
+	Cache           *SimpleCache
+	DB              *gorm.DB
 	FlightTool      *FlightTool
 	HotelListTool   *HotelListTool
 	HotelOffersTool *HotelOffersTool
 	LocationTool    *LocationTool
+}
+
+type Config struct {
+	ClientID     string
+	ClientSecret string
+	IsProduction bool
+	FlightLimit  int
+	HotelLimit   int
+	Timeout      int            // Seconds
+	CacheTTL     CacheTTLConfig // Hours
+}
+
+type CacheTTLConfig struct {
+	Location int
+	Flight   int
+	Hotel    int
 }
 
 // LocationSearchResponse wraps the API response for locations
@@ -72,23 +83,20 @@ type AuthToken struct {
 
 // NewClient creates a new Amadeus client
 // Returns an error if the client cannot be initialized
-func NewClient(clientID, clientSecret string, isProduction bool, gk *genkit.Genkit, registry *tools.Registry, flightLimit, hotelLimit, timeout int, db *gorm.DB) (*Client, error) {
+func NewClient(cfg Config, gk *genkit.Genkit, registry *tools.Registry, db *gorm.DB) (*Client, error) {
 
 	baseURL := BaseURLTest
-	if isProduction {
+	if cfg.IsProduction {
 		baseURL = BaseURLProduction
 	}
 
 	c := &Client{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		BaseURL:      baseURL,
-		HTTPClient:   &http.Client{Timeout: time.Duration(timeout) * time.Second},
-		Cache:        NewSimpleCache(),
-		DB:           db,
+		Config:     cfg,
+		BaseURL:    baseURL,
+		HTTPClient: &http.Client{Timeout: time.Duration(cfg.Timeout) * time.Second},
+		Cache:      NewSimpleCache(),
+		DB:         db,
 	}
-	c.Limits.Flight = flightLimit
-	c.Limits.Hotel = hotelLimit
 
 	// Initialize tools
 	c.initTools(gk, registry)
@@ -111,8 +119,9 @@ func (c *Client) initTools(gk *genkit.Genkit, registry *tools.Registry) {
 func (c *Client) Authenticate() error {
 	data := url.Values{}
 	data.Set("grant_type", "client_credentials")
-	data.Set("client_id", c.ClientID)
-	data.Set("client_secret", c.ClientSecret)
+	data.Set("grant_type", "client_credentials")
+	data.Set("client_id", c.Config.ClientID)
+	data.Set("client_secret", c.Config.ClientSecret)
 
 	req, err := http.NewRequest("POST", c.BaseURL+"/v1/security/oauth2/token", bytes.NewBufferString(data.Encode()))
 	if err != nil {
@@ -180,6 +189,15 @@ func (c *Client) doRequest(ctx context.Context, method, endpoint string, body in
 
 // SearchLocations searches for airports and cities by keyword and returns protobuf Location objects
 func (c *Client) SearchLocations(ctx context.Context, keyword string) ([]*pb.Location, error) {
+	// Check cache
+	cacheKey := GenerateCacheKey("location", keyword)
+	if val, found := c.Cache.Get(cacheKey); found {
+		if locations, ok := val.([]*pb.Location); ok {
+			log.Debugf(ctx, "SearchLocations: cache hit for '%s'", keyword)
+			return locations, nil
+		}
+	}
+
 	data := url.Values{}
 	data.Set("keyword", keyword)
 	data.Set("subType", "CITY,AIRPORT")
@@ -207,6 +225,7 @@ func (c *Client) SearchLocations(ctx context.Context, keyword string) ([]*pb.Loc
 	var locations []*pb.Location
 	var lat, lng float64
 	foundCoordinates := false
+	foundAirport := false
 
 	for _, l := range result.Data {
 		loc := &pb.Location{
@@ -219,6 +238,10 @@ func (c *Client) SearchLocations(ctx context.Context, keyword string) ([]*pb.Loc
 		}
 		locations = append(locations, loc)
 
+		if l.SubType == "AIRPORT" {
+			foundAirport = true
+		}
+
 		// Capture coordinates from the first result that has them
 		if !foundCoordinates && (l.GeoCode.Latitude != 0 || l.GeoCode.Longitude != 0) {
 			lat = l.GeoCode.Latitude
@@ -227,8 +250,8 @@ func (c *Client) SearchLocations(ctx context.Context, keyword string) ([]*pb.Loc
 		}
 	}
 
-	// If we have coordinates, search for nearby airports
-	if foundCoordinates {
+	// If we have coordinates but NO airports, search for nearby airports
+	if foundCoordinates && !foundAirport {
 		nearbyAirports, err := c.SearchNearbyAirports(ctx, lat, lng)
 		if err == nil {
 			// Add unique airports
@@ -247,6 +270,34 @@ func (c *Client) SearchLocations(ctx context.Context, keyword string) ([]*pb.Loc
 			}
 		} else {
 			log.Errorf(ctx, "SearchLocations: failed to search nearby airports: %v", err)
+		}
+	}
+
+	// Cache result aggressively
+	if len(locations) > 0 {
+		ttl := time.Duration(c.Config.CacheTTL.Location) * time.Hour
+		// Cache under the original keyword
+		c.Cache.Set(cacheKey, locations, ttl)
+
+		// Also cache under derived keys from the results
+		for _, loc := range locations {
+			// Cache by IATA Codes
+			for _, code := range loc.IataCodes {
+				if code != "" {
+					key := GenerateCacheKey("location", code)
+					c.Cache.Set(key, locations, ttl)
+				}
+			}
+			// Cache by City Code
+			if loc.CityCode != "" {
+				key := GenerateCacheKey("location", loc.CityCode)
+				c.Cache.Set(key, locations, ttl)
+			}
+			// Cache by City Name
+			if loc.City != "" {
+				key := GenerateCacheKey("location", loc.City)
+				c.Cache.Set(key, locations, ttl)
+			}
 		}
 	}
 

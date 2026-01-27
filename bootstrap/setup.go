@@ -130,16 +130,25 @@ func Setup(ctx context.Context, cfg *config.Config) (*App, error) {
 	}
 
 	// Initializing Amadeus client registers its tools automatically
+	amadeusConfig := amadeus.Config{
+		ClientID:     cfg.Amadeus.ClientID,
+		ClientSecret: cfg.Amadeus.ClientSecret,
+		IsProduction: false, // Default to false
+		FlightLimit:  cfg.Amadeus.Limit.Flight,
+		HotelLimit:   cfg.Amadeus.Limit.Hotel,
+		Timeout:      cfg.Amadeus.Timeout,
+		CacheTTL: amadeus.CacheTTLConfig{
+			Location: cfg.Amadeus.CacheTTL.Location,
+			Flight:   cfg.Amadeus.CacheTTL.Flight,
+			Hotel:    cfg.Amadeus.CacheTTL.Hotel,
+		},
+	}
+
 	amadeusClient, err := amadeus.NewClient(
-		cfg.Amadeus.ClientID,
-		cfg.Amadeus.ClientSecret,
-		false,
+		amadeusConfig,
 		gk,
 		registry,
-		cfg.Amadeus.Limit.Flight,
-		cfg.Amadeus.Limit.Hotel,
-		cfg.Amadeus.Timeout,
-		db, // Pass DB
+		db,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize Amadeus client: %w", err)

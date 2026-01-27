@@ -57,3 +57,56 @@ h5,
 h6 {
   font-family: 'Recoleta', serif;
 }
+
+/* Component Styles */
+
+.timeline-card {
+  background-color: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  /* whiteAlpha.100 approx */
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  border-radius: 1rem;
+  /* 2xl equivalent usually */
+  overflow: hidden;
+  transition: all 0.2s;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-card:hover {
+  border-color: var(--theme-color);
+  box-shadow: 0 0 0 1px var(--theme-color);
+}
+
+.option-card {
+  padding: 0.75rem;
+  border-width: 1px;
+  border-radius: 0.75rem;
+  /* xl equivalent */
+  cursor: pointer;
+  transition: all 0.2s;
+  border-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, 0.04);
+  /* whiteAlpha.50 approx */
+}
+
+.option-card:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  /* whiteAlpha.100 */
+}
+
+.option-card.selected {
+  border-color: var(--theme-color);
+  background-color: var(--theme-color-900);
+}
+
+.timeline-card-options {
+  background-color: rgba(72, 187, 120, 0.08);
+  /* Green-tinted background for options area */
+  border-radius: 0.5rem;
+  /* md equivalent */
+  font-size: 0.875rem;
+  /* sm equivalent */
+}

@@ -56,6 +56,7 @@ IMPORTANT WORKFLOW:
 2. Then, create the itinerary JSON with the gathered information:
    - DO NOT call hotelTool or flightTool - these are for the TravelDesk, not for planning
    - Return the itinerary json with destination, dates, and activities
+   - If the user only requests for flights/hotels, return the itinerary json with only flights/hotels
 
 CURRENCY HANDLING:
 - The system will automatically infer the currency based on the origin country (e.g. US -> USD, UK -> GBP).
@@ -90,18 +91,18 @@ Final Answer Schema:
         "nodes": [
           {
             "id": "start_loc",
-            "location": "JFK",
+            "location": { "iataCodes": ["JFK"] },
             "isInterCity": true
           },
           {
             "id": "node_1",
-            "location": "PAR",
+            "location": { "cityCode": "PAR" },
             "fromTimestamp": "2026-01-25T14:00:00Z",
             "toTimestamp": "2026-01-27T11:00:00Z",
             "isInterCity": false,
             "stay": {
               "name": "Hotel Paris",
-              "location": { "cityCode": "PAR" },
+              "location": { "iataCodes": ["CDG"], "city": "Paris", "country": "France" },
               "checkIn": "2026-01-25T14:00:00Z",
               "checkOut": "2026-01-27T11:00:00Z",
               "travelerCount": 2,
@@ -308,12 +309,6 @@ func (p *TripPlanner) Plan(ctx context.Context, req PlanRequest) (*PlanResult, e
 				}
 			}
 
-			// Resolve city codes
-			if result.Itinerary != nil {
-				// We need to implement resolveCityCodes if we want the airport codes to be correct
-				p.resolveCityCodes(ctx, result.Itinerary)
-			}
-
 			return result, nil
 		}
 	}
@@ -324,102 +319,6 @@ func (p *TripPlanner) Plan(ctx context.Context, req PlanRequest) (*PlanResult, e
 		Question: "I couldn't generate a proper itinerary. Here's what I found: " + text,
 	}, nil
 }
-
-// resolveCityCodes updates the itinerary with correct IATA codes and City names
-func (p *TripPlanner) resolveCityCodes(ctx context.Context, itin *pb.Itinerary) {
-	if p.registry == nil {
-		return
-	}
-
-	for i := range itin.Graph.Nodes {
-		node := itin.Graph.Nodes[i]
-		if node.Stay == nil || node.Stay.Location == nil {
-			continue
-		}
-
-		loc := node.Stay.Location
-		needsResolution := false
-		keyword := ""
-
-		// If we have a code but no city name, resolve it
-		if loc.City == "" && loc.CityCode != "" {
-			needsResolution = true
-			keyword = loc.CityCode
-		} else if loc.City == "" && len(loc.IataCodes) > 0 {
-			needsResolution = true
-			keyword = loc.IataCodes[0]
-		} else if len(loc.CityCode) > 3 || (len(loc.CityCode) == 3 && loc.CityCode != strings.ToUpper(loc.CityCode)) {
-			// Suspicious code (looks like a name), resolve it
-			needsResolution = true
-			keyword = loc.CityCode
-		}
-
-		if needsResolution && keyword != "" {
-			log.Debugf(ctx, "TripPlanner: Resolving location details for '%s'", keyword)
-
-			// Simple synchronous call
-			tCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-			res, err := p.registry.ExecuteTool(tCtx, "amadeus_location_tool", map[string]interface{}{
-				"keyword": keyword,
-			})
-			cancel() // cancel immediately after done
-
-			if err != nil {
-				log.Errorf(ctx, "TripPlanner: Location search failed for %s: %v", keyword, err)
-				continue
-			}
-
-			// Parse result
-			var bestMatch *pb.Location
-			if locations, ok := res.([]*pb.Location); ok && len(locations) > 0 {
-				for _, l := range locations {
-					if l.City != "" {
-						bestMatch = l
-						break
-					}
-				}
-				if bestMatch == nil && len(locations) > 0 {
-					bestMatch = locations[0]
-				}
-			} else {
-				// Fallback JSON roundtrip
-				b, _ := json.Marshal(res)
-				var locs []*pb.Location
-				if err := json.Unmarshal(b, &locs); err == nil && len(locs) > 0 {
-					for _, l := range locs {
-						if l.City != "" {
-							bestMatch = l
-							break
-						}
-					}
-					if bestMatch == nil && len(locs) > 0 {
-						bestMatch = locs[0]
-					}
-				}
-			}
-
-			// Apply result directly
-			if bestMatch != nil {
-				log.Debugf(ctx, "TripPlanner: Resolved '%s' to City: '%s', Code: '%s'", keyword, bestMatch.City, bestMatch.CityCode)
-
-				if node.Stay.Location.City == "" {
-					node.Stay.Location.City = bestMatch.City
-				}
-				if node.Stay.Location.Country == "" {
-					node.Stay.Location.Country = bestMatch.Country
-				}
-				if node.Stay.Location.CityCode == "" || len(node.Stay.Location.CityCode) > 3 {
-					node.Stay.Location.CityCode = bestMatch.CityCode
-				}
-				if len(node.Stay.Location.IataCodes) == 0 {
-					node.Stay.Location.IataCodes = bestMatch.IataCodes
-				}
-			}
-		}
-	}
-}
-
-// resolveCityCodes updates the itinerary with correct IATA codes
 
 // Helper to map string class to pb enum
 func mapClass(c string) pb.Class {

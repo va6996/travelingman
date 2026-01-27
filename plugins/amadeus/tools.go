@@ -282,7 +282,19 @@ func (t *HotelOffersTool) Execute(ctx context.Context, input *HotelOffersInput) 
 		adults = 1
 	}
 
-	resp, err := t.Client.SearchHotelOffers(ctx, input.HotelIDs, adults, input.CheckIn, input.CheckOut, input.Currency)
+	// Construct temporary accommodation object for the search
+	acc := &pb.Accommodation{
+		TravelerCount: int32(adults),
+		CheckIn:       timestamppb.New(parseDate(input.CheckIn)),
+		CheckOut:      timestamppb.New(parseDate(input.CheckOut)),
+		Cost: &pb.Cost{
+			Currency: input.Currency,
+		},
+		// Location info missing in this tool input context, so enrichment won't happen here
+		// unless we change the tool input as well, but for now we match the signature.
+	}
+
+	resp, err := t.Client.SearchHotelOffers(ctx, input.HotelIDs, acc)
 	if err != nil {
 		log.Errorf(ctx, "HotelOffersTool failed: %v", err)
 		return nil, err

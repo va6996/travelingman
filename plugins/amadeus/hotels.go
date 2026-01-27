@@ -236,7 +236,25 @@ func (c *Client) SearchHotelsByCity(ctx context.Context, acc *pb.Accommodation) 
 }
 
 // SearchHotelOffers searches for hotel offers and returns them as pb.Accommodation structs
-func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adults int, checkIn, checkOut, currency string) ([]*pb.Accommodation, error) {
+func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, acc *pb.Accommodation) ([]*pb.Accommodation, error) {
+	// Extract parameters from accommodation object
+	if acc == nil {
+		return nil, fmt.Errorf("accommodation object is required")
+	}
+
+	adults := int(acc.TravelerCount)
+
+	if acc.CheckIn == nil || acc.CheckOut == nil {
+		return nil, fmt.Errorf("check-in and check-out dates are required")
+	}
+	checkIn := acc.CheckIn.AsTime().Format("2006-01-02")
+	checkOut := acc.CheckOut.AsTime().Format("2006-01-02")
+
+	currency := ""
+	if acc.Cost != nil {
+		currency = acc.Cost.Currency
+	}
+
 	// Amadeus API often has limits on the number of IDs (e.g. 50-100).
 	// We chunk them to be safe (e.g., 20).
 	const chunkSize = 20
@@ -331,8 +349,30 @@ func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adult
 			batchAccommodations = append(batchAccommodations, data.ToAccommodations()...)
 		}
 
-		// Set cache for this batch (30 minutes TTL)
-		c.Cache.Set(cacheKey, batchAccommodations, 30*time.Minute)
+		// Enrich results with source location info
+		if acc.Location != nil {
+			for _, res := range batchAccommodations {
+				if res.Location == nil {
+					res.Location = &pb.Location{}
+				}
+				if len(res.Location.IataCodes) == 0 {
+					res.Location.IataCodes = acc.Location.IataCodes
+				}
+				if res.Location.City == "" {
+					res.Location.City = acc.Location.City
+				}
+				if res.Location.Country == "" {
+					res.Location.Country = acc.Location.Country
+				}
+				if res.Location.CityCode == "" {
+					res.Location.CityCode = acc.Location.CityCode
+				}
+			}
+		}
+
+		// Set cache for this batch
+		ttl := time.Duration(c.Config.CacheTTL.Hotel) * time.Hour
+		c.Cache.Set(cacheKey, batchAccommodations, ttl)
 
 		// Persist to DB if available
 		if c.DB != nil {
@@ -349,7 +389,7 @@ func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, adult
 	}
 
 	// Apply limit
-	limit := c.Limits.Hotel
+	limit := c.Config.HotelLimit
 	if limit > 0 && len(accommodations) > limit {
 		accommodations = accommodations[:limit]
 	}
