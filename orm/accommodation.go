@@ -30,7 +30,6 @@ func (a *Accommodation) ToPB() *pb.Accommodation {
 		Id:       int64(a.ID),
 		GroupId:  int64(a.GroupID),
 		Name:     a.Name,
-		Address:  a.Address,
 		CheckIn:  timestamppb.New(a.CheckIn),
 		CheckOut: timestamppb.New(a.CheckOut),
 		Cost: &pb.Cost{
@@ -50,7 +49,6 @@ func AccommodationFromPB(p *pb.Accommodation) *Accommodation {
 		ID:               uint(p.Id),
 		GroupID:          uint(p.GroupId),
 		Name:             p.Name,
-		Address:          p.Address,
 		CheckIn:          p.CheckIn.AsTime(),
 		CheckOut:         p.CheckOut.AsTime(),
 		CostValue:        p.GetCost().GetValue(),

@@ -85,13 +85,12 @@ func (JourneyType) EnumDescriptor() ([]byte, []int) {
 type Node struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                            // Unique identifier for the node
-	Location      string                 `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`                                // Name or address of the location
+	Location      *Location              `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`                                // Name or address of the location
 	FromTimestamp *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=from_timestamp,json=fromTimestamp,proto3" json:"from_timestamp,omitempty"` // Arrival time at this node
 	ToTimestamp   *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=to_timestamp,json=toTimestamp,proto3" json:"to_timestamp,omitempty"`       // Departure time from this node
-	IsInterCity   bool                   `protobuf:"varint,5,opt,name=is_inter_city,json=isInterCity,proto3" json:"is_inter_city,omitempty"`    // Whether this node represents an inter-city travel point
-	Stay          *Accommodation         `protobuf:"bytes,6,opt,name=stay,proto3" json:"stay,omitempty"`                                        // Hotel/accommodation info (from Accommodation)
-	StayOptions   []*Accommodation       `protobuf:"bytes,7,rep,name=stayOptions,proto3" json:"stayOptions,omitempty"`                          // List of possible accommodations
-	SubGraph      *Graph                 `protobuf:"bytes,8,opt,name=sub_graph,json=subGraph,proto3" json:"sub_graph,omitempty"`                // Sub-graph for daily activities
+	Stay          *Accommodation         `protobuf:"bytes,5,opt,name=stay,proto3" json:"stay,omitempty"`                                        // Hotel/accommodation info (from Accommodation)
+	StayOptions   []*Accommodation       `protobuf:"bytes,6,rep,name=stayOptions,proto3" json:"stayOptions,omitempty"`                          // List of possible accommodations
+	SubGraph      *Graph                 `protobuf:"bytes,7,opt,name=sub_graph,json=subGraph,proto3" json:"sub_graph,omitempty"`                // Sub-graph for daily activities
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -133,11 +132,11 @@ func (x *Node) GetId() string {
 	return ""
 }
 
-func (x *Node) GetLocation() string {
+func (x *Node) GetLocation() *Location {
 	if x != nil {
 		return x.Location
 	}
-	return ""
+	return nil
 }
 
 func (x *Node) GetFromTimestamp() *timestamppb.Timestamp {
@@ -152,13 +151,6 @@ func (x *Node) GetToTimestamp() *timestamppb.Timestamp {
 		return x.ToTimestamp
 	}
 	return nil
-}
-
-func (x *Node) GetIsInterCity() bool {
-	if x != nil {
-		return x.IsInterCity
-	}
-	return false
 }
 
 func (x *Node) GetStay() *Accommodation {
@@ -457,16 +449,15 @@ var File_protos_graph_proto protoreflect.FileDescriptor
 
 const file_protos_graph_proto_rawDesc = "" +
 	"\n" +
-	"\x12protos/graph.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16protos/itinerary.proto\"\xfa\x02\n" +
+	"\x12protos/graph.proto\x12\ftravelingman\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16protos/itinerary.proto\"\xee\x02\n" +
 	"\x04Node\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
-	"\blocation\x18\x02 \x01(\tR\blocation\x12A\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x122\n" +
+	"\blocation\x18\x02 \x01(\v2\x16.travelingman.LocationR\blocation\x12A\n" +
 	"\x0efrom_timestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\rfromTimestamp\x12=\n" +
-	"\fto_timestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vtoTimestamp\x12\"\n" +
-	"\ris_inter_city\x18\x05 \x01(\bR\visInterCity\x12/\n" +
-	"\x04stay\x18\x06 \x01(\v2\x1b.travelingman.AccommodationR\x04stay\x12=\n" +
-	"\vstayOptions\x18\a \x03(\v2\x1b.travelingman.AccommodationR\vstayOptions\x120\n" +
-	"\tsub_graph\x18\b \x01(\v2\x13.travelingman.GraphR\bsubGraph\"\xdb\x01\n" +
+	"\fto_timestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vtoTimestamp\x12/\n" +
+	"\x04stay\x18\x05 \x01(\v2\x1b.travelingman.AccommodationR\x04stay\x12=\n" +
+	"\vstayOptions\x18\x06 \x03(\v2\x1b.travelingman.AccommodationR\vstayOptions\x120\n" +
+	"\tsub_graph\x18\a \x01(\v2\x13.travelingman.GraphR\bsubGraph\"\xdb\x01\n" +
 	"\x04Edge\x12\x17\n" +
 	"\afrom_id\x18\x01 \x01(\tR\x06fromId\x12\x13\n" +
 	"\x05to_id\x18\x02 \x01(\tR\x04toId\x12)\n" +
@@ -521,32 +512,34 @@ var file_protos_graph_proto_goTypes = []any{
 	(*Edge)(nil),                  // 2: travelingman.Edge
 	(*Graph)(nil),                 // 3: travelingman.Graph
 	(*Itinerary)(nil),             // 4: travelingman.Itinerary
-	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
-	(*Accommodation)(nil),         // 6: travelingman.Accommodation
-	(*Transport)(nil),             // 7: travelingman.Transport
-	(*Error)(nil),                 // 8: travelingman.Error
+	(*Location)(nil),              // 5: travelingman.Location
+	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
+	(*Accommodation)(nil),         // 7: travelingman.Accommodation
+	(*Transport)(nil),             // 8: travelingman.Transport
+	(*Error)(nil),                 // 9: travelingman.Error
 }
 var file_protos_graph_proto_depIdxs = []int32{
-	5,  // 0: travelingman.Node.from_timestamp:type_name -> google.protobuf.Timestamp
-	5,  // 1: travelingman.Node.to_timestamp:type_name -> google.protobuf.Timestamp
-	6,  // 2: travelingman.Node.stay:type_name -> travelingman.Accommodation
-	6,  // 3: travelingman.Node.stayOptions:type_name -> travelingman.Accommodation
-	3,  // 4: travelingman.Node.sub_graph:type_name -> travelingman.Graph
-	7,  // 5: travelingman.Edge.transport:type_name -> travelingman.Transport
-	7,  // 6: travelingman.Edge.transportOptions:type_name -> travelingman.Transport
-	1,  // 7: travelingman.Graph.nodes:type_name -> travelingman.Node
-	2,  // 8: travelingman.Graph.edges:type_name -> travelingman.Edge
-	3,  // 9: travelingman.Graph.sub_graph:type_name -> travelingman.Graph
-	5,  // 10: travelingman.Itinerary.start_time:type_name -> google.protobuf.Timestamp
-	5,  // 11: travelingman.Itinerary.end_time:type_name -> google.protobuf.Timestamp
-	3,  // 12: travelingman.Itinerary.graph:type_name -> travelingman.Graph
-	0,  // 13: travelingman.Itinerary.journey_type:type_name -> travelingman.JourneyType
-	8,  // 14: travelingman.Itinerary.error:type_name -> travelingman.Error
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	5,  // 0: travelingman.Node.location:type_name -> travelingman.Location
+	6,  // 1: travelingman.Node.from_timestamp:type_name -> google.protobuf.Timestamp
+	6,  // 2: travelingman.Node.to_timestamp:type_name -> google.protobuf.Timestamp
+	7,  // 3: travelingman.Node.stay:type_name -> travelingman.Accommodation
+	7,  // 4: travelingman.Node.stayOptions:type_name -> travelingman.Accommodation
+	3,  // 5: travelingman.Node.sub_graph:type_name -> travelingman.Graph
+	8,  // 6: travelingman.Edge.transport:type_name -> travelingman.Transport
+	8,  // 7: travelingman.Edge.transportOptions:type_name -> travelingman.Transport
+	1,  // 8: travelingman.Graph.nodes:type_name -> travelingman.Node
+	2,  // 9: travelingman.Graph.edges:type_name -> travelingman.Edge
+	3,  // 10: travelingman.Graph.sub_graph:type_name -> travelingman.Graph
+	6,  // 11: travelingman.Itinerary.start_time:type_name -> google.protobuf.Timestamp
+	6,  // 12: travelingman.Itinerary.end_time:type_name -> google.protobuf.Timestamp
+	3,  // 13: travelingman.Itinerary.graph:type_name -> travelingman.Graph
+	0,  // 14: travelingman.Itinerary.journey_type:type_name -> travelingman.JourneyType
+	9,  // 15: travelingman.Itinerary.error:type_name -> travelingman.Error
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_protos_graph_proto_init() }

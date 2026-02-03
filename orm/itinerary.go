@@ -46,11 +46,10 @@ func (i *Itinerary) ToPB() *pb.Itinerary {
 		pbAccommodation := a.ToPB()
 		node := &pb.Node{
 			Id:            fmt.Sprintf("node_acc_%d", a.ID), // Use ID if available or index
-			Location:      pbAccommodation.Address,
+			Location:      pbAccommodation.Location,
 			FromTimestamp: pbAccommodation.CheckIn,
 			ToTimestamp:   pbAccommodation.CheckOut,
 			Stay:          pbAccommodation,
-			IsInterCity:   false,
 		}
 		// Fallback for ID if 0 (new)
 		if a.ID == 0 {

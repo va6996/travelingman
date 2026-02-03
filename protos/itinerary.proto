@@ -24,6 +24,12 @@ enum Class {
     CLASS_FIRST = 4;
 }
 
+enum BaggageType {
+    BAGGAGE_TYPE_UNSPECIFIED = 0;
+    BAGGAGE_TYPE_CARRYON = 1;
+    BAGGAGE_TYPE_CHECKED = 2;
+}
+
 enum Transmission {
     TRANSMISSION_UNSPECIFIED = 0;
     TRANSMISSION_MANUAL = 1;
@@ -42,6 +48,7 @@ message FlightPreferences {
     int32 max_stops = 2;
     repeated string preferred_origin_airports = 3;
     repeated string preferred_destination_airports = 4;
+    BaggagePreferences baggage = 5;  // User's baggage requirements
 }
 
 message TrainPreferences {
@@ -54,6 +61,25 @@ message CarRentalPreferences {
     string car_class = 2;
 }
 
+message BaggagePreferences {
+    int32 checked_bags = 1;      // Number of checked bags user needs
+    int32 carryon_bags = 2;      // Number of carry-on bags user needs
+}
+
+message BaggagePolicy {
+    BaggageType type = 1;         // Type of bag (checked or carryon)
+    int32 quantity = 2;           // Number of bags included
+    int32 weight = 3;             // Weight limit per bag
+    string weight_unit = 4;       // KG or LB
+}
+
+message AncillaryCost {
+    string id = 1;               // Ancillary service ID
+    string type = 2;             // Type: BAGGAGE, SEAT, MEAL, etc.
+    string description = 3;      // Description of the service
+    Cost cost = 4;               // Cost of this ancillary service
+}
+
 message Location {
     string area = 1;
     string city = 2;
@@ -63,6 +89,7 @@ message Location {
     string geocode = 6;
     string zip = 7;
     string name = 8;
+    string address = 9;
 }
 
 enum ErrorCode {
@@ -93,13 +120,12 @@ message Accommodation {
     int64 id = 1;
     int64 group_id = 2;
     string name = 3;
-    string address = 4;
-    google.protobuf.Timestamp check_in = 5;
-    google.protobuf.Timestamp check_out = 6;
-    Cost cost = 7;
-    string booking_reference = 8;
-    string status = 9;
-    repeated int64 user_ids = 10;
+    google.protobuf.Timestamp check_in = 4;
+    google.protobuf.Timestamp check_out = 5;
+    Cost cost = 6;
+    string booking_reference = 7;
+    string status = 8;
+    repeated int64 user_ids = 9;
     AccommodationPreferences preferences = 11;
     int32 traveler_count = 12;
     Location location = 13;
@@ -138,6 +164,9 @@ message Flight {
     string flight_number = 2;
     google.protobuf.Timestamp departure_time = 3;
     google.protobuf.Timestamp arrival_time = 4;
+    repeated BaggagePolicy baggage_policy = 5;  // Included baggage allowance
+    repeated AncillaryCost ancillary_costs = 6; // Additional services (extra bags, seats, etc.)
+    Cost total_cost_with_ancillaries = 7;      // Base fare + ancillary costs
 }
 
 message Train {

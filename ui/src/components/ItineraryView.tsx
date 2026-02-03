@@ -157,7 +157,7 @@ const SingleItineraryTimeline = ({ itinerary }: { itinerary: Itinerary }) => {
                                 options={(item.data as Node).stayOptions}
                                 selectedOptionIndex={selectedIdx}
                                 onSelectOption={(i) => handleSelect(id, i)}
-                                locationName={(item.data as Node).location}
+                                locationName={(item.data as Node).location?.city || (item.data as Node).location?.name || "Unknown Location"}
                             />
                         ) : (
                             <EdgeCard

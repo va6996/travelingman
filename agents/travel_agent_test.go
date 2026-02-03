@@ -98,8 +98,8 @@ func TestTravelAgent_OrchestrateRequest(t *testing.T) {
 		JourneyType: pb.JourneyType_JOURNEY_TYPE_ONE_WAY,
 		Graph: &pb.Graph{
 			Nodes: []*pb.Node{
-				{Id: "n1", Location: "LHR"},
-				{Id: "n2", Location: "JFK"},
+				{Id: "n1", Location: &pb.Location{IataCodes: []string{"LHR"}}},
+				{Id: "n2", Location: &pb.Location{IataCodes: []string{"JFK"}}},
 			},
 			Edges: []*pb.Edge{{
 				FromId: "n1",
@@ -201,8 +201,8 @@ func TestTravelAgent_OrchestrateRequest_RetryOnFailure(t *testing.T) {
 		JourneyType: pb.JourneyType_JOURNEY_TYPE_ONE_WAY,
 		Graph: &pb.Graph{
 			Nodes: []*pb.Node{
-				{Id: "n1", Location: "FAIL"},
-				{Id: "n2", Location: "JFK"},
+				{Id: "n1", Location: &pb.Location{IataCodes: []string{"FAIL"}}},
+				{Id: "n2", Location: &pb.Location{IataCodes: []string{"JFK"}}},
 			},
 			Edges: []*pb.Edge{{
 				FromId: "n1",
@@ -227,8 +227,8 @@ func TestTravelAgent_OrchestrateRequest_RetryOnFailure(t *testing.T) {
 		JourneyType: pb.JourneyType_JOURNEY_TYPE_ONE_WAY,
 		Graph: &pb.Graph{
 			Nodes: []*pb.Node{
-				{Id: "n1", Location: "LHR"},
-				{Id: "n2", Location: "JFK"},
+				{Id: "n1", Location: &pb.Location{IataCodes: []string{"LHR"}}},
+				{Id: "n2", Location: &pb.Location{IataCodes: []string{"JFK"}}},
 			},
 			Edges: []*pb.Edge{{
 				FromId: "n1",

@@ -47,7 +47,7 @@ export const NodeCard = ({ stay, options, selectedOptionIndex, onSelectOption, l
             title={capitalizeFirstLetter(currentStay.name || "Accommodation")}
             subtitle={
                 <VStack align="start" spacing={0}>
-                    <Text>{currentStay.location?.city ? `${currentStay.location.city}, ${currentStay.location.country || ''}` : (currentStay.address || "Location details unavailable")}</Text>
+                    <Text>{currentStay.location?.city ? `${currentStay.location.city}, ${currentStay.location.country || ''}` : "Location details unavailable"}</Text>
                     {currentStay.location?.cityCode && (
                         <Text fontSize="sm" color="gray.500">
                             Code: {currentStay.location.cityCode}

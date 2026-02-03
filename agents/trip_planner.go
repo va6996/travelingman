@@ -91,15 +91,13 @@ Final Answer Schema:
         "nodes": [
           {
             "id": "start_loc",
-            "location": { "iataCodes": ["JFK"] },
-            "isInterCity": true
+            "location": { "iataCodes": ["JFK"], "city": "New York", "country": "USA" }
           },
           {
             "id": "node_1",
             "location": { "cityCode": "PAR" },
             "fromTimestamp": "2026-01-25T14:00:00Z",
             "toTimestamp": "2026-01-27T11:00:00Z",
-            "isInterCity": false,
             "stay": {
               "name": "Hotel Paris",
               "location": { "iataCodes": ["CDG"], "city": "Paris", "country": "France" },
@@ -283,6 +281,10 @@ func (p *TripPlanner) Plan(ctx context.Context, req PlanRequest) (*PlanResult, e
 		if len(finalAnswer.Itineraries) > 0 {
 			log.Infof(ctx, "TripPlanner: Generated %d itineraries", len(finalAnswer.Itineraries))
 
+			for i, itinerary := range finalAnswer.Itineraries {
+				log.Infof(ctx, "TripPlanner: Itinerary %d: %s", i, string(itinerary))
+			}
+
 			result := &PlanResult{
 				Reasoning: finalAnswer.Reasoning,
 			}
@@ -292,15 +294,8 @@ func (p *TripPlanner) Plan(ctx context.Context, req PlanRequest) (*PlanResult, e
 				DiscardUnknown: true,
 			}
 
-			// Convert first itinerary
-			result.Itinerary = &pb.Itinerary{}
-			if err := unmarshaler.Unmarshal(finalAnswer.Itineraries[0], result.Itinerary); err != nil {
-				log.Errorf(ctx, "TripPlanner: Failed to unmarshal first itinerary: %v", err)
-				return nil, fmt.Errorf("failed to parse itinerary: %w", err)
-			}
-
 			// Convert possible itineraries
-			for i := 1; i < len(finalAnswer.Itineraries); i++ {
+			for i := range finalAnswer.Itineraries {
 				pbItin := &pb.Itinerary{}
 				if err := unmarshaler.Unmarshal(finalAnswer.Itineraries[i], pbItin); err == nil {
 					result.PossibleItineraries = append(result.PossibleItineraries, pbItin)

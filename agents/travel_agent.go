@@ -29,24 +29,57 @@ func NewTravelAgent(p Planner, d Assistant) *TravelAgent {
 	}
 }
 
+// isToolError checks if an error is related to tool execution failures
+func isToolError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errMsg := strings.ToLower(err.Error())
+	// Check for common tool error patterns
+	return strings.Contains(errMsg, "tool") ||
+		strings.Contains(errMsg, "function call") ||
+		strings.Contains(errMsg, "tool execution") ||
+		strings.Contains(errMsg, "tool error")
+}
+
 // OrchestrateRequest handles the end-to-end planning process
 func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string, history string) (string, []*pb.Itinerary, error) {
 	currentHistory := history
 	maxIterations := 5
 
-	for i := 0; i < maxIterations; i++ {
+	for i := range maxIterations {
 		log.Debugf(ctx, "Orchestration iteration %d", i+1)
 
-		// 1. Ask Planner for a plan
+		// 1. Ask Planner for a plan (with retry logic for tool errors)
 		log.Infof(ctx, "STEP 1: Requesting trip plan from TripPlanner...")
 		planReq := PlanRequest{
 			UserQuery: userQuery,
 			History:   currentHistory,
 		}
 
-		planRes, err := ta.planner.Plan(ctx, planReq)
+		var planRes *PlanResult
+		var err error
+		maxPlannerRetries := 3
+
+		for retryCount := range maxPlannerRetries {
+			planRes, err = ta.planner.Plan(ctx, planReq)
+
+			// Check if error is a tool error and we have retries left
+			if err != nil {
+				if isToolError(err) && retryCount < maxPlannerRetries-1 {
+					log.Warnf(ctx, "Tool error in planning (attempt %d/%d): %v. Retrying...",
+						retryCount+1, maxPlannerRetries, err)
+					continue
+				}
+				return "", nil, fmt.Errorf("planner error: %w", err)
+			}
+
+			// Success, break out of retry loop
+			break
+		}
+
 		if err != nil {
-			return "", nil, fmt.Errorf("planner error: %w", err)
+			return "", nil, fmt.Errorf("planner error after retries: %w", err)
 		}
 
 		// If Planner needs user clarification, return immediately
@@ -55,11 +88,10 @@ func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string,
 			return planRes.Question, nil, nil
 		}
 
-		if planRes.Itinerary == nil {
-			log.Errorf(ctx, "ERROR: TripPlanner returned nil itinerary.")
+		if len(planRes.PossibleItineraries) == 0 {
+			log.Errorf(ctx, "ERROR: TripPlanner returned no itinerary.")
 			return "", nil, fmt.Errorf("planner returned no itinerary and no question")
 		}
-		log.Debugf(ctx, "TripPlanner proposed itinerary: %q. Proceeding to verification.", planRes.Itinerary.Title)
 
 		var successfulItineraries []*pb.Itinerary
 		var errors []string
@@ -67,11 +99,7 @@ func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string,
 		// 2. Parallel Verification for each proposed itinerary
 		log.Infof(ctx, "STEP 2: Verifying itineraries with TravelDesk...")
 
-		itinerariesToCheck := []*pb.Itinerary{}
-		if planRes.Itinerary != nil {
-			itinerariesToCheck = append(itinerariesToCheck, planRes.Itinerary)
-		}
-		itinerariesToCheck = append(itinerariesToCheck, planRes.PossibleItineraries...)
+		itinerariesToCheck := planRes.PossibleItineraries
 
 		type deskResult struct {
 			itinerary *pb.Itinerary
@@ -91,7 +119,7 @@ func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string,
 			}(it)
 		}
 
-		for i := 0; i < len(itinerariesToCheck); i++ {
+		for range itinerariesToCheck {
 			res := <-resChan
 			if res.err != nil {
 				log.Errorf(ctx, "TravelDesk verification error: %v", res.err)
@@ -144,12 +172,13 @@ func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string,
 		ta.scoreAndTag(successfulItineraries)
 
 		// 4. Success! Formulate final response
-		finalResponse := fmt.Sprintf("Here are the valid trip options based on your request:\n\n%s\n\n", planRes.Reasoning)
+		var finalResponse strings.Builder
+		fmt.Fprintf(&finalResponse, "Here are the valid trip options based on your request:\n\n%s\n\n", planRes.Reasoning)
 
 		for i, itin := range successfulItineraries {
-			finalResponse += fmt.Sprintf("### Option %d: %s %s\n", i+1, itin.Title, formatTags(itin.Tags))
-			finalResponse += ta.formatItinerary(itin, 0)
-			finalResponse += "\n"
+			fmt.Fprintf(&finalResponse, "### Option %d: %s %s\n", i+1, itin.Title, formatTags(itin.Tags))
+			finalResponse.WriteString(ta.formatItinerary(itin, 0))
+			finalResponse.WriteString("\n")
 
 			// Pretty print the itinerary JSON
 			b, err := json.MarshalIndent(itin, "", "  ")
@@ -159,7 +188,7 @@ func (ta *TravelAgent) OrchestrateRequest(ctx context.Context, userQuery string,
 		}
 
 		// Return the successful itineraries
-		return finalResponse, successfulItineraries, nil
+		return finalResponse.String(), successfulItineraries, nil
 	}
 
 	return "I'm having trouble finding a plan that works with current availability. Can we try adjusting your criteria?", nil, nil
@@ -188,7 +217,7 @@ func (ta *TravelAgent) formatItinerary(it *pb.Itinerary, indentLevel int) string
 			items = append(items, itineraryItem{
 				Time:    start.Format("Jan 02 15:04"),
 				EndTime: end.Format("Jan 02 15:04"),
-				Details: fmt.Sprintf("Stay at %s (%s). Ref: %s. Price: %.2f %s %s", acc.Name, acc.Address, acc.BookingReference, acc.GetCost().GetValue(), acc.GetCost().GetCurrency(), formatTags(acc.Tags)),
+				Details: fmt.Sprintf("Stay at %s (%s). Ref: %s. Price: %.2f %s %s", acc.Name, acc.Location.City, acc.BookingReference, acc.GetCost().GetValue(), acc.GetCost().GetCurrency(), formatTags(acc.Tags)),
 				SortKey: start.Format(time.RFC3339),
 			})
 		}

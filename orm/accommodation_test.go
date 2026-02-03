@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/va6996/travelingman/pb"
 	"github.com/stretchr/testify/assert"
+	"github.com/va6996/travelingman/pb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -22,7 +22,6 @@ func TestAccommodationCRUD(t *testing.T) {
 	acc := &pb.Accommodation{
 		GroupId: group.GroupId,
 		Name:    "Grand Hotel",
-		Address: "123 Main St",
 		Status:  "Booked",
 		CheckIn: timestamppb.New(time.Now()),
 	}

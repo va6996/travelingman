@@ -74,8 +74,18 @@ func (td *TravelDesk) EnrichGraph(ctx context.Context, itinerary *pb.Itinerary) 
 
 	// Enrich location information
 	for _, node := range itinerary.Graph.Nodes {
-		if node.Stay == nil || node.Stay.Location == nil {
+		if node.Location != nil {
+			if err := td.enrichLocation(ctx, node.Location); err != nil {
+				log.Errorf(ctx, "TravelDesk: Location enrichment failed for %s: %v", node.Location, err)
+			}
+		}
+
+		if node.Stay == nil {
 			continue
+		}
+
+		if node.Stay.Location == nil && node.Location != nil {
+			node.Stay.Location = node.Location
 		}
 
 		if err := td.enrichLocation(ctx, node.Stay.Location); err != nil {
@@ -212,63 +222,6 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 					} else if len(transports) > 0 {
 						// Collect ALL flight options
 						edge.TransportOptions = transports
-
-						// ENRICH LOCATIONS
-						// Amadeus SearchFlights returns IATA codes but no city names. We need to fetch them.
-						// We'll gather all unique codes from the results and do a lookup.
-						codesToEnrich := make(map[string]bool)
-						for _, tr := range transports {
-							if tr.OriginLocation != nil && len(tr.OriginLocation.IataCodes) > 0 {
-								codesToEnrich[tr.OriginLocation.IataCodes[0]] = true
-							}
-							if tr.DestinationLocation != nil && len(tr.DestinationLocation.IataCodes) > 0 {
-								codesToEnrich[tr.DestinationLocation.IataCodes[0]] = true
-							}
-						}
-
-						// Loop and enrich (Naive approach: 1 lookup per code. In prod, use cache/batch)
-						// We can use td.amadeus.SearchLocations or a local cache
-						// For now, let's just do it
-						locationDetails := make(map[string]string) // Code -> CityName
-
-						for code := range codesToEnrich {
-							// Use existing LocationTool logic or direct Client call
-							// Client.SearchLocations returns list.
-							// We can try to use the cache in Client if we implemented it, or just call it.
-							// Given this is a demo/prototype, calling it is fine, but maybe limit concurrency.
-							locs, err := td.amadeus.SearchLocations(ctx, code)
-							if err == nil && len(locs) > 0 {
-								// find the one matching the code
-								for _, l := range locs {
-									// SearchLocations returns matches. Need to filter.
-									// Actually SearchLocations("SFO") returns SFO airport details which includes City Name
-									// We'll just take the city name from the first result if it matches or seems relevant
-									if l.City != "" {
-										locationDetails[code] = l.City
-										break
-									}
-								}
-							}
-						}
-
-						// Apply enrichment
-						for _, tr := range transports {
-							// Origin
-							if tr.OriginLocation != nil && len(tr.OriginLocation.IataCodes) > 0 {
-								code := tr.OriginLocation.IataCodes[0]
-								if name, ok := locationDetails[code]; ok {
-									tr.OriginLocation.City = name
-								}
-							}
-							// Dest
-							if tr.DestinationLocation != nil && len(tr.DestinationLocation.IataCodes) > 0 {
-								code := tr.DestinationLocation.IataCodes[0]
-								if name, ok := locationDetails[code]; ok {
-									tr.DestinationLocation.City = name
-								}
-							}
-						}
-
 						log.Infof(ctx, "TravelDesk: Found %d flight options", len(transports))
 					} else {
 						// ... existing error handling ...
@@ -288,13 +241,13 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 	// 2. Check Hotels (Nodes)
 	for _, node := range itinerary.Graph.Nodes {
 		if acc := node.Stay; acc != nil {
-			log.Debugf(ctx, "TravelDesk: Checking hotels in city %s", acc.Address)
+			log.Debugf(ctx, "TravelDesk: Checking hotels in city %s", acc.Location.City)
 
 			// Direct API Flow:
 			// A. Search hotels by city to            // Use preferences
-			listResp, err := td.amadeus.SearchHotelsByCity(ctx, acc) // acc.Address holds CityCode
+			listResp, err := td.amadeus.SearchHotelsByCity(ctx, acc)
 			if err != nil {
-				errMsg := fmt.Sprintf("Hotel city search failed for %s: %s", acc.Address, err)
+				errMsg := fmt.Sprintf("Hotel city search failed for %s: %s", acc.Location.City, err)
 				log.Errorf(ctx, "TravelDesk: ISSUE: %s", errMsg)
 				acc.Error = &pb.Error{
 					Message:  errMsg,
@@ -305,7 +258,7 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 			}
 
 			if len(listResp.Data) == 0 {
-				errMsg := fmt.Sprintf("No hotels found in city %s", acc.Address)
+				errMsg := fmt.Sprintf("No hotels found in city %s", acc.Location.City)
 				log.Errorf(ctx, "TravelDesk: ISSUE: %s", errMsg)
 				acc.Error = &pb.Error{
 					Message:  errMsg,
@@ -361,7 +314,7 @@ func (td *TravelDesk) checkRecursive(ctx context.Context, itinerary *pb.Itinerar
 			} else {
 				// No data returned
 				acc.Status = "NO_OFFERS"
-				errMsg := fmt.Sprintf("No hotel offers found in %s", acc.Address)
+				errMsg := fmt.Sprintf("No hotel offers found in %s", acc.Location.City)
 				acc.Error = &pb.Error{
 					Message:  errMsg,
 					Code:     pb.ErrorCode_ERROR_CODE_DATA_NOT_FOUND,

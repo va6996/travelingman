@@ -84,6 +84,32 @@ proto3.util.setEnumType(Class, "travelingman.Class", [
 ]);
 
 /**
+ * @generated from enum travelingman.BaggageType
+ */
+export enum BaggageType {
+  /**
+   * @generated from enum value: BAGGAGE_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: BAGGAGE_TYPE_CARRYON = 1;
+   */
+  CARRYON = 1,
+
+  /**
+   * @generated from enum value: BAGGAGE_TYPE_CHECKED = 2;
+   */
+  CHECKED = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(BaggageType)
+proto3.util.setEnumType(BaggageType, "travelingman.BaggageType", [
+  { no: 0, name: "BAGGAGE_TYPE_UNSPECIFIED" },
+  { no: 1, name: "BAGGAGE_TYPE_CARRYON" },
+  { no: 2, name: "BAGGAGE_TYPE_CHECKED" },
+]);
+
+/**
  * @generated from enum travelingman.Transmission
  */
 export enum Transmission {
@@ -276,6 +302,13 @@ export class FlightPreferences extends Message<FlightPreferences> {
    */
   preferredDestinationAirports: string[] = [];
 
+  /**
+   * User's baggage requirements
+   *
+   * @generated from field: travelingman.BaggagePreferences baggage = 5;
+   */
+  baggage?: BaggagePreferences;
+
   constructor(data?: PartialMessage<FlightPreferences>) {
     super();
     proto3.util.initPartial(data, this);
@@ -288,6 +321,7 @@ export class FlightPreferences extends Message<FlightPreferences> {
     { no: 2, name: "max_stops", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 3, name: "preferred_origin_airports", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "preferred_destination_airports", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "baggage", kind: "message", T: BaggagePreferences },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FlightPreferences {
@@ -394,6 +428,179 @@ export class CarRentalPreferences extends Message<CarRentalPreferences> {
 }
 
 /**
+ * @generated from message travelingman.BaggagePreferences
+ */
+export class BaggagePreferences extends Message<BaggagePreferences> {
+  /**
+   * Number of checked bags user needs
+   *
+   * @generated from field: int32 checked_bags = 1;
+   */
+  checkedBags = 0;
+
+  /**
+   * Number of carry-on bags user needs
+   *
+   * @generated from field: int32 carryon_bags = 2;
+   */
+  carryonBags = 0;
+
+  constructor(data?: PartialMessage<BaggagePreferences>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "travelingman.BaggagePreferences";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "checked_bags", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "carryon_bags", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BaggagePreferences {
+    return new BaggagePreferences().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BaggagePreferences {
+    return new BaggagePreferences().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BaggagePreferences {
+    return new BaggagePreferences().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BaggagePreferences | PlainMessage<BaggagePreferences> | undefined, b: BaggagePreferences | PlainMessage<BaggagePreferences> | undefined): boolean {
+    return proto3.util.equals(BaggagePreferences, a, b);
+  }
+}
+
+/**
+ * @generated from message travelingman.BaggagePolicy
+ */
+export class BaggagePolicy extends Message<BaggagePolicy> {
+  /**
+   * Type of bag (checked or carryon)
+   *
+   * @generated from field: travelingman.BaggageType type = 1;
+   */
+  type = BaggageType.UNSPECIFIED;
+
+  /**
+   * Number of bags included
+   *
+   * @generated from field: int32 quantity = 2;
+   */
+  quantity = 0;
+
+  /**
+   * Weight limit per bag
+   *
+   * @generated from field: int32 weight = 3;
+   */
+  weight = 0;
+
+  /**
+   * KG or LB
+   *
+   * @generated from field: string weight_unit = 4;
+   */
+  weightUnit = "";
+
+  constructor(data?: PartialMessage<BaggagePolicy>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "travelingman.BaggagePolicy";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "type", kind: "enum", T: proto3.getEnumType(BaggageType) },
+    { no: 2, name: "quantity", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "weight", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "weight_unit", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BaggagePolicy {
+    return new BaggagePolicy().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BaggagePolicy {
+    return new BaggagePolicy().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BaggagePolicy {
+    return new BaggagePolicy().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BaggagePolicy | PlainMessage<BaggagePolicy> | undefined, b: BaggagePolicy | PlainMessage<BaggagePolicy> | undefined): boolean {
+    return proto3.util.equals(BaggagePolicy, a, b);
+  }
+}
+
+/**
+ * @generated from message travelingman.AncillaryCost
+ */
+export class AncillaryCost extends Message<AncillaryCost> {
+  /**
+   * Ancillary service ID
+   *
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * Type: BAGGAGE, SEAT, MEAL, etc.
+   *
+   * @generated from field: string type = 2;
+   */
+  type = "";
+
+  /**
+   * Description of the service
+   *
+   * @generated from field: string description = 3;
+   */
+  description = "";
+
+  /**
+   * Cost of this ancillary service
+   *
+   * @generated from field: travelingman.Cost cost = 4;
+   */
+  cost?: Cost;
+
+  constructor(data?: PartialMessage<AncillaryCost>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "travelingman.AncillaryCost";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "cost", kind: "message", T: Cost },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AncillaryCost {
+    return new AncillaryCost().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AncillaryCost {
+    return new AncillaryCost().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AncillaryCost {
+    return new AncillaryCost().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AncillaryCost | PlainMessage<AncillaryCost> | undefined, b: AncillaryCost | PlainMessage<AncillaryCost> | undefined): boolean {
+    return proto3.util.equals(AncillaryCost, a, b);
+  }
+}
+
+/**
  * @generated from message travelingman.Location
  */
 export class Location extends Message<Location> {
@@ -437,6 +644,11 @@ export class Location extends Message<Location> {
    */
   name = "";
 
+  /**
+   * @generated from field: string address = 9;
+   */
+  address = "";
+
   constructor(data?: PartialMessage<Location>) {
     super();
     proto3.util.initPartial(data, this);
@@ -453,6 +665,7 @@ export class Location extends Message<Location> {
     { no: 6, name: "geocode", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "zip", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "address", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Location {
@@ -541,37 +754,32 @@ export class Accommodation extends Message<Accommodation> {
   name = "";
 
   /**
-   * @generated from field: string address = 4;
-   */
-  address = "";
-
-  /**
-   * @generated from field: google.protobuf.Timestamp check_in = 5;
+   * @generated from field: google.protobuf.Timestamp check_in = 4;
    */
   checkIn?: Timestamp;
 
   /**
-   * @generated from field: google.protobuf.Timestamp check_out = 6;
+   * @generated from field: google.protobuf.Timestamp check_out = 5;
    */
   checkOut?: Timestamp;
 
   /**
-   * @generated from field: travelingman.Cost cost = 7;
+   * @generated from field: travelingman.Cost cost = 6;
    */
   cost?: Cost;
 
   /**
-   * @generated from field: string booking_reference = 8;
+   * @generated from field: string booking_reference = 7;
    */
   bookingReference = "";
 
   /**
-   * @generated from field: string status = 9;
+   * @generated from field: string status = 8;
    */
   status = "";
 
   /**
-   * @generated from field: repeated int64 user_ids = 10;
+   * @generated from field: repeated int64 user_ids = 9;
    */
   userIds: bigint[] = [];
 
@@ -611,13 +819,12 @@ export class Accommodation extends Message<Accommodation> {
     { no: 1, name: "id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 2, name: "group_id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "address", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "check_in", kind: "message", T: Timestamp },
-    { no: 6, name: "check_out", kind: "message", T: Timestamp },
-    { no: 7, name: "cost", kind: "message", T: Cost },
-    { no: 8, name: "booking_reference", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 9, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 10, name: "user_ids", kind: "scalar", T: 3 /* ScalarType.INT64 */, repeated: true },
+    { no: 4, name: "check_in", kind: "message", T: Timestamp },
+    { no: 5, name: "check_out", kind: "message", T: Timestamp },
+    { no: 6, name: "cost", kind: "message", T: Cost },
+    { no: 7, name: "booking_reference", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 9, name: "user_ids", kind: "scalar", T: 3 /* ScalarType.INT64 */, repeated: true },
     { no: 11, name: "preferences", kind: "message", T: AccommodationPreferences },
     { no: 12, name: "traveler_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 13, name: "location", kind: "message", T: Location },
@@ -819,6 +1026,27 @@ export class Flight extends Message<Flight> {
    */
   arrivalTime?: Timestamp;
 
+  /**
+   * Included baggage allowance
+   *
+   * @generated from field: repeated travelingman.BaggagePolicy baggage_policy = 5;
+   */
+  baggagePolicy: BaggagePolicy[] = [];
+
+  /**
+   * Additional services (extra bags, seats, etc.)
+   *
+   * @generated from field: repeated travelingman.AncillaryCost ancillary_costs = 6;
+   */
+  ancillaryCosts: AncillaryCost[] = [];
+
+  /**
+   * Base fare + ancillary costs
+   *
+   * @generated from field: travelingman.Cost total_cost_with_ancillaries = 7;
+   */
+  totalCostWithAncillaries?: Cost;
+
   constructor(data?: PartialMessage<Flight>) {
     super();
     proto3.util.initPartial(data, this);
@@ -831,6 +1059,9 @@ export class Flight extends Message<Flight> {
     { no: 2, name: "flight_number", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "departure_time", kind: "message", T: Timestamp },
     { no: 4, name: "arrival_time", kind: "message", T: Timestamp },
+    { no: 5, name: "baggage_policy", kind: "message", T: BaggagePolicy, repeated: true },
+    { no: 6, name: "ancillary_costs", kind: "message", T: AncillaryCost, repeated: true },
+    { no: 7, name: "total_cost_with_ancillaries", kind: "message", T: Cost },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Flight {

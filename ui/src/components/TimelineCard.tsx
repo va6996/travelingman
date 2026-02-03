@@ -53,7 +53,7 @@ export const TimelineCard = ({
                             {title}
                         </Text>
                         {subtitle && (
-                            <Box fontSize="lg" color="whiteAlpha.700">
+                            <Box as="div" fontSize="lg" color="whiteAlpha.700">
                                 {subtitle}
                             </Box>
                         )}

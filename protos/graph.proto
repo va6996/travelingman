@@ -11,13 +11,12 @@ import "protos/itinerary.proto";
 // It maps to protobuf structures: TripDay, Place, Accommodation
 message Node {
     string id = 1;                                    // Unique identifier for the node
-    string location = 2;                              // Name or address of the location
+    Location location = 2;                            // Name or address of the location
     google.protobuf.Timestamp from_timestamp = 3;     // Arrival time at this node
     google.protobuf.Timestamp to_timestamp = 4;       // Departure time from this node
-    bool is_inter_city = 5;                           // Whether this node represents an inter-city travel point
-    Accommodation stay = 6;                           // Hotel/accommodation info (from Accommodation)
-    repeated Accommodation stayOptions = 7;           // List of possible accommodations
-    Graph sub_graph = 8;                              // Sub-graph for daily activities
+    Accommodation stay = 5;                           // Hotel/accommodation info (from Accommodation)
+    repeated Accommodation stayOptions = 6;           // List of possible accommodations
+    Graph sub_graph = 7;                              // Sub-graph for daily activities
 }
 
 // Edge represents transportation between two locations

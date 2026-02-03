@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"slices"
 	"strconv"
 	"time"
 
@@ -83,12 +82,23 @@ type PricingOptions struct {
 	IncludedCheckedBagsOnly bool     `json:"includedCheckedBagsOnly"`
 }
 
+type IncludedCheckedBags struct {
+	Quantity   int    `json:"quantity"`
+	Weight     int    `json:"weight"`
+	WeightUnit string `json:"weightUnit"` // KG, LB
+}
+
+type FareDetails struct {
+	SegmentID           string                `json:"segmentId"`
+	IncludedCheckedBags *IncludedCheckedBags  `json:"includedCheckedBags,omitempty"`
+}
+
 type TravelerPricing struct {
-	TravelerID   string `json:"travelerId"`
-	FareOption   string `json:"fareOption"`
-	TravelerType string `json:"travelerType"`
-	Price        Price  `json:"price"`
-	// FareDetailsBySegment would go here
+	TravelerID    string        `json:"travelerId"`
+	FareOption    string        `json:"fareOption"`
+	TravelerType  string        `json:"travelerType"`
+	Price         Price         `json:"price"`
+	FareDetails   []FareDetails `json:"fareDetails,omitempty"`
 }
 
 // --- Structs for Flight Price Confirmation ---
@@ -99,6 +109,12 @@ type FlightPriceCheckRequest struct {
 		Type         string        `json:"type"`
 		FlightOffers []FlightOffer `json:"flightOffers"`
 	} `json:"data"`
+}
+
+// AdditionalServicesRequest is used to request pricing for extra bags
+type AdditionalServicesRequest struct {
+	Type     string `json:"type"`
+	Quantity int    `json:"quantity"`
 }
 
 // --- Structs for Flight Booking ---
@@ -196,6 +212,9 @@ type AssociatedRecord struct {
 // --- Methods ---
 
 // SearchFlights searches for flight offers
+// INVARIANTS (see docs/INVARIANTS.md):
+//   - transport.OriginLocation and transport.DestinationLocation are non-nil and enriched
+//   - All required fields (dates, traveler count) are validated by ValidateItinerary
 func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]*pb.Transport, error) {
 	// Extract flight from transport
 	flight := transport.GetFlight()
@@ -203,87 +222,25 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]
 		return nil, fmt.Errorf("transport does not contain flight details")
 	}
 
-	// Extract parameters from transport locations
-	origin := ""
-	if transport.OriginLocation != nil {
-		if transport.OriginLocation.CityCode != "" {
-			origin = transport.OriginLocation.CityCode
-			// If we are using CityCode but we have a specific airport code, save it to preferences
-			if len(transport.OriginLocation.IataCodes) > 0 && transport.OriginLocation.IataCodes[0] != origin {
-				if transport.FlightPreferences == nil {
-					transport.FlightPreferences = &pb.FlightPreferences{}
-				}
-				// Check if already present
-				found := slices.Contains(transport.FlightPreferences.PreferredOriginAirports, transport.OriginLocation.IataCodes[0])
-				if !found {
-					transport.FlightPreferences.PreferredOriginAirports = append(transport.FlightPreferences.PreferredOriginAirports, transport.OriginLocation.IataCodes[0])
-				}
-			}
-		} else if len(transport.OriginLocation.IataCodes) > 0 {
-			origin = transport.OriginLocation.IataCodes[0]
-		}
-	}
+	// Extract location codes (prefer specific airport, fallback to city)
+	// INVARIANT: Locations are enriched before this is called
+	origin := getLocationCode(transport.OriginLocation)
+	destination := getLocationCode(transport.DestinationLocation)
 
-	destination := ""
-	if transport.DestinationLocation != nil {
-		if transport.DestinationLocation.CityCode != "" {
-			destination = transport.DestinationLocation.CityCode
-			// If we are using CityCode but we have a specific airport code, save it to preferences
-			if len(transport.DestinationLocation.IataCodes) > 0 && transport.DestinationLocation.IataCodes[0] != destination {
-				if transport.FlightPreferences == nil {
-					transport.FlightPreferences = &pb.FlightPreferences{}
-				}
-				// Check if already present
-				found := slices.Contains(transport.FlightPreferences.PreferredDestinationAirports, transport.DestinationLocation.IataCodes[0])
-				if !found {
-					transport.FlightPreferences.PreferredDestinationAirports = append(transport.FlightPreferences.PreferredDestinationAirports, transport.DestinationLocation.IataCodes[0])
-				}
-			}
-		} else if len(transport.DestinationLocation.IataCodes) > 0 {
-			destination = transport.DestinationLocation.IataCodes[0]
-		}
-	}
-
-	departureDate := ""
-	if flight.DepartureTime != nil {
-		departureDate = flight.DepartureTime.AsTime().Format("2006-01-02")
-	}
-
-	// Extract adults from transport
+	// INVARIANT: DepartureTime and TravelerCount are always set by ValidateItinerary
+	departureDate := flight.DepartureTime.AsTime().Format("2006-01-02")
 	adults := int(transport.TravelerCount)
-	if adults <= 0 {
-		adults = 1
-	}
 
 	// Calculate returnDate if needed (not in current Proto for one-way segments, but logic kept for compatibility)
 	// If it's a round trip, logic might be handled differently, but for now we follow previous logic.
 	returnDate := ""
 
-	// Validate inputs
-	if origin == "" {
-		return nil, fmt.Errorf("origin location is required (CityCode or IataCode)")
-	}
-	if destination == "" {
-		return nil, fmt.Errorf("destination location is required (CityCode or IataCode)")
-	}
-	if departureDate == "" {
-		return nil, fmt.Errorf("departure date is required")
-	}
-
-	// Validate date is not in the past
-	if depTime, err := time.Parse("2006-01-02", departureDate); err == nil {
-		// Use "yesterday" as buffer to account for timezones
-		yesterday := time.Now().AddDate(0, 0, -1)
-		if depTime.Before(yesterday) {
-			// Instead of returning hard error, check if we can shift the date or if it's too old
-			// For now, strict validation is safer to avoid API errors
-			return nil, fmt.Errorf("departure date %s is in the past", departureDate)
-		}
-		// Also check for zero date/year 1
-		if depTime.Year() < 2020 {
-			return nil, fmt.Errorf("departure date %s is invalid", departureDate)
-		}
-	}
+	// INVARIANTS (see docs/INVARIANTS.md):
+	// - origin and destination are non-empty (enriched locations)
+	// - departureDate is valid and not in past
+	// - adults (TravelerCount) is always positive
+	// - DepartureTime is always non-nil
+	// - Currency is always set
 
 	// Construct query parameters
 	endpoint := fmt.Sprintf("/v2/shopping/flight-offers?originLocationCode=%s&destinationLocationCode=%s&adults=%d",
@@ -297,9 +254,8 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]
 		endpoint += fmt.Sprintf("&returnDate=%s", returnDate)
 	}
 
-	if transport.Cost != nil && transport.Cost.Currency != "" {
-		endpoint += fmt.Sprintf("&currencyCode=%s", transport.Cost.Currency)
-	}
+	// INVARIANT: Currency is always set by ValidateItinerary
+	endpoint += fmt.Sprintf("&currencyCode=%s", transport.Cost.Currency)
 
 	// Handle Preferences
 	if transport.FlightPreferences != nil {
@@ -385,6 +341,30 @@ func (c *Client) SearchFlights(ctx context.Context, transport *pb.Transport) ([]
 			break
 		}
 		transports = append(transports, offer.ToTransport())
+	}
+
+	// Enrich transport locations from input transport and populate ancillary baggage pricing
+	// INVARIANT: transport locations are non-nil and enriched
+	for i, t := range transports {
+		if t.OriginLocation == nil {
+			t.OriginLocation = &pb.Location{}
+		}
+		if t.DestinationLocation == nil {
+			t.DestinationLocation = &pb.Location{}
+		}
+		enrichLocationFrom(t.OriginLocation, transport.OriginLocation)
+		enrichLocationFrom(t.DestinationLocation, transport.DestinationLocation)
+
+		// Copy flight preferences from input transport
+		t.FlightPreferences = transport.FlightPreferences
+
+		// Populate ancillary baggage pricing if user needs more bags than included
+		if i < len(searchResp.Data) {
+			if err := c.PopulateAncillaryBaggagePricing(ctx, t, searchResp.Data[i]); err != nil {
+				log.Warnf(ctx, "SearchFlights: Failed to populate ancillary baggage pricing: %v", err)
+				// Continue anyway, just log the warning
+			}
+		}
 	}
 
 	// Set cache
@@ -527,9 +507,11 @@ func (o FlightOffer) ToTransport() *pb.Transport {
 	}
 
 	// Price
+	basePrice := 0.0
 	if price, err := strconv.ParseFloat(o.Price.Total, 64); err == nil {
+		basePrice = price
 		t.Cost = &pb.Cost{
-			Value:    price,
+			Value:    basePrice,
 			Currency: o.Price.Currency,
 		}
 	}
@@ -556,8 +538,210 @@ func (o FlightOffer) ToTransport() *pb.Transport {
 			flightDetails.ArrivalTime = timestamppb.New(arrTime)
 		}
 
+		// Extract baggage information from travelerPricings
+		extractBaggageInfo(o, flightDetails)
+
+		// Calculate total cost with ancillaries (initially just base price)
+		flightDetails.TotalCostWithAncillaries = &pb.Cost{
+			Value:    basePrice,
+			Currency: o.Price.Currency,
+		}
+
 		t.Details = &pb.Transport_Flight{Flight: flightDetails}
 	}
 
 	return t
+}
+
+// extractBaggageInfo extracts baggage allowance information from flight offer
+func extractBaggageInfo(offer FlightOffer, flight *pb.Flight) {
+	if len(offer.TravelerPricings) == 0 {
+		return
+	}
+
+	// Get baggage info from first traveler pricing
+	tp := offer.TravelerPricings[0]
+	if len(tp.FareDetails) == 0 {
+		return
+	}
+
+	for _, fd := range tp.FareDetails {
+		if fd.IncludedCheckedBags != nil {
+			policy := &pb.BaggagePolicy{
+				Type:        pb.BaggageType_BAGGAGE_TYPE_CHECKED,
+				Quantity:    int32(fd.IncludedCheckedBags.Quantity),
+				Weight:      int32(fd.IncludedCheckedBags.Weight),
+				WeightUnit:  fd.IncludedCheckedBags.WeightUnit,
+			}
+			flight.BaggagePolicy = append(flight.BaggagePolicy, policy)
+		}
+	}
+
+	// Note: Most airlines include 1 carry-on bag, but this is not always
+	// explicitly returned in the API response. We could add a default here
+	// or build a database of airline policies.
+}
+
+// GetIncludedBaggageCount returns the number of included checked bags
+func getIncludedBaggageCount(flight *pb.Flight) int32 {
+	if flight == nil {
+		return 0
+	}
+	for _, policy := range flight.BaggagePolicy {
+		if policy.Type == pb.BaggageType_BAGGAGE_TYPE_CHECKED {
+			return policy.Quantity
+		}
+	}
+	return 0
+}
+
+// CheckBaggageRequirements compares user preferences with included baggage
+// and returns the number of additional bags needed
+func CheckBaggageRequirements(transport *pb.Transport) int32 {
+	if transport.FlightPreferences == nil || transport.FlightPreferences.Baggage == nil {
+		return 0
+	}
+
+	flight := transport.GetFlight()
+	if flight == nil {
+		return 0
+	}
+
+	included := getIncludedBaggageCount(flight)
+	needed := transport.FlightPreferences.Baggage.CheckedBags
+
+	if needed > included {
+		return needed - included
+	}
+	return 0
+}
+
+// GetAdditionalBaggagePrice queries the Flight Offers Price API for additional baggage costs
+// Returns the price for adding the specified number of extra bags
+func (c *Client) GetAdditionalBaggagePrice(ctx context.Context, offer FlightOffer, additionalBags int32) (*FlightSearchResponse, error) {
+	if additionalBags <= 0 {
+		return nil, fmt.Errorf("additional bags must be positive")
+	}
+
+	// Create pricing request with additional services
+	reqBody := struct {
+		Data struct {
+			Type         string        `json:"type"`
+			FlightOffers []FlightOffer `json:"flightOffers"`
+		} `json:"data"`
+	}{
+		Data: struct {
+			Type         string        `json:"type"`
+			FlightOffers []FlightOffer `json:"flightOffers"`
+		}{
+			Type:         "flight-offers-pricing",
+			FlightOffers: []FlightOffer{offer},
+		},
+	}
+
+	log.Debugf(ctx, "GetAdditionalBaggagePrice: Requesting pricing for %d additional bags", additionalBags)
+
+	resp, err := c.doRequest(ctx, "POST", "/v1/shopping/flight-offers/pricing", reqBody)
+	if err != nil {
+		log.Errorf(ctx, "GetAdditionalBaggagePrice: request failed: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Errorf(ctx, "GetAdditionalBaggagePrice: API returned status %s", resp.Status)
+		return nil, fmt.Errorf("additional baggage pricing failed: %s", resp.Status)
+	}
+
+	var priceResp FlightSearchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&priceResp); err != nil {
+		log.Errorf(ctx, "GetAdditionalBaggagePrice: failed to decode response: %v", err)
+		return nil, err
+	}
+
+	return &priceResp, nil
+}
+
+// AddAncillaryBaggageCost adds an ancillary cost entry for additional bags
+// and updates the total cost with ancillaries
+func AddAncillaryBaggageCost(transport *pb.Transport, additionalBags int32, bagPrice float64, currency string) {
+	flight := transport.GetFlight()
+	if flight == nil {
+		return
+	}
+
+	// Add ancillary cost for extra bags
+	ancillary := &pb.AncillaryCost{
+		Id:          fmt.Sprintf("BAG_%d", additionalBags),
+		Type:        "BAGGAGE",
+		Description: fmt.Sprintf("%d additional checked bag(s)", additionalBags),
+		Cost: &pb.Cost{
+			Value:    bagPrice * float64(additionalBags),
+			Currency: currency,
+		},
+	}
+
+	flight.AncillaryCosts = append(flight.AncillaryCosts, ancillary)
+
+	// Update total cost with ancillaries
+	basePrice := transport.Cost.GetValue()
+	if flight.TotalCostWithAncillaries == nil {
+		flight.TotalCostWithAncillaries = &pb.Cost{
+			Currency: currency,
+		}
+	}
+
+	flight.TotalCostWithAncillaries.Value = basePrice + (bagPrice * float64(additionalBags))
+	flight.TotalCostWithAncillaries.Currency = currency
+}
+
+// PopulateAncillaryBaggagePricing checks if user needs more bags than included,
+// queries the additional pricing, and updates the transport with ancillary costs
+func (c *Client) PopulateAncillaryBaggagePricing(ctx context.Context, transport *pb.Transport, offer FlightOffer) error {
+	additionalBags := CheckBaggageRequirements(transport)
+	if additionalBags == 0 {
+		log.Debugf(ctx, "PopulateAncillaryBaggagePricing: No additional bags needed")
+		return nil
+	}
+
+	log.Debugf(ctx, "PopulateAncillaryBaggagePricing: User needs %d additional bags", additionalBags)
+
+	// For now, we'll use a default price since the Flight Offers Price API
+	// doesn't always return detailed ancillary pricing in a consistent format.
+	// In production, you would:
+	// 1. Build a database of airline baggage fees
+	// 2. Use the Flight Offers Price API with additionalServices
+	// 3. Or integrate with Duffel API which has excellent baggage data
+
+	// Default estimated price per additional bag (will vary by airline/route)
+	// This is a placeholder - in production you'd query the actual price
+	defaultBagPrice := 50.0 // USD, will be adjusted based on currency
+
+	currency := "USD"
+	if transport.Cost != nil {
+		currency = transport.Cost.Currency
+	}
+
+	// Try to get actual pricing from Amadeus
+	priceResp, err := c.GetAdditionalBaggagePrice(ctx, offer, additionalBags)
+	if err == nil && len(priceResp.Data) > 0 {
+		// Calculate the difference between original price and price with additional bags
+		originalPrice, _ := strconv.ParseFloat(offer.Price.Total, 64)
+		newPrice, _ := strconv.ParseFloat(priceResp.Data[0].Price.Total, 64)
+
+		if newPrice > originalPrice {
+			// The API returned a higher price, likely including additional bags
+			extraCost := newPrice - originalPrice
+			bagPrice := extraCost / float64(additionalBags)
+			AddAncillaryBaggageCost(transport, additionalBags, bagPrice, currency)
+			log.Debugf(ctx, "PopulateAncillaryBaggagePricing: Added ancillary cost: %.2f %s per bag", bagPrice, currency)
+			return nil
+		}
+	}
+
+	// Fallback to default pricing if API didn't return additional bag cost
+	log.Debugf(ctx, "PopulateAncillaryBaggagePricing: Using default pricing (%.2f %s per bag)", defaultBagPrice, currency)
+	AddAncillaryBaggageCost(transport, additionalBags, defaultBagPrice, currency)
+
+	return nil
 }

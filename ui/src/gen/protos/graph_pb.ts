@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
-import { Accommodation, Error, Transport } from "./itinerary_pb.js";
+import { Accommodation, Error, Location, Transport } from "./itinerary_pb.js";
 
 /**
  * @generated from enum travelingman.JourneyType
@@ -68,9 +68,9 @@ export class Node extends Message<Node> {
   /**
    * Name or address of the location
    *
-   * @generated from field: string location = 2;
+   * @generated from field: travelingman.Location location = 2;
    */
-  location = "";
+  location?: Location;
 
   /**
    * Arrival time at this node
@@ -87,30 +87,23 @@ export class Node extends Message<Node> {
   toTimestamp?: Timestamp;
 
   /**
-   * Whether this node represents an inter-city travel point
-   *
-   * @generated from field: bool is_inter_city = 5;
-   */
-  isInterCity = false;
-
-  /**
    * Hotel/accommodation info (from Accommodation)
    *
-   * @generated from field: travelingman.Accommodation stay = 6;
+   * @generated from field: travelingman.Accommodation stay = 5;
    */
   stay?: Accommodation;
 
   /**
    * List of possible accommodations
    *
-   * @generated from field: repeated travelingman.Accommodation stayOptions = 7;
+   * @generated from field: repeated travelingman.Accommodation stayOptions = 6;
    */
   stayOptions: Accommodation[] = [];
 
   /**
    * Sub-graph for daily activities
    *
-   * @generated from field: travelingman.Graph sub_graph = 8;
+   * @generated from field: travelingman.Graph sub_graph = 7;
    */
   subGraph?: Graph;
 
@@ -123,13 +116,12 @@ export class Node extends Message<Node> {
   static readonly typeName = "travelingman.Node";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "location", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "location", kind: "message", T: Location },
     { no: 3, name: "from_timestamp", kind: "message", T: Timestamp },
     { no: 4, name: "to_timestamp", kind: "message", T: Timestamp },
-    { no: 5, name: "is_inter_city", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "stay", kind: "message", T: Accommodation },
-    { no: 7, name: "stayOptions", kind: "message", T: Accommodation, repeated: true },
-    { no: 8, name: "sub_graph", kind: "message", T: Graph },
+    { no: 5, name: "stay", kind: "message", T: Accommodation },
+    { no: 6, name: "stayOptions", kind: "message", T: Accommodation, repeated: true },
+    { no: 7, name: "sub_graph", kind: "message", T: Graph },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Node {

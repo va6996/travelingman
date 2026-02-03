@@ -179,17 +179,9 @@ type HotelListResponse struct {
 
 // SearchHotelsByCity searches for hotels in a specific city
 func (c *Client) SearchHotelsByCity(ctx context.Context, acc *pb.Accommodation) (*HotelListResponse, error) {
-	cityCode := ""
-	if acc.Location != nil {
-		if len(acc.Location.IataCodes) > 0 {
-			cityCode = acc.Location.IataCodes[0]
-		} else {
-			cityCode = acc.Location.CityCode
-		}
-	}
-	if cityCode == "" {
-		cityCode = acc.Address // Fallback
-	}
+	// INVARIANT 3: Accommodation has non-nil Location
+	// INVARIANT 1: Location is enriched with codes
+	cityCode := getLocationCode(acc.Location)
 
 	// Step 1: Get list of hotels in city
 	endpoint := fmt.Sprintf("/v1/reference-data/locations/hotels/by-city?cityCode=%s", cityCode)
@@ -238,22 +230,17 @@ func (c *Client) SearchHotelsByCity(ctx context.Context, acc *pb.Accommodation) 
 // SearchHotelOffers searches for hotel offers and returns them as pb.Accommodation structs
 func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, acc *pb.Accommodation) ([]*pb.Accommodation, error) {
 	// Extract parameters from accommodation object
-	if acc == nil {
-		return nil, fmt.Errorf("accommodation object is required")
-	}
+	// INVARIANT 3: Accommodation is non-nil
+	// INVARIANT 7: TravelerCount is positive
 
 	adults := int(acc.TravelerCount)
 
-	if acc.CheckIn == nil || acc.CheckOut == nil {
-		return nil, fmt.Errorf("check-in and check-out dates are required")
-	}
+	// INVARIANT 6: CheckIn and CheckOut are non-nil and valid
 	checkIn := acc.CheckIn.AsTime().Format("2006-01-02")
 	checkOut := acc.CheckOut.AsTime().Format("2006-01-02")
 
-	currency := ""
-	if acc.Cost != nil {
-		currency = acc.Cost.Currency
-	}
+	// INVARIANT 8: Currency is always set
+	currency := acc.Cost.Currency
 
 	// Amadeus API often has limits on the number of IDs (e.g. 50-100).
 	// We chunk them to be safe (e.g., 20).
@@ -350,23 +337,13 @@ func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, acc *
 		}
 
 		// Enrich results with source location info
+		// INVARIANT: acc.Location is non-nil and enriched
 		if acc.Location != nil {
 			for _, res := range batchAccommodations {
 				if res.Location == nil {
 					res.Location = &pb.Location{}
 				}
-				if len(res.Location.IataCodes) == 0 {
-					res.Location.IataCodes = acc.Location.IataCodes
-				}
-				if res.Location.City == "" {
-					res.Location.City = acc.Location.City
-				}
-				if res.Location.Country == "" {
-					res.Location.Country = acc.Location.Country
-				}
-				if res.Location.CityCode == "" {
-					res.Location.CityCode = acc.Location.CityCode
-				}
+				enrichLocationFrom(res.Location, acc.Location)
 			}
 		}
 
@@ -374,11 +351,10 @@ func (c *Client) SearchHotelOffers(ctx context.Context, hotelIds []string, acc *
 		ttl := time.Duration(c.Config.CacheTTL.Hotel) * time.Hour
 		c.Cache.Set(cacheKey, batchAccommodations, ttl)
 
-		// Persist to DB if available
-		if c.DB != nil {
-			if b, err := json.Marshal(batchAccommodations); err == nil {
-				orm.SetCacheEntry(c.DB, cacheKey, b, 60*time.Minute)
-			}
+		// INVARIANT: DB is always initialized
+		// Persist to DB
+		if b, err := json.Marshal(batchAccommodations); err == nil {
+			orm.SetCacheEntry(c.DB, cacheKey, b, 60*time.Minute)
 		}
 
 		accommodations = append(accommodations, batchAccommodations...)
@@ -443,12 +419,12 @@ func (d HotelOfferData) ToAccommodations() []*pb.Accommodation {
 	var accs []*pb.Accommodation
 	for _, offer := range d.Offers {
 		acc := &pb.Accommodation{
-			Name:    d.Hotel.Name,
-			Address: d.Hotel.ChainCode, // Using ChainCode as address placeholder or similar
+			Name: d.Hotel.Name,
 			Location: &pb.Location{
 				CityCode: d.Hotel.CityCode,
 				Name:     d.Hotel.Name,
 				Geocode:  fmt.Sprintf("%f,%f", d.Hotel.Latitude, d.Hotel.Longitude),
+				Address:  d.Hotel.ChainCode, // Preserving original chain code mapping logic
 			},
 			Preferences: &pb.AccommodationPreferences{
 				RoomType: offer.Room.TypeEstimated.Category,

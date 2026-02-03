@@ -99,9 +99,8 @@ func TestTravelDesk_CheckAvailability(t *testing.T) {
 		JourneyType: pb.JourneyType_JOURNEY_TYPE_ONE_WAY,
 		Graph: &pb.Graph{
 			Nodes: []*pb.Node{
-				{Id: "n1", Location: "LHR"},
-				{Id: "n2", Location: "NYC", Stay: &pb.Accommodation{
-					Address:       "NYC",
+				{Id: "n1", Location: &pb.Location{IataCodes: []string{"LHR"}}},
+				{Id: "n2", Location: &pb.Location{IataCodes: []string{"JFK"}}, Stay: &pb.Accommodation{
 					TravelerCount: 1,
 					CheckIn:       timestamppb.New(time.Date(2026, 6, 1, 14, 0, 0, 0, time.UTC)),
 					CheckOut:      timestamppb.New(time.Date(2026, 6, 5, 11, 0, 0, 0, time.UTC)),
@@ -186,8 +185,8 @@ func TestTravelDesk_CheckAvailability_NoAvailability(t *testing.T) {
 		JourneyType: pb.JourneyType_JOURNEY_TYPE_ONE_WAY,
 		Graph: &pb.Graph{
 			Nodes: []*pb.Node{
-				{Id: "n1", Location: "LHR"},
-				{Id: "n2", Location: "NYC", Stay: &pb.Accommodation{Address: "NYC", CheckIn: timestamppb.Now(), CheckOut: timestamppb.Now()}},
+				{Id: "n1", Location: &pb.Location{IataCodes: []string{"LHR"}}},
+				{Id: "n2", Location: &pb.Location{IataCodes: []string{"JFK"}}, Stay: &pb.Accommodation{CheckIn: timestamppb.Now(), CheckOut: timestamppb.Now()}},
 			},
 			Edges: []*pb.Edge{{
 				FromId: "n1",
