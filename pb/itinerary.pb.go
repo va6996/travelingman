@@ -1333,6 +1333,9 @@ type Flight struct {
 	BaggagePolicy            []*BaggagePolicy       `protobuf:"bytes,5,rep,name=baggage_policy,json=baggagePolicy,proto3" json:"baggage_policy,omitempty"`                                      // Included baggage allowance
 	AncillaryCosts           []*AncillaryCost       `protobuf:"bytes,6,rep,name=ancillary_costs,json=ancillaryCosts,proto3" json:"ancillary_costs,omitempty"`                                   // Additional services (extra bags, seats, etc.)
 	TotalCostWithAncillaries *Cost                  `protobuf:"bytes,7,opt,name=total_cost_with_ancillaries,json=totalCostWithAncillaries,proto3" json:"total_cost_with_ancillaries,omitempty"` // Base fare + ancillary costs
+	Segments                 []*FlightSegment       `protobuf:"bytes,8,rep,name=segments,proto3" json:"segments,omitempty"`                                                                     // Individual flight segments
+	LayoverCount             int32                  `protobuf:"varint,9,opt,name=layover_count,json=layoverCount,proto3" json:"layover_count,omitempty"`                                        // Number of layovers (segments - 1)
+	TotalDuration            string                 `protobuf:"bytes,10,opt,name=total_duration,json=totalDuration,proto3" json:"total_duration,omitempty"`                                     // Total journey duration (e.g., "2h 30m")
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -1416,6 +1419,127 @@ func (x *Flight) GetTotalCostWithAncillaries() *Cost {
 	return nil
 }
 
+func (x *Flight) GetSegments() []*FlightSegment {
+	if x != nil {
+		return x.Segments
+	}
+	return nil
+}
+
+func (x *Flight) GetLayoverCount() int32 {
+	if x != nil {
+		return x.LayoverCount
+	}
+	return 0
+}
+
+func (x *Flight) GetTotalDuration() string {
+	if x != nil {
+		return x.TotalDuration
+	}
+	return ""
+}
+
+type FlightSegment struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	CarrierCode          string                 `protobuf:"bytes,1,opt,name=carrier_code,json=carrierCode,proto3" json:"carrier_code,omitempty"`                              // Airline code
+	FlightNumber         string                 `protobuf:"bytes,2,opt,name=flight_number,json=flightNumber,proto3" json:"flight_number,omitempty"`                           // Flight number
+	DepartureTime        *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=departure_time,json=departureTime,proto3" json:"departure_time,omitempty"`                        // Segment departure time
+	ArrivalTime          *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=arrival_time,json=arrivalTime,proto3" json:"arrival_time,omitempty"`                              // Segment arrival time
+	DepartureAirportCode string                 `protobuf:"bytes,5,opt,name=departure_airport_code,json=departureAirportCode,proto3" json:"departure_airport_code,omitempty"` // Origin IATA code
+	ArrivalAirportCode   string                 `protobuf:"bytes,6,opt,name=arrival_airport_code,json=arrivalAirportCode,proto3" json:"arrival_airport_code,omitempty"`       // Destination IATA code
+	Duration             string                 `protobuf:"bytes,7,opt,name=duration,proto3" json:"duration,omitempty"`                                                       // Segment duration (e.g., "1h 45m")
+	Stops                int32                  `protobuf:"varint,8,opt,name=stops,proto3" json:"stops,omitempty"`                                                            // Number of stops in this segment
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *FlightSegment) Reset() {
+	*x = FlightSegment{}
+	mi := &file_protos_itinerary_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FlightSegment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FlightSegment) ProtoMessage() {}
+
+func (x *FlightSegment) ProtoReflect() protoreflect.Message {
+	mi := &file_protos_itinerary_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FlightSegment.ProtoReflect.Descriptor instead.
+func (*FlightSegment) Descriptor() ([]byte, []int) {
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *FlightSegment) GetCarrierCode() string {
+	if x != nil {
+		return x.CarrierCode
+	}
+	return ""
+}
+
+func (x *FlightSegment) GetFlightNumber() string {
+	if x != nil {
+		return x.FlightNumber
+	}
+	return ""
+}
+
+func (x *FlightSegment) GetDepartureTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DepartureTime
+	}
+	return nil
+}
+
+func (x *FlightSegment) GetArrivalTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ArrivalTime
+	}
+	return nil
+}
+
+func (x *FlightSegment) GetDepartureAirportCode() string {
+	if x != nil {
+		return x.DepartureAirportCode
+	}
+	return ""
+}
+
+func (x *FlightSegment) GetArrivalAirportCode() string {
+	if x != nil {
+		return x.ArrivalAirportCode
+	}
+	return ""
+}
+
+func (x *FlightSegment) GetDuration() string {
+	if x != nil {
+		return x.Duration
+	}
+	return ""
+}
+
+func (x *FlightSegment) GetStops() int32 {
+	if x != nil {
+		return x.Stops
+	}
+	return 0
+}
+
 type Train struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	DepartureTime *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=departure_time,json=departureTime,proto3" json:"departure_time,omitempty"`
@@ -1427,7 +1551,7 @@ type Train struct {
 
 func (x *Train) Reset() {
 	*x = Train{}
-	mi := &file_protos_itinerary_proto_msgTypes[12]
+	mi := &file_protos_itinerary_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1439,7 +1563,7 @@ func (x *Train) String() string {
 func (*Train) ProtoMessage() {}
 
 func (x *Train) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_itinerary_proto_msgTypes[12]
+	mi := &file_protos_itinerary_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1452,7 +1576,7 @@ func (x *Train) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Train.ProtoReflect.Descriptor instead.
 func (*Train) Descriptor() ([]byte, []int) {
-	return file_protos_itinerary_proto_rawDescGZIP(), []int{12}
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Train) GetDepartureTime() *timestamppb.Timestamp {
@@ -1488,7 +1612,7 @@ type CarRental struct {
 
 func (x *CarRental) Reset() {
 	*x = CarRental{}
-	mi := &file_protos_itinerary_proto_msgTypes[13]
+	mi := &file_protos_itinerary_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1500,7 +1624,7 @@ func (x *CarRental) String() string {
 func (*CarRental) ProtoMessage() {}
 
 func (x *CarRental) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_itinerary_proto_msgTypes[13]
+	mi := &file_protos_itinerary_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1513,7 +1637,7 @@ func (x *CarRental) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CarRental.ProtoReflect.Descriptor instead.
 func (*CarRental) Descriptor() ([]byte, []int) {
-	return file_protos_itinerary_proto_rawDescGZIP(), []int{13}
+	return file_protos_itinerary_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CarRental) GetCompany() string {
@@ -1633,7 +1757,7 @@ const file_protos_itinerary_proto_rawDesc = "" +
 	"\x05train\x18\r \x01(\v2\x13.travelingman.TrainH\x00R\x05train\x128\n" +
 	"\n" +
 	"car_rental\x18\x0e \x01(\v2\x17.travelingman.CarRentalH\x00R\tcarRentalB\t\n" +
-	"\adetails\"\xaf\x03\n" +
+	"\adetails\"\xb4\x04\n" +
 	"\x06Flight\x12!\n" +
 	"\fcarrier_code\x18\x01 \x01(\tR\vcarrierCode\x12#\n" +
 	"\rflight_number\x18\x02 \x01(\tR\fflightNumber\x12A\n" +
@@ -1641,7 +1765,20 @@ const file_protos_itinerary_proto_rawDesc = "" +
 	"\farrival_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\varrivalTime\x12B\n" +
 	"\x0ebaggage_policy\x18\x05 \x03(\v2\x1b.travelingman.BaggagePolicyR\rbaggagePolicy\x12D\n" +
 	"\x0fancillary_costs\x18\x06 \x03(\v2\x1b.travelingman.AncillaryCostR\x0eancillaryCosts\x12Q\n" +
-	"\x1btotal_cost_with_ancillaries\x18\a \x01(\v2\x12.travelingman.CostR\x18totalCostWithAncillaries\"\xac\x01\n" +
+	"\x1btotal_cost_with_ancillaries\x18\a \x01(\v2\x12.travelingman.CostR\x18totalCostWithAncillaries\x127\n" +
+	"\bsegments\x18\b \x03(\v2\x1b.travelingman.FlightSegmentR\bsegments\x12#\n" +
+	"\rlayover_count\x18\t \x01(\x05R\flayoverCount\x12%\n" +
+	"\x0etotal_duration\x18\n" +
+	" \x01(\tR\rtotalDuration\"\xf3\x02\n" +
+	"\rFlightSegment\x12!\n" +
+	"\fcarrier_code\x18\x01 \x01(\tR\vcarrierCode\x12#\n" +
+	"\rflight_number\x18\x02 \x01(\tR\fflightNumber\x12A\n" +
+	"\x0edeparture_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\rdepartureTime\x12=\n" +
+	"\farrival_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\varrivalTime\x124\n" +
+	"\x16departure_airport_code\x18\x05 \x01(\tR\x14departureAirportCode\x120\n" +
+	"\x14arrival_airport_code\x18\x06 \x01(\tR\x12arrivalAirportCode\x12\x1a\n" +
+	"\bduration\x18\a \x01(\tR\bduration\x12\x14\n" +
+	"\x05stops\x18\b \x01(\x05R\x05stops\"\xac\x01\n" +
 	"\x05Train\x12A\n" +
 	"\x0edeparture_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\rdepartureTime\x12=\n" +
 	"\farrival_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\varrivalTime\x12!\n" +
@@ -1700,7 +1837,7 @@ func file_protos_itinerary_proto_rawDescGZIP() []byte {
 }
 
 var file_protos_itinerary_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_protos_itinerary_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_protos_itinerary_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_protos_itinerary_proto_goTypes = []any{
 	(TransportType)(0),               // 0: travelingman.TransportType
 	(Class)(0),                       // 1: travelingman.Class
@@ -1720,10 +1857,11 @@ var file_protos_itinerary_proto_goTypes = []any{
 	(*Accommodation)(nil),            // 15: travelingman.Accommodation
 	(*Transport)(nil),                // 16: travelingman.Transport
 	(*Flight)(nil),                   // 17: travelingman.Flight
-	(*Train)(nil),                    // 18: travelingman.Train
-	(*CarRental)(nil),                // 19: travelingman.CarRental
-	(*Cost)(nil),                     // 20: travelingman.Cost
-	(*timestamppb.Timestamp)(nil),    // 21: google.protobuf.Timestamp
+	(*FlightSegment)(nil),            // 18: travelingman.FlightSegment
+	(*Train)(nil),                    // 19: travelingman.Train
+	(*CarRental)(nil),                // 20: travelingman.CarRental
+	(*Cost)(nil),                     // 21: travelingman.Cost
+	(*timestamppb.Timestamp)(nil),    // 22: google.protobuf.Timestamp
 }
 var file_protos_itinerary_proto_depIdxs = []int32{
 	1,  // 0: travelingman.FlightPreferences.travel_class:type_name -> travelingman.Class
@@ -1731,40 +1869,43 @@ var file_protos_itinerary_proto_depIdxs = []int32{
 	1,  // 2: travelingman.TrainPreferences.travel_class:type_name -> travelingman.Class
 	3,  // 3: travelingman.CarRentalPreferences.transmission:type_name -> travelingman.Transmission
 	2,  // 4: travelingman.BaggagePolicy.type:type_name -> travelingman.BaggageType
-	20, // 5: travelingman.AncillaryCost.cost:type_name -> travelingman.Cost
+	21, // 5: travelingman.AncillaryCost.cost:type_name -> travelingman.Cost
 	4,  // 6: travelingman.Error.code:type_name -> travelingman.ErrorCode
 	5,  // 7: travelingman.Error.severity:type_name -> travelingman.ErrorSeverity
-	21, // 8: travelingman.Accommodation.check_in:type_name -> google.protobuf.Timestamp
-	21, // 9: travelingman.Accommodation.check_out:type_name -> google.protobuf.Timestamp
-	20, // 10: travelingman.Accommodation.cost:type_name -> travelingman.Cost
+	22, // 8: travelingman.Accommodation.check_in:type_name -> google.protobuf.Timestamp
+	22, // 9: travelingman.Accommodation.check_out:type_name -> google.protobuf.Timestamp
+	21, // 10: travelingman.Accommodation.cost:type_name -> travelingman.Cost
 	6,  // 11: travelingman.Accommodation.preferences:type_name -> travelingman.AccommodationPreferences
 	13, // 12: travelingman.Accommodation.location:type_name -> travelingman.Location
 	14, // 13: travelingman.Accommodation.error:type_name -> travelingman.Error
 	0,  // 14: travelingman.Transport.type:type_name -> travelingman.TransportType
 	13, // 15: travelingman.Transport.origin_location:type_name -> travelingman.Location
 	13, // 16: travelingman.Transport.destination_location:type_name -> travelingman.Location
-	20, // 17: travelingman.Transport.cost:type_name -> travelingman.Cost
+	21, // 17: travelingman.Transport.cost:type_name -> travelingman.Cost
 	7,  // 18: travelingman.Transport.flight_preferences:type_name -> travelingman.FlightPreferences
 	8,  // 19: travelingman.Transport.train_preferences:type_name -> travelingman.TrainPreferences
 	9,  // 20: travelingman.Transport.car_rental_preferences:type_name -> travelingman.CarRentalPreferences
 	14, // 21: travelingman.Transport.error:type_name -> travelingman.Error
 	17, // 22: travelingman.Transport.flight:type_name -> travelingman.Flight
-	18, // 23: travelingman.Transport.train:type_name -> travelingman.Train
-	19, // 24: travelingman.Transport.car_rental:type_name -> travelingman.CarRental
-	21, // 25: travelingman.Flight.departure_time:type_name -> google.protobuf.Timestamp
-	21, // 26: travelingman.Flight.arrival_time:type_name -> google.protobuf.Timestamp
+	19, // 23: travelingman.Transport.train:type_name -> travelingman.Train
+	20, // 24: travelingman.Transport.car_rental:type_name -> travelingman.CarRental
+	22, // 25: travelingman.Flight.departure_time:type_name -> google.protobuf.Timestamp
+	22, // 26: travelingman.Flight.arrival_time:type_name -> google.protobuf.Timestamp
 	11, // 27: travelingman.Flight.baggage_policy:type_name -> travelingman.BaggagePolicy
 	12, // 28: travelingman.Flight.ancillary_costs:type_name -> travelingman.AncillaryCost
-	20, // 29: travelingman.Flight.total_cost_with_ancillaries:type_name -> travelingman.Cost
-	21, // 30: travelingman.Train.departure_time:type_name -> google.protobuf.Timestamp
-	21, // 31: travelingman.Train.arrival_time:type_name -> google.protobuf.Timestamp
-	21, // 32: travelingman.CarRental.pickup_time:type_name -> google.protobuf.Timestamp
-	21, // 33: travelingman.CarRental.dropoff_time:type_name -> google.protobuf.Timestamp
-	34, // [34:34] is the sub-list for method output_type
-	34, // [34:34] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	21, // 29: travelingman.Flight.total_cost_with_ancillaries:type_name -> travelingman.Cost
+	18, // 30: travelingman.Flight.segments:type_name -> travelingman.FlightSegment
+	22, // 31: travelingman.FlightSegment.departure_time:type_name -> google.protobuf.Timestamp
+	22, // 32: travelingman.FlightSegment.arrival_time:type_name -> google.protobuf.Timestamp
+	22, // 33: travelingman.Train.departure_time:type_name -> google.protobuf.Timestamp
+	22, // 34: travelingman.Train.arrival_time:type_name -> google.protobuf.Timestamp
+	22, // 35: travelingman.CarRental.pickup_time:type_name -> google.protobuf.Timestamp
+	22, // 36: travelingman.CarRental.dropoff_time:type_name -> google.protobuf.Timestamp
+	37, // [37:37] is the sub-list for method output_type
+	37, // [37:37] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_protos_itinerary_proto_init() }
@@ -1784,7 +1925,7 @@ func file_protos_itinerary_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protos_itinerary_proto_rawDesc), len(file_protos_itinerary_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   14,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

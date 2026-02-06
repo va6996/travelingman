@@ -21,6 +21,10 @@ test
 main
 server
 app
+fonts/
+travelingman
+travelingman.db-shm
+travelingman.db-wal
 
 # IDE
 .idea

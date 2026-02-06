@@ -1047,6 +1047,27 @@ export class Flight extends Message<Flight> {
    */
   totalCostWithAncillaries?: Cost;
 
+  /**
+   * Individual flight segments
+   *
+   * @generated from field: repeated travelingman.FlightSegment segments = 8;
+   */
+  segments: FlightSegment[] = [];
+
+  /**
+   * Number of layovers (segments - 1)
+   *
+   * @generated from field: int32 layover_count = 9;
+   */
+  layoverCount = 0;
+
+  /**
+   * Total journey duration (e.g., "2h 30m")
+   *
+   * @generated from field: string total_duration = 10;
+   */
+  totalDuration = "";
+
   constructor(data?: PartialMessage<Flight>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1062,6 +1083,9 @@ export class Flight extends Message<Flight> {
     { no: 5, name: "baggage_policy", kind: "message", T: BaggagePolicy, repeated: true },
     { no: 6, name: "ancillary_costs", kind: "message", T: AncillaryCost, repeated: true },
     { no: 7, name: "total_cost_with_ancillaries", kind: "message", T: Cost },
+    { no: 8, name: "segments", kind: "message", T: FlightSegment, repeated: true },
+    { no: 9, name: "layover_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 10, name: "total_duration", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Flight {
@@ -1078,6 +1102,101 @@ export class Flight extends Message<Flight> {
 
   static equals(a: Flight | PlainMessage<Flight> | undefined, b: Flight | PlainMessage<Flight> | undefined): boolean {
     return proto3.util.equals(Flight, a, b);
+  }
+}
+
+/**
+ * @generated from message travelingman.FlightSegment
+ */
+export class FlightSegment extends Message<FlightSegment> {
+  /**
+   * Airline code
+   *
+   * @generated from field: string carrier_code = 1;
+   */
+  carrierCode = "";
+
+  /**
+   * Flight number
+   *
+   * @generated from field: string flight_number = 2;
+   */
+  flightNumber = "";
+
+  /**
+   * Segment departure time
+   *
+   * @generated from field: google.protobuf.Timestamp departure_time = 3;
+   */
+  departureTime?: Timestamp;
+
+  /**
+   * Segment arrival time
+   *
+   * @generated from field: google.protobuf.Timestamp arrival_time = 4;
+   */
+  arrivalTime?: Timestamp;
+
+  /**
+   * Origin IATA code
+   *
+   * @generated from field: string departure_airport_code = 5;
+   */
+  departureAirportCode = "";
+
+  /**
+   * Destination IATA code
+   *
+   * @generated from field: string arrival_airport_code = 6;
+   */
+  arrivalAirportCode = "";
+
+  /**
+   * Segment duration (e.g., "1h 45m")
+   *
+   * @generated from field: string duration = 7;
+   */
+  duration = "";
+
+  /**
+   * Number of stops in this segment
+   *
+   * @generated from field: int32 stops = 8;
+   */
+  stops = 0;
+
+  constructor(data?: PartialMessage<FlightSegment>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "travelingman.FlightSegment";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "carrier_code", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "flight_number", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "departure_time", kind: "message", T: Timestamp },
+    { no: 4, name: "arrival_time", kind: "message", T: Timestamp },
+    { no: 5, name: "departure_airport_code", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "arrival_airport_code", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "duration", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "stops", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FlightSegment {
+    return new FlightSegment().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FlightSegment {
+    return new FlightSegment().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FlightSegment {
+    return new FlightSegment().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FlightSegment | PlainMessage<FlightSegment> | undefined, b: FlightSegment | PlainMessage<FlightSegment> | undefined): boolean {
+    return proto3.util.equals(FlightSegment, a, b);
   }
 }
 

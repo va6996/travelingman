@@ -109,6 +109,12 @@ func (td *TravelDesk) EnrichGraph(ctx context.Context, itinerary *pb.Itinerary) 
 			}
 		}
 	}
+
+	// Recurse for sub-graph if needed
+	if itinerary.Graph.SubGraph != nil {
+		subItin := &pb.Itinerary{Graph: itinerary.Graph.SubGraph}
+		td.EnrichGraph(ctx, subItin)
+	}
 }
 
 func (td *TravelDesk) enrichLocation(ctx context.Context, loc *pb.Location) error {

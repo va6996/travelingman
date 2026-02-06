@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/firebase/genkit/go/ai"
 	"github.com/firebase/genkit/go/genkit"
@@ -73,7 +74,7 @@ func Setup(ctx context.Context, cfg *config.Config) (*App, error) {
 		// Z.ai is OpenAI-compatible with base URL https://api.z.ai/api/paas/v4/
 		zaiPlugin := &zaiconfig.Zai{
 			APIKey:  cfg.AI.Zai.APIKey,
-			BaseURL: "https://api.z.ai/api/paas/v4/",
+			BaseURL: "https://api.z.ai/api/coding/paas/v4/",
 		}
 		gk = genkit.Init(ctx, genkit.WithPlugins(zaiPlugin))
 		model = zaiPlugin.Model(gk, cfg.AI.Zai.Model)
@@ -129,11 +130,19 @@ func Setup(ctx context.Context, cfg *config.Config) (*App, error) {
 		return nil, fmt.Errorf("AMADEUS_CLIENT_ID and AMADEUS_CLIENT_SECRET must be set")
 	}
 
+	// Check environment variable for Amadeus environment (test vs production)
+	isProd := strings.ToLower(cfg.Amadeus.Environment) == "production"
+	if isProd {
+		log.Infof(ctx, "Using Amadeus PRODUCTION Environment")
+	} else {
+		log.Infof(ctx, "Using Amadeus TEST Environment")
+	}
+
 	// Initializing Amadeus client registers its tools automatically
 	amadeusConfig := amadeus.Config{
 		ClientID:     cfg.Amadeus.ClientID,
 		ClientSecret: cfg.Amadeus.ClientSecret,
-		IsProduction: false, // Default to false
+		IsProduction: isProd,
 		FlightLimit:  cfg.Amadeus.Limit.Flight,
 		HotelLimit:   cfg.Amadeus.Limit.Hotel,
 		Timeout:      cfg.Amadeus.Timeout,

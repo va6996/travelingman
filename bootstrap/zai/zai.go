@@ -7,7 +7,6 @@ package zai
 
 import (
 	"context"
-	"os"
 
 	"github.com/firebase/genkit/go/ai"
 	"github.com/firebase/genkit/go/core/api"
@@ -36,31 +35,15 @@ func (z *Zai) Name() string {
 
 // Init implements genkit.Plugin.
 func (z *Zai) Init(ctx context.Context) []api.Action {
-	apiKey := z.APIKey
- baseURL := z.BaseURL
-
-	// if api key is not set, get it from environment variable
-	if apiKey == "" {
-		apiKey = os.Getenv("ZAI_API_KEY")
-	}
-
-	if apiKey == "" {
-		panic("zai plugin initialization failed: apiKey is required (set ZAI_API_KEY or pass APIKey)")
-	}
-
-	// Set default base URL if not provided
-	if baseURL == "" {
-		baseURL = "https://api.z.ai/api/paas/v4/"
-	}
-
+	// invariant: configuration is pre-initialized in bootstrap/setup.go
 	if z.openAICompatible == nil {
 		z.openAICompatible = &compat_oai.OpenAICompatible{}
 	}
 
 	// set the options
 	z.openAICompatible.Opts = []option.RequestOption{
-		option.WithAPIKey(apiKey),
-		option.WithBaseURL(baseURL),
+		option.WithAPIKey(z.APIKey),
+		option.WithBaseURL(z.BaseURL),
 	}
 
 	z.openAICompatible.Provider = provider

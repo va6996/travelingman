@@ -1,28 +1,40 @@
-.PHONY: all proto build run server dev clean setup-dev help
+.PHONY: all proto build run server dev dev-frontend dev-backend clean setup-dev help
 
 # Variables
 PROTO_DIR = protos
 PB_DIR = pb
 BINARY_NAME = server
 
-# Default target
+# Default target - production build
 all: build
 
 # Help target
 help:
 	@echo "Available targets:"
-	@echo "  all          - Build the application (default)"
-	@echo "  proto        - Generate Go and TypeScript protobufs"
-	@echo "  proto-go     - Generate Go protobufs only"
-	@echo "  build        - Build the application binary"
-	@echo "  run          - Build and run the server"
-	@echo "  server       - Build and start the server (dedicated server command)"
-	@echo "  dev          - Setup dev dependencies and run with hot reload"
-	@echo "  setup-dev    - Install development dependencies (air, configure Genkit)"
-	@echo "  test         - Run all tests"
-	@echo "  test-integration - Run integration tests"
-	@echo "  clean        - Clean up generated files and binaries"
-	@echo "  help         - Show this help message"
+	@echo "  all               - Build production binary (default)"
+	@echo "  proto             - Generate Go and TypeScript protobufs"
+	@echo "  proto-go          - Generate Go protobufs only"
+	@echo "  proto-web         - Generate TypeScript protobufs only"
+	@echo "  build             - Build production binary with embedded UI"
+	@echo "  run               - Build and run production server"
+	@echo "  server            - Build and start production server"
+	@echo "  dev               - Run both frontend and backend in dev mode"
+	@echo "  dev-frontend      - Run frontend dev server only (Vite)"
+	@echo "  dev-backend       - Run backend dev server only (Air hot reload)"
+	@echo "  setup-dev         - Install development dependencies"
+	@echo "  test              - Run all tests"
+	@echo "  test-integration  - Run integration tests"
+	@echo "  clean             - Clean up generated files and binaries"
+	@echo "  help              - Show this help message"
+	@echo ""
+	@echo "Development workflow:"
+	@echo "  make dev          - Start both frontend (:5173) and backend (:8000)"
+	@echo "  npm run dev       - Start frontend dev server only"
+	@echo "  make dev-backend  - Start backend dev server only"
+	@echo ""
+	@echo "Production workflow:"
+	@echo "  make build        - Build production binary with embedded UI"
+	@echo "  ./server          - Run production server"
 
 # Generate Go code from Protobuf files
 proto-go:
@@ -56,6 +68,9 @@ proto: proto-go proto-web
 # Build the application
 build: proto
 	@echo "Building application..."
+	@echo "Building UI..."
+	cd ui && npm run build
+	@echo "Building Go binary with embedded UI..."
 	go mod tidy
 	go build -o $(BINARY_NAME) .
 
@@ -74,9 +89,11 @@ setup-dev:
 	@echo "Installing development dependencies..."
 	@export PATH="$$PATH:$$(go env GOPATH)/bin"; \
 	if ! command -v air >/dev/null 2>&1; then \
-		echo "Installing air for hot reload..."; \
+		echo "Installing air for Go hot reload..."; \
 		go install github.com/air-verse/air@latest; \
 	fi
+	@echo "Installing UI dependencies..."
+	@cd ui && npm install
 	@echo "Configuring Genkit..."
 	@if command -v genkit >/dev/null 2>&1; then \
 		genkit config set updateNotificationsOptOut true || true; \
@@ -84,10 +101,31 @@ setup-dev:
 		echo "Genkit CLI not found - skipping notification config"; \
 	fi
 
-# Run with hot reload
-dev: setup-dev
-	@echo "Running with hot reload..."
+# Frontend development only (runs Vite dev server on :5173)
+dev-frontend:
+	@echo "Starting frontend development server..."
+	@cd ui && npm run dev
+
+# Backend development only (runs Air hot reload on :8000)
+dev-backend: setup-dev
+	@echo "Starting backend development server with hot reload..."
 	@export PATH="$$PATH:$$(go env GOPATH)/bin" && air
+
+# Full development mode - runs both frontend and backend
+dev: setup-dev
+	@echo "Starting full development environment..."
+	@echo "  Frontend: http://localhost:5173"
+	@echo "  Backend:  http://localhost:8000"
+	@echo "  Press Ctrl+C to stop both servers"
+	@echo ""
+	@# Use a subshell to handle both processes together
+	@(export PATH="$$PATH:$$(go env GOPATH)/bin"; \
+	air & \
+	AIR_PID=$$!; \
+	cd ui && npm run dev & \
+	FRONTEND_PID=$$!; \
+	trap "kill $$AIR_PID $$FRONTEND_PID 2>/dev/null; exit 0" INT TERM; \
+	wait)
 
 # Run tests
 test:

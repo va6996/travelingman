@@ -167,6 +167,20 @@ message Flight {
     repeated BaggagePolicy baggage_policy = 5;  // Included baggage allowance
     repeated AncillaryCost ancillary_costs = 6; // Additional services (extra bags, seats, etc.)
     Cost total_cost_with_ancillaries = 7;      // Base fare + ancillary costs
+    repeated FlightSegment segments = 8;        // Individual flight segments
+    int32 layover_count = 9;                    // Number of layovers (segments - 1)
+    string total_duration = 10;                 // Total journey duration (e.g., "2h 30m")
+}
+
+message FlightSegment {
+    string carrier_code = 1;                    // Airline code
+    string flight_number = 2;                   // Flight number
+    google.protobuf.Timestamp departure_time = 3; // Segment departure time
+    google.protobuf.Timestamp arrival_time = 4;   // Segment arrival time
+    string departure_airport_code = 5;          // Origin IATA code
+    string arrival_airport_code = 6;            // Destination IATA code
+    string duration = 7;                        // Segment duration (e.g., "1h 45m")
+    int32 stops = 8;                            // Number of stops in this segment
 }
 
 message Train {

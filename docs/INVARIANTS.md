@@ -226,3 +226,25 @@ To verify invariants are maintained:
 - [ ] No traveler count defaults in API methods
 - [ ] No currency nil checks in API methods
 - [ ] No DB nil checks before cache operations
+
+---
+
+### INVARIANT 11: Service Configuration Always Pre-Initialized
+
+**Established**: `bootstrap/setup.go` in `Setup()`
+
+**Guarantee**: All service and plugin configuration (API keys, Base URLs, Models) is fully resolved and populated in the struct before `Init()` is called.
+
+**Details**:
+```go
+plugin := &Plugin{
+    APIKey:  cfg.Key, // Loaded from config/env by setup logic
+    BaseURL: cfg.URL,
+}
+// Plugin.Init() is called on fully configured struct
+```
+
+**Relied Upon By**:
+- `bootstrap/zai/zai.go:Init()` - assumes APIKey and BaseURL are set
+- Reduces need for `os.Getenv` calls inside plugin logic
+- Centralizes configuration management in `bootstrap/setup.go`

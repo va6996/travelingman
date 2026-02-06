@@ -45,6 +45,7 @@ type ZaiConfig struct {
 type AmadeusConfig struct {
 	ClientID     string `yaml:"client_id" env:"AMADEUS_CLIENT_ID"`
 	ClientSecret string `yaml:"client_secret" env:"AMADEUS_CLIENT_SECRET"`
+	Environment  string `yaml:"environment" env:"AMADEUS_ENV" env-default:"test"`
 	Limit        struct {
 		Flight int `yaml:"flight" env:"AMADEUS_LIMIT_FLIGHT" env-default:"10"`
 		Hotel  int `yaml:"hotel" env:"AMADEUS_LIMIT_HOTEL" env-default:"10"`

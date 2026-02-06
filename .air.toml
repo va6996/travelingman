@@ -5,8 +5,12 @@ tmp_dir = "tmp"
   cmd = "go build -o ./tmp/server ."
   bin = "./tmp/server"
   delay = 1000
-  exclude_dir = ["tmp", "vendor", "testdata", "pb", "pb_ts", "node_modules"]
+  exclude_dir = ["tmp", "vendor", "testdata", "pb", "pb_ts", "node_modules", "ui/dist", "ui/node_modules"]
   exclude_regex = ["_test.go"]
+  include_ext = ["go", "tpl", "tmpl", "html"]
+
+[env]
+  PORT = "8000"
 
 [color]
   app = ""

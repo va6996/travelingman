@@ -1,0 +1,60 @@
+# Binaries and build artifacts
+server
+tmp
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+ui/node_modules/
+ui/dist/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+**/.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Documentation
+docs/
+README.md
+*.md
+!docs/README.md
+
+# Test files
+*_test.go
+
+# Air hot reload config
+.air.toml
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db

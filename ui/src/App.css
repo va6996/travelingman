@@ -194,3 +194,25 @@
     width: 300px;
     object-fit: contain;
 }
+
+/* Baggage Display Enhancements */
+.baggage-summary {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.baggage-allowance {
+    color: #60a5fa;
+    font-weight: 500;
+}
+
+.baggage-ancillary {
+    background: rgba(251, 146, 60, 0.1);
+    border: 1px solid rgba(251, 146, 60, 0.3);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+}

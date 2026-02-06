@@ -89,16 +89,16 @@ type IncludedCheckedBags struct {
 }
 
 type FareDetails struct {
-	SegmentID           string                `json:"segmentId"`
-	IncludedCheckedBags *IncludedCheckedBags  `json:"includedCheckedBags,omitempty"`
+	SegmentID           string               `json:"segmentId"`
+	IncludedCheckedBags *IncludedCheckedBags `json:"includedCheckedBags,omitempty"`
 }
 
 type TravelerPricing struct {
-	TravelerID    string        `json:"travelerId"`
-	FareOption    string        `json:"fareOption"`
-	TravelerType  string        `json:"travelerType"`
-	Price         Price         `json:"price"`
-	FareDetails   []FareDetails `json:"fareDetails,omitempty"`
+	TravelerID   string        `json:"travelerId"`
+	FareOption   string        `json:"fareOption"`
+	TravelerType string        `json:"travelerType"`
+	Price        Price         `json:"price"`
+	FareDetails  []FareDetails `json:"fareDetailsBySegment,omitempty"`
 }
 
 // --- Structs for Flight Price Confirmation ---
@@ -518,8 +518,10 @@ func (o FlightOffer) ToTransport() *pb.Transport {
 
 	// Details from first segment of first itinerary (simplification)
 	if len(o.Itineraries) > 0 && len(o.Itineraries[0].Segments) > 0 {
-		firstSeg := o.Itineraries[0].Segments[0]
-		lastSeg := o.Itineraries[0].Segments[len(o.Itineraries[0].Segments)-1]
+		itinerary := o.Itineraries[0]
+		segments := itinerary.Segments
+		firstSeg := segments[0]
+		lastSeg := segments[len(segments)-1]
 
 		t.OriginLocation.IataCodes = append(t.OriginLocation.IataCodes, firstSeg.Departure.IataCode)
 		t.DestinationLocation.IataCodes = append(t.DestinationLocation.IataCodes, lastSeg.Arrival.IataCode)
@@ -536,6 +538,14 @@ func (o FlightOffer) ToTransport() *pb.Transport {
 		}
 		if arrTime, err := time.Parse("2006-01-02T15:04:05", lastSeg.Arrival.At); err == nil {
 			flightDetails.ArrivalTime = timestamppb.New(arrTime)
+		}
+
+		// Extract all segments and layover information
+		extractSegments(segments, flightDetails)
+
+		// Set total journey duration if available
+		if itinerary.Duration != "" {
+			flightDetails.TotalDuration = itinerary.Duration
 		}
 
 		// Extract baggage information from travelerPricings
@@ -568,10 +578,10 @@ func extractBaggageInfo(offer FlightOffer, flight *pb.Flight) {
 	for _, fd := range tp.FareDetails {
 		if fd.IncludedCheckedBags != nil {
 			policy := &pb.BaggagePolicy{
-				Type:        pb.BaggageType_BAGGAGE_TYPE_CHECKED,
-				Quantity:    int32(fd.IncludedCheckedBags.Quantity),
-				Weight:      int32(fd.IncludedCheckedBags.Weight),
-				WeightUnit:  fd.IncludedCheckedBags.WeightUnit,
+				Type:       pb.BaggageType_BAGGAGE_TYPE_CHECKED,
+				Quantity:   int32(fd.IncludedCheckedBags.Quantity),
+				Weight:     int32(fd.IncludedCheckedBags.Weight),
+				WeightUnit: fd.IncludedCheckedBags.WeightUnit,
 			}
 			flight.BaggagePolicy = append(flight.BaggagePolicy, policy)
 		}
@@ -580,6 +590,44 @@ func extractBaggageInfo(offer FlightOffer, flight *pb.Flight) {
 	// Note: Most airlines include 1 carry-on bag, but this is not always
 	// explicitly returned in the API response. We could add a default here
 	// or build a database of airline policies.
+}
+
+// extractSegments extracts all flight segments and calculates layover information
+func extractSegments(segments []Segment, flight *pb.Flight) {
+	if len(segments) == 0 {
+		return
+	}
+
+	// Convert each segment to protobuf FlightSegment
+	for _, seg := range segments {
+		pbSeg := &pb.FlightSegment{
+			CarrierCode:          seg.CarrierCode,
+			FlightNumber:         seg.Number,
+			DepartureAirportCode: seg.Departure.IataCode,
+			ArrivalAirportCode:   seg.Arrival.IataCode,
+			Duration:             seg.Duration,
+			Stops:                int32(seg.NumberOfStops),
+		}
+
+		// Parse departure time
+		if depTime, err := time.Parse("2006-01-02T15:04:05", seg.Departure.At); err == nil {
+			pbSeg.DepartureTime = timestamppb.New(depTime)
+		}
+
+		// Parse arrival time
+		if arrTime, err := time.Parse("2006-01-02T15:04:05", seg.Arrival.At); err == nil {
+			pbSeg.ArrivalTime = timestamppb.New(arrTime)
+		}
+
+		flight.Segments = append(flight.Segments, pbSeg)
+	}
+
+	// Calculate layover count (number of segments - 1, or 0 if only 1 segment)
+	if len(segments) > 1 {
+		flight.LayoverCount = int32(len(segments) - 1)
+	} else {
+		flight.LayoverCount = 0
+	}
 }
 
 // GetIncludedBaggageCount returns the number of included checked bags

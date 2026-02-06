@@ -1,11 +1,16 @@
 package main
 
 import (
+	"embed"
 	"context"
 	"errors"
+	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
+	pathpkg "path"
+	"strings"
 	"syscall"
 
 	"connectrpc.com/connect"
@@ -18,6 +23,9 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 )
+
+//go:embed ui/dist
+var uiFS embed.FS
 
 type TravelServer struct {
 	app *bootstrap.App
@@ -102,6 +110,83 @@ func main() {
 	traveler := &TravelServer{app: app}
 	path, handler := pbconnect.NewTravelServiceHandler(traveler)
 	mux.Handle(path, handler)
+
+	// Create a sub-filesystem for ui/dist
+	uiSubFS, err := fs.Sub(uiFS, "ui/dist")
+	if err != nil {
+		log.Fatalf(context.Background(), "Failed to create UI sub-filesystem: %v", err)
+	}
+
+	// Create file server for embedded UI
+	uiFileServer := http.FileServer(http.FS(uiSubFS))
+
+	// SPA fallback handler - serves index.html for non-API routes
+	spaHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set proper MIME types
+		ext := strings.ToLower(pathpkg.Ext(r.URL.Path))
+		switch ext {
+		case ".js":
+			w.Header().Set("Content-Type", "application/javascript")
+		case ".css":
+			w.Header().Set("Content-Type", "text/css")
+		case ".html":
+			w.Header().Set("Content-Type", "text/html")
+		case ".woff":
+		case ".woff2":
+			w.Header().Set("Content-Type", "font/woff2")
+		case ".ttf":
+			w.Header().Set("Content-Type", "font/ttf")
+		case ".otf":
+			w.Header().Set("Content-Type", "font/otf")
+		case ".png":
+			w.Header().Set("Content-Type", "image/png")
+		case ".jpg":
+		case ".jpeg":
+			w.Header().Set("Content-Type", "image/jpeg")
+		case ".svg":
+			w.Header().Set("Content-Type", "image/svg+xml")
+		case ".json":
+			w.Header().Set("Content-Type", "application/json")
+		}
+
+		// Try to serve the file from the embedded filesystem
+		cleanPath := strings.TrimPrefix(r.URL.Path, "/")
+		if cleanPath == "" {
+			cleanPath = "."
+		}
+
+		_, err := uiSubFS.Open(cleanPath)
+		if err == nil {
+			// File exists, serve it
+			uiFileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// File doesn't exist, fallback to index.html for SPA routing
+		indexFile, err := uiSubFS.Open("index.html")
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		defer indexFile.Close()
+
+		// Get file info for Content-Type header
+		stat, _ := indexFile.Stat()
+		http.ServeContent(w, r, "index.html", stat.ModTime(), indexFile.(interface {
+			io.ReadSeeker
+		}))
+	})
+
+	// Register UI handler for all non-API routes
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// API routes go to Connect handler
+		if strings.HasPrefix(r.URL.Path, "/TravelService") {
+			handler.ServeHTTP(w, r)
+			return
+		}
+		// All other routes go to SPA handler
+		spaHandler.ServeHTTP(w, r)
+	})
 
 	// Simple CORS middleware
 	corsHandler := func(h http.Handler) http.Handler {

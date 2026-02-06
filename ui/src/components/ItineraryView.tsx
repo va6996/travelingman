@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { VStack, Box, Text, Heading, Divider, Tabs, TabList, TabPanels, Tab, TabPanel, Icon } from '@chakra-ui/react'
+import { VStack, Box, Text, Heading, Icon } from '@chakra-ui/react'
 import { MdHotel, MdFlight, MdDirectionsCar, MdTrain, MdDirectionsWalk } from 'react-icons/md'
 import { Itinerary, Node, Edge } from '../gen/protos/graph_pb'
 import { TransportType } from '../gen/protos/itinerary_pb'
@@ -186,28 +186,7 @@ export const ItineraryView = ({ itinerary, possibleItineraries }: ItineraryViewP
                 <Text color="gray.400">{options[0].description}</Text>
             </Box>
 
-            <Divider borderColor="whiteAlpha.200" />
-
-            {options.length > 1 ? (
-                <Tabs variant="soft-rounded" colorScheme="green" align="center">
-                    <TabList mb={4} bg="#111827" p={1} borderRadius="xl" border="1px solid" borderColor="whiteAlpha.100" width="fit-content" mx="auto">
-                        {options.map((_, idx) => (
-                            <Tab key={idx} color="gray.400" _selected={{ color: 'white', bg: 'green.600' }} borderRadius="lg" fontSize="md">
-                                {options[idx].title || `Option ${idx + 1}`}
-                            </Tab>
-                        ))}
-                    </TabList>
-                    <TabPanels>
-                        {options.map((it, idx) => (
-                            <TabPanel key={idx} px={0}>
-                                <SingleItineraryTimeline itinerary={it} />
-                            </TabPanel>
-                        ))}
-                    </TabPanels>
-                </Tabs>
-            ) : (
-                <SingleItineraryTimeline itinerary={options[0]} />
-            )}
+            <SingleItineraryTimeline itinerary={options[0]} />
         </VStack>
     )
 }

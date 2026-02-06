@@ -132,9 +132,11 @@ func (t *FlightTool) Execute(ctx context.Context, input *FlightInput) ([]*pb.Tra
 		},
 	}
 
-	if currency != "" {
-		transport.Cost = &pb.Cost{Currency: currency}
+	// Ensure Cost is initialized (INVARIANT: Currency Always Set)
+	if currency == "" {
+		currency = "USD"
 	}
+	transport.Cost = &pb.Cost{Currency: currency}
 
 	resp, err := t.Client.SearchFlights(ctx, transport)
 
@@ -288,7 +290,7 @@ func (t *HotelOffersTool) Execute(ctx context.Context, input *HotelOffersInput) 
 		CheckIn:       timestamppb.New(parseDate(input.CheckIn)),
 		CheckOut:      timestamppb.New(parseDate(input.CheckOut)),
 		Cost: &pb.Cost{
-			Currency: input.Currency,
+			Currency: currencyOrDefault(input.Currency, "USD"),
 		},
 		// Location info missing in this tool input context, so enrichment won't happen here
 		// unless we change the tool input as well, but for now we match the signature.
@@ -358,4 +360,12 @@ func NewLocationTool(c *Client, gk *genkit.Genkit, registry *tools.Registry) *Lo
 		return t.Execute(ctx, &LocationInput{Keyword: keyword})
 	})
 	return t
+}
+
+// currencyOrDefault returns the currency if not empty, otherwise returns the default value
+func currencyOrDefault(c, def string) string {
+	if c == "" {
+		return def
+	}
+	return c
 }
